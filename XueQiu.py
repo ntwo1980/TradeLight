@@ -5,7 +5,6 @@ import re
 import requests
 import unittest
 import pandas as pd
-from structures import *
 
 class XueQiu:
     LOGIN_PAGE = 'https://www.xueqiu.com'
@@ -60,15 +59,26 @@ class XueQiu:
 
         return portfolios[~portfolios.index.isin(exclude_portfolios)]
 
+    def fetch_all_portfolio_positions(self):
+        portfolios = self.fetch_all_portfolios()
+        holdings = self.fetch_portfolios_holdings(portfolios.index)
+
+        return holdings
+
+    def fetch_portfolios_holdings(self, portfolios):
+        holdings = [self.fetch_single_portfolio_holdings(p) for p in portfolios]
+
+        return pd.concat(holdings)
+
     def get_all_portfolio(self):
         portfolio_config = self.config['portfolio']
         all_portfolio_info = {}
 
         for p in portfolio_config:
-            yield p, self.get_portfolio(p)
+            yield p, self.fetch_single_portfolio_holdings(p)
 
-    def get_portfolio(self, portfolio_id):
-        r = self.s.get(self.PORTFOLIO_URL + portfolio_id)
+    def fetch_single_portfolio_holdings(self, portfolio):
+        r = self.s.get(self.PORTFOLIO_URL + portfolio)
 
         match_info = re.search(r'(?<=SNB.cubeInfo = ).*(?=;\n)', r.text)
         if match_info is None:
@@ -79,8 +89,20 @@ class XueQiu:
             raise Exception('get portfolio info error: {}'.format(e))
 
         holdings_info = portfolio_info['view_rebalancing']['holdings']
-        holdings = [Holding(code=s['stock_symbol'], name=s['stock_name'], industry=s['segment_name'], weight=s['weight']) for s in holdings_info]
+        codes = [s['stock_symbol'] for s in holdings_info]
+        names = [s['stock_name'] for s in holdings_info]
+        industries = [s['segment_name'] for s in holdings_info]
+        weights = [s['weight'] for s in holdings_info]
 
+        holdings = pd.DataFrame(
+            {
+                "code": codes,
+                "name": names,
+                "industry": industries,
+                "weight": weights
+            })
+
+        holdings.set_index('code', inplace=True)
         return holdings
 
     def create_login_params(self, user, password):
@@ -96,9 +118,8 @@ class XueQiu:
 
 
 class XueQiuTest(unittest.TestCase):
-    def setUp(self):
-        now = datetime.datetime.now()
-        today_str = now.strftime("%Y%m%d")
+    @classmethod
+    def setUpClass(self):
         script_dir = os.path.dirname(__file__)
         config_file_path = os.path.join(script_dir, 'config/XueQiu.json')
         with open(config_file_path, 'r') as f:
@@ -107,14 +128,19 @@ class XueQiuTest(unittest.TestCase):
         self.xq = XueQiu(config)
         self.xq.login()
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
         pass
 
-    def test_get_portfolio(self):
-        print(self.xq.get_portfolio('ZH1153957'))
+    def test_get_portfolio_holdings(self):
+        holdings = self.xq.fetch_single_portfolio_holdings('ZH1153957')
 
     def test_fetch_all_portfolios(self):
         self.xq.fetch_all_portfolios()
+
+    @unittest.skip("")
+    def test_fetch_all_portfolio_positions(self):
+        self.xq.fetch_all_portfolio_positions()
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,9 @@
 {
     "account": {
-        "user": "13911111111",
-        "password": "111111111"
+        "email": "test@sample.com",
+	"telephone": "13911111111",
+        "password": "aaaaaaaaaaaa",
+        "portfolio": "ZH11111111"
     },
     "exclude_portfolios": [
 	"ZH1111111",

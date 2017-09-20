@@ -8,7 +8,7 @@ import pandas as pd
 
 class XueQiu:
     LOGIN_PAGE = 'https://www.xueqiu.com'
-    LOGIN_API = 'https://xueqiu.com/snowman/login'
+    LOGIN_API = 'https://xueqiu.com/user/login'
     TRANSACTION_API = 'https://xueqiu.com/cubes/rebalancing/history.json'
     PORTFOLIO_URL = 'https://xueqiu.com/p/'
     ALL_PORTFOLIOS_URL= 'https://xueqiu.com/v4/stock/portfolio/stocks.json?size=1000&category=1&type=1'
@@ -25,26 +25,32 @@ class XueQiu:
             'Accept': '*/*',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.8',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Host': 'xueqiu.com',
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100 Safari/537.36',
             'X-Requested-With': 'XMLHttpRequest',
-            'Origin': self.WEB_ORIGIN,
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Pragma': 'no-cache',
         }
         self.s.headers.update(headers)
 
         # init cookie
-        self.s.get(self.LOGIN_PAGE)
+        #self.s.get(self.LOGIN_PAGE)
 
         # post for login
         account_config = self.config['account']
         params = self.create_login_params(
-            account_config['user'],
-            account_config['password'])
+            account_config['email'],
+            account_config['telephone'],
+            account_config['password'],
+            account_config['portfolio'])
 
         rep = self.s.post(self.LOGIN_API, data=params)
-
-        self.check_login_success(rep)
-        print('login succeed')
+        login_status = rep.json()
+        if 'error_description' in login_status:
+            return False, login_status['error_description']
+        return True, "succeed"
 
     def fetch_all_portfolios(self):
         r = self.s.get(self.ALL_PORTFOLIOS_URL)
@@ -105,16 +111,14 @@ class XueQiu:
         holdings.set_index('code', inplace=True)
         return holdings
 
-    def create_login_params(self, user, password):
+    def create_login_params(self, email, telphone, password, portfolio):
         params = {
-            'username': user,
-            'password': password
+            'username': email,
+            'account': telphone,
+            'password': password,
+            'portfolio_code': portfolio
         }
         return params
-
-    def check_login_success(self, login_status):
-        if 'error_description' in login_status:
-            raise NotLoginError(login_status['error_description'])
 
 
 class XueQiuTest(unittest.TestCase):
@@ -126,7 +130,9 @@ class XueQiuTest(unittest.TestCase):
             config = json.load(f)
 
         self.xq = XueQiu(config)
-        self.xq.login()
+        succeed, reason = self.xq.login()
+        if not succeed:
+            raise Exception("login failed: " + reason)
 
     @classmethod
     def tearDownClass(self):
@@ -138,9 +144,8 @@ class XueQiuTest(unittest.TestCase):
     def test_fetch_all_portfolios(self):
         self.xq.fetch_all_portfolios()
 
-    @unittest.skip("")
     def test_fetch_all_portfolio_positions(self):
-        self.xq.fetch_all_portfolio_positions()
+        print(self.xq.fetch_all_portfolio_positions())
 
 if __name__ == '__main__':
     unittest.main()

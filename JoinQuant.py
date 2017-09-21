@@ -72,9 +72,10 @@ class JoinQuant:
         }
         return params
 
-    def fetch_factors_file(self):
-        file_path = os.path.join(self.data_path, 'factors.csv')
-        rep = self.s.get("https://www.joinquant.com/user/23286199053/files/data/factors.csv?download=1")
+    def fetch_file(self, file_name, new_file_name):
+        account_config = self.config['account']
+        file_path = os.path.join(self.data_path, new_file_name)
+        rep = self.s.get("https://www.joinquant.com/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
 
         with open(file_path, 'wb') as f:
             f.write(rep.content)
@@ -96,8 +97,8 @@ class JoinQuantTest(unittest.TestCase):
     def tearDownClass(self):
         pass
 
-    def test(self):
-        self.jq.fetch_factors_file()
+    def test_downlad_file(self):
+        self.jq.fetch_file('up_down.csv', 'r_up_down.csv')
 
 if __name__ == '__main__':
     unittest.main()

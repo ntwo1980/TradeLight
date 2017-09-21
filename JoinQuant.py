@@ -51,15 +51,16 @@ class JoinQuant:
         if len(set_cookie) < 100:
             return False, 'Login failed'
 
-        print(set_cookie)
         # self.s.headers.update({
             # 'cookie': set_cookie
         # })
 
         # init jupter cookie
-        print(self.s.cookies)
-        rep = self.s.get(self.JUPTER_PAGE)
-        print(rep.cookies)
+        params = {
+            'username': account_config['userid'],
+            'token': self.s.cookies['PHPSESSID']
+        }
+        rep = self.s.post(self.JUPTER_PAGE, data=params)
 
         return True, "succeed"
 
@@ -76,7 +77,6 @@ class JoinQuant:
         rep = self.s.get("https://www.joinquant.com/user/23286199053/files/data/factors.csv?download=1")
 
         with open(file_path, 'wb') as f:
-            print(rep.content)
             f.write(rep.content)
 
 class JoinQuantTest(unittest.TestCase):

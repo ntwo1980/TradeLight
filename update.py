@@ -44,7 +44,7 @@ def generate_blog_up_down(generator):
     data_path = os.path.join(script_dir, 'data/r_up_down.csv')
 
     df = pd.read_csv(data_path, index_col='date', parse_dates=True)
-    generator.line('五日内创一个月新低比例{}, 五日内创一个月新高比例{}。'
+    generator.line('五日内创一个月新低比例{:.2f}, 五日内创一个月新高比例{:.2f}。股价低于一个月前股价95%比例{:.2f}，股价高于一个前股价95%比例{:.2f}。'
                    .format(df['low'][-1], df['high'][-1], df['down'][-1], df['up'][-1]))
     #generator.data_frame(df)
 

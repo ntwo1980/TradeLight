@@ -61,6 +61,10 @@ class HexoGenerator:
     def __str__(self):
         return os.linesep.join(self.lines)
 
+    def write(self):
+        with open(self.hexo_file_path, 'w') as f:
+            f.write(str(self))
+
 class HexoGeneratorTest(unittest.TestCase):
     @classmethod
     def setUpClass(self):

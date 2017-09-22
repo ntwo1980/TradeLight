@@ -50,7 +50,7 @@ class HexoGenerator:
         self.empty_line()
 
     def img(self, url):
-        self.lines.append()'![]({})'.format(url))
+        self.lines.append('![]({})'.format(url))
         self.empty_line()
 
     def data_frame(self, df, headers = None, float_format='%.2g'):

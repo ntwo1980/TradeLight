@@ -3,6 +3,7 @@ import json
 import datetime
 import subprocess
 import shlex
+import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
@@ -34,11 +35,57 @@ blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
 
+jq = None
+
+def login_jointquant():
+    global jq
+    script_dir = os.path.dirname(__file__)
+    config_file_path = os.path.join(script_dir, 'config/JoinQuant.json')
+    with open(config_file_path, 'r') as f:
+        config = json.load(f)
+
+    jq = JoinQuant.JoinQuant(config)
+    succeed, reason = jq.login()
+    if not succeed:
+        raise Exception("login failed: " + reason)
+
+def download_joinquant_files():
+    global jq
+
+    jq.fetch_file('up_down.csv', 'r_up_down.csv')
+    jq.fetch_file('weekdayly_returns.csv', 'r_weekdayly_returns.csv')
+    jq.fetch_file('weekly_returns.csv', 'r_weekly_returns.csv')
+    jq.fetch_file('monthly_returns.csv', 'r_monthly_returns.csv')
+
 def generate_blog_source():
     blog_source_path = '{}r_{}.md'.format(blog_post_path, today_str)
 
     blog_generator = HexoGenerator.HexoGenerator(blog_source_path, '每日提示-{}'.format(today_str), tags=['每日提示'])
     generate_blog_up_down(blog_generator)
+
+    blog_generator.write()
+
+def generate_montly_returns_blog_source():
+    blog_source_path = '{}r_{}.md'.format(blog_post_path, 'MonthlyReturns')
+
+    blog_generator = HexoGenerator.HexoGenerator(blog_source_path, '主要指数月回报统计'.format(today_str), tags=['数据统计'])
+    generate_blog_monthly_stat(blog_generator)
+
+    blog_generator.write()
+
+def generate_weekdayly_returns_blog_source():
+    blog_source_path = '{}r_{}.md'.format(blog_post_path, 'WeekdaylyReturns')
+
+    blog_generator = HexoGenerator.HexoGenerator(blog_source_path, '主要指数周内回报统计'.format(today_str), tags=['数据统计'])
+    generate_blog_weekdayly_stat(blog_generator)
+
+    blog_generator.write()
+
+def generate_weekly_returns_blog_source():
+    blog_source_path = '{}r_{}.md'.format(blog_post_path, 'WeeklyReturns')
+
+    blog_generator = HexoGenerator.HexoGenerator(blog_source_path, '主要指数周回报统计'.format(today_str), tags=['数据统计'])
+    generate_blog_weekly_stat(blog_generator)
 
     blog_generator.write()
 
@@ -74,11 +121,57 @@ def generate_blog_up_down(generator):
     plt.savefig(figure_path, bbox_inches='tight')
 
     generator.img('{}{}'.format(blog_upload_relative_path, figure_name))
-    #generator.data_frame(df)
+
+def generate_blog_weekdayly_stat(generator):
+    data_path = os.path.join(script_dir, 'data/r_weekdayly_returns.csv')
+
+    total_df = pd.read_csv(data_path)
+    dfs = np.array_split(total_df, len(total_df.index) / 5 )   # split whole dataframe into dataframes of individual index
+    for df in dfs:
+        generator.h3(df['index_name'].iat[0])
+        df['weekday'] = df['weekday'] + 1
+        generator.data_frame(df[['weekday', 'count', 'mean', 'min', 'max', 'positive_pct']],
+            headers=[
+                '周几', '样本数量', '平均', '最小值', '最大值', '正回报比率'
+            ])
+
+def generate_blog_weekly_stat(generator):
+    data_path = os.path.join(script_dir, 'data/r_weekly_returns.csv')
+
+    total_df = pd.read_csv(data_path)
+    dfs = np.array_split(total_df, len(total_df.index) / 53 )   # split whole dataframe into dataframes of individual index
+    for df in dfs:
+        generator.h3(df['index_name'].iat[0])
+        df['week'] = df['week']
+        generator.data_frame(df[['week', 'count', 'mean', 'min', 'max', 'positive_pct']],
+            headers=[
+                '周', '样本数量', '平均', '最小值', '最大值', '正回报比率'
+            ])
+
+def generate_blog_monthly_stat(generator):
+    data_path = os.path.join(script_dir, 'data/r_monthly_returns.csv')
+
+    total_df = pd.read_csv(data_path)
+    dfs = np.array_split(total_df, len(total_df.index) / 12 )   # split whole dataframe into dataframes of individual index
+    for df in dfs:
+        generator.h3(df['index_name'].iat[0])
+        generator.data_frame(df[['month', 'count', 'mean', 'min', 'max', 'positive_pct']],
+            headers=[
+                '月份', '样本数量', '平均', '最小值', '最大值', '正回报比率'
+            ])
+
 
 def hexo_generate():
     subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)))
 
-generate_blog_source()
+
+login_jointquant()
+download_joinquant_files()
+
+#generate_blog_source()
+generate_weekdayly_returns_blog_source()
+generate_montly_returns_blog_source()
+generate_weekly_returns_blog_source()
 
 hexo_generate()
+

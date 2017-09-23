@@ -55,12 +55,11 @@ class HexoGenerator:
 
     def data_frame(self, df, headers = None, float_format='%.2g'):
         text = os.linesep.join([
-                '|'.join(df.columns),
+                '|'.join(headers if headers else df.columns),
                 '|'.join(4 * '-' for i in df.columns),
                 df.to_csv(sep='|', index=False, header=False, float_format=float_format)
             ]).replace('|', ' | ')
         self.line(text)
-
 
     def __str__(self):
         return os.linesep.join(self.lines)

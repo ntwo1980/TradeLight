@@ -11,16 +11,17 @@ import matplotlib.pyplot as plt
 import XueQiu
 import JoinQuant
 import HexoGenerator
+import utils
 
 now = datetime.datetime.now()
 today_str = now.strftime("%Y%m%d")
 script_dir = os.path.dirname(__file__)
 ''''
-config_file_path = os.path.join(script_dir, 'config/XueQiu.json')
-with open(config_file_path, 'r') as f:
-    config = json.load(f)
+xueqiu_config_file_path = os.path.join(script_dir, 'config/XueQiu.json')
+with open(xueqiu_config_file_path, 'r') as f:
+    xueqiu_config = json.load(f)
 
-xq = XueQiu.XueQiu(config)
+xq = XueQiu.XueQiu(xueqiu_config)
 
 xq.login()
 data_file_path = os.path.join(script_dir, 'data/XueQiu_{}.csv'.format(today_str))
@@ -30,7 +31,11 @@ all_holdings = xq.fetch_all_portfolio_positions()
 all_holdings.to_csv(data_file_path)
 '''
 
-blog_path = '/home/luke/blogs/'
+app_config_file_path = os.path.join(script_dir, 'config/app.json')
+with open(app_config_file_path, 'r') as f:
+    app_config = json.load(f)
+blog_path = app_config['blogs_path']
+
 blog_source_path = os.path.join(blog_path, 'source/')
 blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
@@ -41,11 +46,11 @@ jq = None
 def login_jointquant():
     global jq
     script_dir = os.path.dirname(__file__)
-    config_file_path = os.path.join(script_dir, 'config/JoinQuant.json')
-    with open(config_file_path, 'r') as f:
-        config = json.load(f)
+    joint_quant_config_file_path = os.path.join(script_dir, 'config/JoinQuant.json')
+    with open(joint_quant_config_file_path, 'r') as f:
+        join_quant_config = json.load(f)
 
-    jq = JoinQuant.JoinQuant(config)
+    jq = JoinQuant.JoinQuant(join_quant_config)
     succeed, reason = jq.login()
     if not succeed:
         raise Exception("login failed: " + reason)
@@ -163,7 +168,11 @@ def generate_blog_monthly_stat(generator):
 
 
 def hexo_generate():
-    subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)))
+    is_windows = utils.is_windows()
+
+    subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)), shell = is_windows)
+    if is_windows:
+        subprocess.call(shlex.split('hexo deploy --cwd {}'.format(blog_path)), shell = is_windows)
 
 def check_join_quant_data_time_stamp():
     global jq
@@ -175,7 +184,7 @@ def check_join_quant_data_time_stamp():
 login_jointquant()
 
 if check_join_quant_data_time_stamp():
-    check_join_quant_data_time_stamp()
+    print('here')
     download_joinquant_files()
 
     if datetime.datetime.now().date().day % 5 == 0:
@@ -185,4 +194,3 @@ if check_join_quant_data_time_stamp():
 
     generate_blog_source()
     hexo_generate()
-

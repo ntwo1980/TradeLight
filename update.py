@@ -184,7 +184,6 @@ def check_join_quant_data_time_stamp():
 login_jointquant()
 
 if check_join_quant_data_time_stamp():
-    print('here')
     download_joinquant_files()
 
     if datetime.datetime.now().date().day % 5 == 0:

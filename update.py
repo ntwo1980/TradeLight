@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import datetime
 import subprocess
@@ -164,16 +165,24 @@ def generate_blog_monthly_stat(generator):
 def hexo_generate():
     subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)))
 
+def check_join_quant_data_time_stamp():
+    global jq
+
+    timestamp = jq.fetch_file('timestamp.txt', None)
+
+    return timestamp.decode('utf-8') == datetime.datetime.now().date().strftime('%Y-%m-%d')
 
 login_jointquant()
-download_joinquant_files()
 
-if datetime.datetime.now().date().day % 5 == 0:
-    generate_weekdayly_returns_blog_source()
-    generate_montly_returns_blog_source()
-    generate_weekly_returns_blog_source()
+if check_join_quant_data_time_stamp():
+    check_join_quant_data_time_stamp()
+    download_joinquant_files()
 
-generate_blog_source()
+    if datetime.datetime.now().date().day % 5 == 0:
+        generate_weekdayly_returns_blog_source()
+        generate_montly_returns_blog_source()
+        generate_weekly_returns_blog_source()
 
-hexo_generate()
+    generate_blog_source()
+    hexo_generate()
 

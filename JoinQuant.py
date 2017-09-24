@@ -74,11 +74,14 @@ class JoinQuant:
 
     def fetch_file(self, file_name, new_file_name):
         account_config = self.config['account']
-        file_path = os.path.join(self.data_path, new_file_name)
         rep = self.s.get("https://www.joinquant.com/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
 
-        with open(file_path, 'wb') as f:
-            f.write(rep.content)
+        if not new_file_name is None:
+            file_path = os.path.join(self.data_path, new_file_name)
+            with open(file_path, 'wb') as f:
+                f.write(rep.content)
+        else:
+            return rep.content
 
 class JoinQuantTest(unittest.TestCase):
     @classmethod

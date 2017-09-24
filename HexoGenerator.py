@@ -65,7 +65,7 @@ class HexoGenerator:
         return os.linesep.join(self.lines)
 
     def write(self):
-        with open(self.hexo_file_path, 'w') as f:
+        with open(self.hexo_file_path, 'w', encoding='utf-8') as f:
             f.write(str(self))
 
 class HexoGeneratorTest(unittest.TestCase):

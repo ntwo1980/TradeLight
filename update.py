@@ -168,10 +168,12 @@ def hexo_generate():
 login_jointquant()
 download_joinquant_files()
 
-#generate_blog_source()
-generate_weekdayly_returns_blog_source()
-generate_montly_returns_blog_source()
-generate_weekly_returns_blog_source()
+if datetime.datetime.now().date().day % 5 == 0:
+    generate_weekdayly_returns_blog_source()
+    generate_montly_returns_blog_source()
+    generate_weekly_returns_blog_source()
+
+generate_blog_source()
 
 hexo_generate()
 

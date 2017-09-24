@@ -19,7 +19,7 @@ class HexoGenerator:
         self.lines.append('date: {}'.format(self.time.strftime('%Y-%m-%d %H:%M:%S')))
         if self.tags:
             self.lines.append('tags:')
-            self.lines.append(os.linesep.join(['- {}'.format(l) for l in self.tags]))
+            self.lines.append('\n'.join(['- {}'.format(l) for l in self.tags]))
         self.lines.append('-' * 3)
         self.empty_line()
 
@@ -54,7 +54,7 @@ class HexoGenerator:
         self.empty_line()
 
     def data_frame(self, df, headers = None, float_format='%.2g'):
-        text = os.linesep.join([
+        text = '\n'.join([
                 '|'.join(headers if headers else df.columns),
                 '|'.join(4 * '-' for i in df.columns),
                 df.to_csv(sep='|', index=False, header=False, float_format=float_format)
@@ -62,7 +62,7 @@ class HexoGenerator:
         self.line(text)
 
     def __str__(self):
-        return os.linesep.join(self.lines)
+        return '\n'.join(self.lines)
 
     def write(self):
         with open(self.hexo_file_path, 'w', encoding='utf-8') as f:

@@ -16,7 +16,6 @@ class JoinQuantWeeklyStatJob(b.BlogPostGenerateJobBase):
         dfs = np.array_split(total_df, len(total_df.index) / 53 )   # split whole dataframe into dataframes of individual index
         for df in dfs:
             blog_generator.h3(df['index_name'].iat[0])
-            df['week'] = df['week']
             blog_generator.data_frame(df[['week', 'count', 'mean', 'min', 'max', 'positive_pct']],
                 headers=[
                     '周', '样本数量', '平均', '最小值', '最大值', '正回报比率'

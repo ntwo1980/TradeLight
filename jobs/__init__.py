@@ -7,6 +7,7 @@ __all__ = [
     'JoinQuantMonthlyStatJob',
     'JoinQuantWeekdaylyStatJob',
     'JoinQuantWeeklyStatJob',
+    'JoinQuantQuarterlyStatJob',
     'PostSectionGenerator',
     'UpDownPostSectionGenerator',
     'HexoGeneratorJob'

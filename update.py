@@ -1,13 +1,31 @@
 import os
 import datetime
 import json
+import argparse
+import subprocess
+import shlex
+import utils
 import JoinQuant
-import jobs.JoinQuantDownloadFilesJob
-import jobs.JoinQuantWeekdaylyStatJob
-import jobs.JoinQuantWeeklyStatJob
-import jobs.JoinQuantMonthlyStatJob
+from jobs import *
+# import jobs.JoinQuantDownloadFilesJob
+# import jobs.JoinQuantWeekdaylyStatJob
+# import jobs.JoinQuantWeeklyStatJob
+# import jobs.JoinQuantMonthlyStatJob
+# import jobs.EverydayPostJob
+# import jobs.UpDownPostSectionGenerator
 
 script_dir = os.path.dirname(__file__)
+parser = argparse.ArgumentParser()
+
+generate_parser = parser.add_argument('-g', '--generate', default='')
+args = parser.parse_args()
+if args.generate == 'all':
+    generate_all = True
+else:
+    generate_all = False
+
+now = datetime.datetime.now()
+today_str = now.strftime("%Y%m%d")
 
 ''''
 xueqiu_config_file_path = os.path.join(script_dir, 'config/XueQiu.json')
@@ -48,25 +66,44 @@ def login_jointquant():
 def check_join_quant_data_time_stamp(jq):
     timestamp = jq.fetch_file('timestamp.txt', None)
 
-    return timestamp.decode('utf-8') == datetime.datetime.now().date().strftime('%Y-%m-%d')
+    return timestamp.decode('utf-8') == now.strftime('%Y-%m-%d')
 
+def generate_everyday_blog_post():
+    section_generators = [
+        UpDownPostSectionGenerator.UpDownPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path)
+    ]
+
+    EverydayPostJob.EverydayPostJob(
+        post_path = '{}r_{}.md'.format(blog_post_path, today_str),
+        section_generators = section_generators
+    ).run()
+
+def hexo_generate():
+    is_windows = utils.is_windows()
+
+    subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)), shell = is_windows)
+    if is_windows:
+        subprocess.call(shlex.split('hexo deploy --cwd {}'.format(blog_path)), shell = is_windows)
 
 jq = login_jointquant()
 
-if check_join_quant_data_time_stamp(jq):
-    jobs.JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
+if generate_all or check_join_quant_data_time_stamp(jq):
+    JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
 
-    if datetime.datetime.now().date().day % 5 == 0:
-        jobs.JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(jq,
+    if generate_all or now.date().day % 5 == 0 :
+        JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'WeekdaylyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_weekdayly_returns.csv')).run()
-        jobs.JoinQuantWeeklyStatJob.JoinQuantWeeklyStatJob(jq,
+        JoinQuantWeeklyStatJob.JoinQuantWeeklyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'WeeklyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_weekly_returns.csv')).run()
-        jobs.JoinQuantMonthlyStatJob.JoinQuantMonthlyStatJob(jq,
+        JoinQuantMonthlyStatJob.JoinQuantMonthlyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'MonthlyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_monthly_returns.csv')).run()
 
-    generate_blog_source()
+    generate_everyday_blog_post()
     hexo_generate()
 

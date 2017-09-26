@@ -1,20 +1,16 @@
 import datetime
 import numpy as np
 import pandas as pd
-import jobs.JoinQuantJobBase as j
 import jobs.BlogPostGenerateJobBase as b
 import HexoGenerator
 
-class JoinQuantWeeklyStatJob(j.JoinQuantJobBase, b.BlogPostGenerateJobBase):
-    def __init__(self, jq, post_path, data_file_path):
-        j.JoinQuantJobBase.__init__(self, jq)
+class JoinQuantWeeklyStatJob(b.BlogPostGenerateJobBase):
+    def __init__(self, post_path, data_file_path):
         b.BlogPostGenerateJobBase.__init__(self, post_path)
         self.data_file_path = data_file_path
 
     def run(self):
-        now = datetime.datetime.now()
-        today_str = now.strftime("%Y%m%d")
-        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '主要指数周回报统计'.format(today_str), tags=['数据统计'])
+        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '主要指数周回报统计', tags=['数据统计'])
 
         total_df = pd.read_csv(self.data_file_path)
         dfs = np.array_split(total_df, len(total_df.index) / 53 )   # split whole dataframe into dataframes of individual index

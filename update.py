@@ -2,17 +2,9 @@ import os
 import datetime
 import json
 import argparse
-import subprocess
-import shlex
 import utils
 import JoinQuant
 from jobs import *
-# import jobs.JoinQuantDownloadFilesJob
-# import jobs.JoinQuantWeekdaylyStatJob
-# import jobs.JoinQuantWeeklyStatJob
-# import jobs.JoinQuantMonthlyStatJob
-# import jobs.EverydayPostJob
-# import jobs.UpDownPostSectionGenerator
 
 script_dir = os.path.dirname(__file__)
 parser = argparse.ArgumentParser()
@@ -81,13 +73,6 @@ def generate_everyday_blog_post():
         section_generators = section_generators
     ).run()
 
-def hexo_generate():
-    is_windows = utils.is_windows()
-
-    subprocess.call(shlex.split('hexo generate --cwd {}'.format(blog_path)), shell = is_windows)
-    if is_windows:
-        subprocess.call(shlex.split('hexo deploy --cwd {}'.format(blog_path)), shell = is_windows)
-
 jq = login_jointquant()
 
 if generate_all or check_join_quant_data_time_stamp(jq):
@@ -105,5 +90,6 @@ if generate_all or check_join_quant_data_time_stamp(jq):
             data_file_path = os.path.join(script_dir, 'data/r_monthly_returns.csv')).run()
 
     generate_everyday_blog_post()
-    hexo_generate()
+
+    HexoGeneratorJob.HexoGeneratorJob(blog_path).run()
 

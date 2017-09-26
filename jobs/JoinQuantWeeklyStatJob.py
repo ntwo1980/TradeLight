@@ -10,7 +10,7 @@ class JoinQuantWeeklyStatJob(b.BlogPostGenerateJobBase):
         self.data_file_path = data_file_path
 
     def run(self):
-        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '主要指数周回报统计', tags=['数据统计'])
+        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '主要指数年内周回报统计', tags=['数据统计'])
 
         total_df = pd.read_csv(self.data_file_path)
         dfs = np.array_split(total_df, len(total_df.index) / 53 )   # split whole dataframe into dataframes of individual index

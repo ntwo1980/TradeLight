@@ -62,6 +62,8 @@ def check_join_quant_data_time_stamp(jq):
 
 def generate_everyday_blog_post():
     section_generators = [
+        HistoryPostSectionGenerator.HistoryPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/')),
         UpDownPostSectionGenerator.UpDownPostSectionGenerator(
             data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
@@ -77,8 +79,6 @@ jq = login_jointquant()
 
 if generate_all or check_join_quant_data_time_stamp(jq):
     JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
-
-    generate_everyday_blog_post()
 
     if generate_all or now.date().day % 5 == 0 :
         JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
@@ -96,6 +96,8 @@ if generate_all or check_join_quant_data_time_stamp(jq):
         JoinQuantQuarterlyStatJob.JoinQuantQuarterlyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'QuarterlyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_quarterly_returns.csv')).run()
+
+    generate_everyday_blog_post()
 
     HexoGeneratorJob.HexoGeneratorJob(blog_path).run()
 

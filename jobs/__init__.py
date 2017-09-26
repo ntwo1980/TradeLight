@@ -11,5 +11,6 @@ __all__ = [
     'JoinQuantQuarterlyStatJob',
     'PostSectionGenerator',
     'UpDownPostSectionGenerator',
+    'HistoryPostSectionGenerator',
     'HexoGeneratorJob'
 ]

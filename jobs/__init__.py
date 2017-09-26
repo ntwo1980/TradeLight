@@ -5,6 +5,7 @@ __all__ = [
     'JoinQuantDownloadFilesJob',
     'JoinQuantJobBase',
     'JoinQuantMonthlyStatJob',
+    'JoinQuantMonthweeklyStatJob',
     'JoinQuantWeekdaylyStatJob',
     'JoinQuantWeeklyStatJob',
     'JoinQuantQuarterlyStatJob',

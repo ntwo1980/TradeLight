@@ -88,6 +88,9 @@ if generate_all or check_join_quant_data_time_stamp(jq):
         JoinQuantMonthlyStatJob.JoinQuantMonthlyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'MonthlyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_monthly_returns.csv')).run()
+        JoinQuantMonthweeklyStatJob.JoinQuantMonthweeklyStatJob(
+            post_path = '{}r_{}.md'.format(blog_post_path, 'MonthweeklyReturns'),
+            data_file_path = os.path.join(script_dir, 'data/r_monthweekly_returns.csv')).run()
         JoinQuantQuarterlyStatJob.JoinQuantQuarterlyStatJob(
             post_path = '{}r_{}.md'.format(blog_post_path, 'QuarterlyReturns'),
             data_file_path = os.path.join(script_dir, 'data/r_quarterly_returns.csv')).run()

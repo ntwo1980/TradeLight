@@ -39,6 +39,7 @@ with open(app_config_file_path, 'r') as f:
     app_config = json.load(f)
 blog_path = app_config['blogs_path']
 blog_source_path = os.path.join(blog_path, 'source/')
+blog_page_path = blog_source_path
 blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
@@ -78,23 +79,23 @@ def generate_everyday_blog_post():
 jq = login_jointquant()
 
 if generate_all or check_join_quant_data_time_stamp(jq):
-    JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
+    # JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
 
     if generate_all or now.date().day % 5 == 0 :
         JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
-            post_path = '{}r_{}.md'.format(blog_post_path, 'WeekdaylyReturns'),
+            post_path = os.path.join(blog_page_path, 'r_WeekdaylyReturns/', 'index.md'),
             data_file_path = os.path.join(script_dir, 'data/r_weekdayly_returns.csv')).run()
         JoinQuantWeeklyStatJob.JoinQuantWeeklyStatJob(
-            post_path = '{}r_{}.md'.format(blog_post_path, 'WeeklyReturns'),
+            post_path = os.path.join(blog_page_path, 'r_WeeklyReturns/', 'index.md'),
             data_file_path = os.path.join(script_dir, 'data/r_weekly_returns.csv')).run()
         JoinQuantMonthlyStatJob.JoinQuantMonthlyStatJob(
-            post_path = '{}r_{}.md'.format(blog_post_path, 'MonthlyReturns'),
+            post_path = os.path.join(blog_page_path, 'r_MonthlyReturns/', 'index.md'),
             data_file_path = os.path.join(script_dir, 'data/r_monthly_returns.csv')).run()
         JoinQuantMonthweeklyStatJob.JoinQuantMonthweeklyStatJob(
-            post_path = '{}r_{}.md'.format(blog_post_path, 'MonthweeklyReturns'),
+            post_path = os.path.join(blog_page_path, 'r_MonthweeklyReturns/', 'index.md'),
             data_file_path = os.path.join(script_dir, 'data/r_monthweekly_returns.csv')).run()
         JoinQuantQuarterlyStatJob.JoinQuantQuarterlyStatJob(
-            post_path = '{}r_{}.md'.format(blog_post_path, 'QuarterlyReturns'),
+            post_path = os.path.join(blog_page_path, 'r_QuarterlyReturns/', 'index.md'),
             data_file_path = os.path.join(script_dir, 'data/r_quarterly_returns.csv')).run()
 
     generate_everyday_blog_post()

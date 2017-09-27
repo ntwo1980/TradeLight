@@ -16,6 +16,9 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
         # data_path = os.path.join(script_dir, 'data/r_up_down.csv')
 
         df = pd.read_csv(self.data_file_path, index_col='date', parse_dates=True)
+        if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:
+            df = df.ix[:-1,:]
+
         blog_generator.line('五日内创一个月新低比例{:.2f}%, 五日内创一个月新高比例{:.2f}%。股价低于一个月前股价95%比例{:.2f}%，股价高于一个前股价95%比例{:.2f}。'
                     .format(df['low'][-1], df['high'][-1], df['down'][-1], df['up'][-1]))
 

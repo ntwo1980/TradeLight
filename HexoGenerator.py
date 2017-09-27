@@ -53,6 +53,9 @@ class HexoGenerator:
         self.lines.append('![]({})'.format(url))
         self.empty_line()
 
+    def get_url_str(self, title, url):
+        return '[{}]({})'.format(title, url)
+
     def data_frame(self, df, headers = None, float_format='%.2g'):
         text = '\n'.join([
                 '|'.join(headers if headers else df.columns),

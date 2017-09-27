@@ -29,7 +29,8 @@ class HistoryPostSectionGenerator(p.PostSectionGenerator):
         df = df[(df['quarter']==quarter) | (df['quarter']== next_quarter)]
         df = df[df['index'].isin(self.display_indexes)]
         # df.sort_values('index', inplace = True)
-        blog_generator.h4('季度回报')
+        # blog_generator.h4('季度回报')
+        blog_generator.h4(blog_generator.get_url_str('季度回报', '/r_QuarterlyReturns/'))
         blog_generator.data_frame(df[['quarter', 'index_name', 'count', 'mean', 'min', 'max', 'positive_pct']],
             headers=[
                 '季度', '指数', '样本数量', '平均', '最小值', '最大值', '正回报比率'
@@ -46,7 +47,7 @@ class HistoryPostSectionGenerator(p.PostSectionGenerator):
         df = df[(df['month']==month) | (df['month']== next_month)]
         df = df[df['index'].isin(self.display_indexes)]
 
-        blog_generator.h4('月回报')
+        blog_generator.h4(blog_generator.get_url_str('月回报', '/r_MonthlyReturns/'))
         blog_generator.data_frame(df[['month', 'index_name', 'count', 'mean', 'min', 'max', 'positive_pct']],
             headers=[
                 '月', '指数', '样本数量', '平均', '最小值', '最大值', '正回报比率'
@@ -63,7 +64,7 @@ class HistoryPostSectionGenerator(p.PostSectionGenerator):
         df = df[(df['week']==week) | (df['week']== next_week)]
         df = df[df['index'].isin(self.display_indexes)]
 
-        blog_generator.h4('年内周回报')
+        blog_generator.h4(blog_generator.get_url_str('年内周回报', '/r_WeeklyReturns/'))
         blog_generator.data_frame(df[['week', 'index_name', 'count', 'mean', 'min', 'max', 'positive_pct']],
             headers=[
                 '周', '指数', '样本数量', '平均', '最小值', '最大值', '正回报比率'
@@ -81,7 +82,7 @@ class HistoryPostSectionGenerator(p.PostSectionGenerator):
         df = df[(df['weekday']==weekday) | (df['weekday']== next_weekday)]
         df = df[df['index'].isin(self.display_indexes)]
 
-        blog_generator.h4('周内日回报')
+        blog_generator.h4(blog_generator.get_url_str('周内日回报', '/r_WeekdaylyReturns/'))
         blog_generator.data_frame(df[['weekday', 'index_name', 'count', 'mean', 'min', 'max', 'positive_pct']],
             headers=[
                 '星期', '指数', '样本数量', '平均', '最小值', '最大值', '正回报比率'

@@ -65,6 +65,11 @@ class XueQiu:
 
         return portfolios[~portfolios.index.isin(exclude_portfolios)]
 
+    def get_portfolios_from_csv(self, csv_file_path):
+        df = pd.read_csv(csv_file_path)
+
+        return df
+
     def fetch_all_portfolio_positions(self):
         portfolios = self.fetch_all_portfolios()
         holdings = self.fetch_portfolios_holdings(portfolios.index)
@@ -145,7 +150,7 @@ class XueQiuTest(unittest.TestCase):
         self.xq.fetch_all_portfolios()
 
     def test_fetch_all_portfolio_positions(self):
-        print(self.xq.fetch_all_portfolio_positions())
+        self.xq.fetch_all_portfolio_positions()
 
 if __name__ == '__main__':
     unittest.main()

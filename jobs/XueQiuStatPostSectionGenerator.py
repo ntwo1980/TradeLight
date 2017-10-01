@@ -22,6 +22,10 @@ class XueQiuStatPostSectionGenerator(p.PostSectionGenerator):
         df_stat = df_stat.join(df[['code', 'name']].set_index('code').groupby(level=0).first())
         df_stat.sort_values(['portfolios_count', 'avg_weight'], ascending=False, inplace=True)
         df_stat.reset_index(inplace=True)
+        df_stat['code'] = df_stat['code'].str.slice(2, 8)
+        df_stat['code'] = df_stat['code'].map(lambda x: blog_generator.get_url_str(x, '../../r_stocks/?code=' + x))
+
+        blog_generator.h4(blog_generator.get_url_str('季度回报', '/r_QuarterlyReturns/'))
 
         blog_generator.data_frame(df_stat[['code', 'name', 'portfolios_count',  'avg_weight']],
             headers=[

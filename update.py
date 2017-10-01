@@ -8,6 +8,7 @@ import JoinQuant
 import XueQiu
 from jobs import *
 
+is_windows = utils.is_windows()
 script_dir = os.path.dirname(__file__)
 parser = argparse.ArgumentParser()
 
@@ -43,7 +44,7 @@ blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
 blog_public_upload_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:])
-blog_public_upload_stocks_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:], 'stocks')
+blog_public_upload_stocks_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:], 'r_stocks')
 
 if not os.path.exists(blog_public_upload_stocks_absolute_path):
     os.makedirs(blog_public_upload_stocks_absolute_path)
@@ -135,9 +136,8 @@ if generate_xueqiu and not only_local_file:
     portfolios = xq.get_portfolios_from_csv(portfolios_csv_path)
     XueQiuFetchHoldingsJob.XueQiuFetchHoldingsJob(xq, holdings_csv_path, portfolios['code']).run()
 
-'''
 if generate_joinquant or generate_xueqiu:
     generate_everyday_blog_post()
 
-    HexoGeneratorJob.HexoGeneratorJob(blog_path).run()
-'''
+    # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()
+    HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()

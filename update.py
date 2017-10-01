@@ -12,16 +12,22 @@ script_dir = os.path.dirname(__file__)
 parser = argparse.ArgumentParser()
 
 generate_parser = parser.add_argument('-t', '--type', default='jx', nargs='?')
+generate_parser = parser.add_argument('-l', '--local', default='', nargs='?')
 args = parser.parse_args()
 
 generate_xueqiu = False
 generate_joinquant = False
+only_local_file = False
 
 if 'x' in args.type:
     generate_xueqiu = True
 
 if 'j' in args.type:
     generate_joinquant = True
+
+
+if args.local is None:
+    only_local_file = True
 
 now = datetime.datetime.now()
 today_str = now.strftime("%Y%m%d")
@@ -31,10 +37,16 @@ with open(app_config_file_path, 'r') as f:
     app_config = json.load(f)
 blog_path = app_config['blogs_path']
 blog_source_path = os.path.join(blog_path, 'source/')
+blog_public_path = os.path.join(blog_path, 'public/')
 blog_page_path = blog_source_path
 blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
+blog_public_upload_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:])
+blog_public_upload_stocks_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:], 'stocks')
+
+if not os.path.exists(blog_public_upload_stocks_absolute_path):
+    os.makedirs(blog_public_upload_stocks_absolute_path)
 
 def login_jointquant():
     joint_quant_config_file_path = os.path.join(script_dir, 'config/JoinQuant.json')
@@ -88,10 +100,11 @@ def generate_everyday_blog_post():
 
 
 if generate_joinquant:
-    jq = login_jointquant()
+    if not only_local_file:
+        jq = login_jointquant()
 
-    if check_join_quant_data_time_stamp(jq):
-        JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
+        if check_join_quant_data_time_stamp(jq):
+            JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
 
     JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
         post_path = os.path.join(blog_page_path, 'r_WeekdaylyReturns/', 'index.md'),
@@ -108,8 +121,11 @@ if generate_joinquant:
     JoinQuantQuarterlyStatJob.JoinQuantQuarterlyStatJob(
         post_path = os.path.join(blog_page_path, 'r_QuarterlyReturns/', 'index.md'),
         data_file_path = os.path.join(script_dir, 'data/r_quarterly_returns.csv')).run()
+    JoinQuantStocksJsonDataJob.JoinQuantStocksJsonDataJob(
+        json_dir = blog_public_upload_stocks_absolute_path,
+        data_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
 
-if generate_xueqiu:
+if generate_xueqiu and not only_local_file:
     xq = login_xueqiu()
 
     portfolios_csv_path = os.path.join(script_dir, 'data/r_xq_portfolios.csv')
@@ -119,8 +135,9 @@ if generate_xueqiu:
     portfolios = xq.get_portfolios_from_csv(portfolios_csv_path)
     XueQiuFetchHoldingsJob.XueQiuFetchHoldingsJob(xq, holdings_csv_path, portfolios['code']).run()
 
+'''
 if generate_joinquant or generate_xueqiu:
-        generate_everyday_blog_post()
+    generate_everyday_blog_post()
 
-        HexoGeneratorJob.HexoGeneratorJob(blog_path).run()
-
+    HexoGeneratorJob.HexoGeneratorJob(blog_path).run()
+'''

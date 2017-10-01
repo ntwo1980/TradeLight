@@ -8,3 +8,4 @@ class JoinQuantDownloadFilesJob(j.JoinQuantJobBase):
         self.jq.fetch_file('quarterly_returns.csv', 'r_quarterly_returns.csv')
         self.jq.fetch_file('monthly_returns.csv', 'r_monthly_returns.csv')
         self.jq.fetch_file('monthweekly_returns.csv', 'r_monthweekly_returns.csv')
+        self.jq.fetch_file('stocks.csv', 'r_stocks.csv')

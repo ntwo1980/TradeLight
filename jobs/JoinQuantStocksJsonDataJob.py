@@ -21,7 +21,11 @@ class JoinQuantStocksJsonDataJob(j.JobBase):
         df_stocks['pb_r'] = df_stocks['pb'].where(df_stocks['pb'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
         df_stocks['ps_r'] = df_stocks['ps'].where(df_stocks['ps'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
         df_stocks['pcf_r'] = df_stocks['pcf'].where(df_stocks['pcf'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
+        df_stocks['itr_r'] = df_stocks['itr'].rank(ascending = True, method = 'max', pct=True)
+        df_stocks['ir_r'] = df_stocks['ir'].rank(ascending = True, method = 'max', pct=True)
+        df_stocks['inp_r'] = df_stocks['inp'].rank(ascending = True, method = 'max', pct=True)
         df_stocks['iop_r'] = df_stocks['iop'].rank(ascending = True, method = 'max', pct=True)
+        df_stocks['inps_r'] = df_stocks['inps'].rank(ascending = True, method = 'max', pct=True)
 
         for _, s in df_stocks.iterrows():
             json_file = os.path.join(self.json_dir, '{}.json'.format(s['code']))

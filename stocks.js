@@ -41,26 +41,43 @@
             '</table>'].join('')).appendTo(postBody);
 
         var techIndicators = [
-            ['close', '收盘价', ''],
-            ['close_count', '250日内交易日数量', ''],
-            ['ma42', '42日均线', function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma42']) / stock['ma42']) * 100) + '%' }],
-            ['ma120', '120日均线', function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma120']) / stock['ma120']) * 100) + '%' }],
-            ['ma250', '250日均线', function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma250']) / stock['ma250']) * 100) + '%' }],
-            ['max10', '10内最高价', function(stock){ return '收盘价低于最高价' + toDecimal(((stock['max10'] - stock['close']) / stock['max10']) * 100) + '%' }],
-            ['min10', '10内最低价', function(stock){ return '收盘价高于最低价' + toDecimal(((stock['close'] - stock['min10']) / stock['min10']) * 100) + '%' }],
-            ['atr10', 'ATR10', function(stock){ return '最高价下跌<span style="font-size:150%; padding: 0 5px;">' + toDecimal((stock['max10'] - stock['close']) / stock['atr10']) + '</span>个atr10' }],
-            ['l_slop', '22日EMA斜率', function(stock){ return stock['l_pvalue'] < 0.001 && stock['l_stderror'] < 7 ? '' : '无效' }],
-            ['l_pvalue', '22日EMA斜率pvalue', ''],
-            ['l_stderror', '22日EMA斜率stderror', '']
+            ['close', '收盘价', toDecimal, ''],
+            ['ma42', '42日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma42']) / stock['ma42']) * 100) + '%' }],
+            ['ma120', '120日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma120']) / stock['ma120']) * 100) + '%' }],
+            ['ma250', '250日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma250']) / stock['ma250']) * 100) + '%' }],
+            ['max10', '10内最高价', toDecimal, function(stock){ return stock['max10'] === stock['close'] ? '新高' : '收盘价低于最高价' + toDecimal(((stock['max10'] - stock['close']) / stock['max10']) * 100) + '%' }],
+            ['min10', '10内最低价', toDecimal, function(stock){ return stock['min10'] === stock['close'] ? '新低' : '收盘价高于最低价' + toDecimal(((stock['close'] - stock['min10']) / stock['min10']) * 100) + '%' }],
+            [function(stock){ return (stock['max10'] / stock['min10']) - 1 }, '最高价高于最低价（%）', toDecimal, ''],
+            ['atr10', 'ATR10', toDecimal,
+                function(stock){
+                    var highVsLow = (stock['max10'] / stock['min10']) - 1;
+
+                    if(stock['max10'] === stock['close']) return '新高';
+
+                    return '最高价下跌' +
+                        (highVsLow < 0.05 ? '' : '<span style="font-size:150%; padding: 0 5px;">') +
+                        toDecimal((stock['max10'] - stock['close']) / stock['atr10']) +
+                        (highVsLow < 0.05 ? '' : '</span>') + '个atr10';
+                }],
+            ['l_slop', '22日EMA斜率', toDecimal, function(stock){ return stock['l_pvalue'] < 0.001 && stock['l_stderror'] < 7 ? '' : '无效' }],
+            ['l_pvalue', '22日EMA斜率pvalue', undefined, ''],
+            ['l_stderror', '22日EMA斜率stderror', undefined, '']
         ];
 
 
         $($.map(techIndicators, function(indicator){
+            var indicatorName = indicator[1],
+                indicatorValue = typeof indicator[0] === 'function' ? indicator[0](stock) : stock[indicator[0]],
+                indicatorRemark = typeof indicator[3] === 'function' ? indicator[3](stock) : indicator[3];
+
+            if(indicator[2])
+                indicatorValue = indicator[2](indicatorValue);
+
             return [
                 '<tr>',
-                    '<td>', indicator[1], '</td>',
-                    '<td>', toDecimal(stock[indicator[0]]), '</td>',
-                    '<td>', typeof indicator[2] === 'function' ? indicator[2](stock) : indicator[2], '</td>',
+                    '<td>', indicatorName, '</td>',
+                    '<td>', indicatorValue, '</td>',
+                    '<td>', indicatorRemark, '</td>',
                 '</tr>',
             ].join('');
         }).join('')).appendTo(techTable)

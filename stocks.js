@@ -47,7 +47,7 @@
             ['ma250', '250日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma250']) / stock['ma250']) * 100) + '%' }],
             ['max10', '10内最高价', toDecimal, function(stock){ return stock['max10'] === stock['close'] ? '新高' : '收盘价低于最高价' + toDecimal(((stock['max10'] - stock['close']) / stock['max10']) * 100) + '%' }],
             ['min10', '10内最低价', toDecimal, function(stock){ return stock['min10'] === stock['close'] ? '新低' : '收盘价高于最低价' + toDecimal(((stock['close'] - stock['min10']) / stock['min10']) * 100) + '%' }],
-            [function(stock){ return (stock['max10'] / stock['min10']) - 1 }, '最高价高于最低价（%）', toDecimal, ''],
+            [function(stock){ return (stock['max10'] / stock['min10'] - 1) * 100; }, '最高价高于最低价（%）', toDecimal, ''],
             ['atr10', 'ATR10', toDecimal,
                 function(stock){
                     var highVsLow = (stock['max10'] / stock['min10']) - 1;

@@ -91,6 +91,12 @@ def generate_everyday_blog_post():
             data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path),
+        XueQiuWatchesPostSectionGenerator.XueQiuWatchesPostSectionGenerator(
+            watches_data_files=[
+                ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')]
+            ],
+            stocks_file_path = os.path.join(script_dir, 'data/r_stocks.csv')
+        ),
         XueQiuStatPostSectionGenerator.XueQiuStatPostSectionGenerator(
             holdings_data_file_path=os.path.join(script_dir, 'data/r_xq_holdings_{}.csv'.format(today_str)))
     ]
@@ -133,9 +139,12 @@ if generate_xueqiu and not only_local_file:
     portfolios_csv_path = os.path.join(script_dir, 'data/r_xq_portfolios.csv')
     XueQiuFetchPortfoliosJob.XueQiuFetchPortfoliosJob(xq, portfolios_csv_path).run()
 
-    holdings_csv_path = os.path.join(script_dir, 'data/r_xq_holdings.csv')
+    holdings_csv_path = os.path.join(script_dir, 'data/r_xq_holdings_{}.csv'.format(today_str))
     portfolios = xq.get_portfolios_from_csv(portfolios_csv_path)
     XueQiuFetchHoldingsJob.XueQiuFetchHoldingsJob(xq, holdings_csv_path, portfolios['code']).run()
+
+    watches_csv_path = os.path.join(script_dir, 'data/r_xq_watches.csv')
+    XueQiuFetchWatchesJob.XueQiuFetchWatchesJob(xq, watches_csv_path).run()
 
 if generate_joinquant or generate_xueqiu:
     generate_everyday_blog_post()

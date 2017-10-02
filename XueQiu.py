@@ -12,6 +12,7 @@ class XueQiu:
     TRANSACTION_API = 'https://xueqiu.com/cubes/rebalancing/history.json'
     PORTFOLIO_URL = 'https://xueqiu.com/p/'
     ALL_PORTFOLIOS_URL= 'https://xueqiu.com/v4/stock/portfolio/stocks.json?size=1000&category=1&type=1'
+    MY_WATCHES_URL= 'https://xueqiu.com/v4/stock/portfolio/stocks.json?size=1000&category=2&type=1'
     WEB_REFERER = 'https://www.xueqiu.com'
     WEB_ORIGIN = 'https://xueqiu.com'
 
@@ -64,6 +65,19 @@ class XueQiu:
         exclude_portfolios = self.config['exclude_portfolios']
 
         return portfolios[~portfolios.index.isin(exclude_portfolios)]
+
+
+    def fetch_my_watches(self):
+        r = self.s.get(self.MY_WATCHES_URL)
+
+        portfolios = json.loads(r.text)['stocks']
+        portfolio_codes = [p['code'] for p in portfolios]
+        portfolio_names = [p['stockName'] for p in portfolios]
+
+        portfolios = pd.DataFrame({"code": portfolio_codes, "name": portfolio_names})
+        portfolios.set_index('code', inplace=True)
+
+        return portfolios
 
     def get_portfolios_from_csv(self, csv_file_path):
         df = pd.read_csv(csv_file_path)

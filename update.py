@@ -31,7 +31,8 @@ if args.local is None:
     only_local_file = True
 
 now = datetime.datetime.now()
-today_str = now.strftime("%Y%m%d")
+# today_str = now.strftime("%Y%m%d")
+today_str = now.strftime("20170929")
 
 app_config_file_path = os.path.join(script_dir, 'config/app.json')
 with open(app_config_file_path, 'r') as f:

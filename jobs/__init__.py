@@ -19,6 +19,6 @@ __all__ = [
     'UpDownPostSectionGenerator',
     'HistoryPostSectionGenerator',
     'XueQiuStatPostSectionGenerator',
-    'XueQiuWatchesPostSectionGenerator',
+    'WatchesPostSectionGenerator',
     'HexoGeneratorJob'
 ]

@@ -49,6 +49,9 @@ class HexoGenerator:
         self.lines.append(text)
         self.empty_line()
 
+    def read_more(self):
+        self.line('<!-- more -->')
+
     def img(self, url):
         self.lines.append('![]({})'.format(url))
         self.empty_line()

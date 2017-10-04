@@ -105,6 +105,7 @@
             ['cmc', '流通市值', true],
             ['pe', '市盈率', true],
             ['pe_lyr', '静态市盈率', true],
+            ['peg', 'PEG', true],
             ['pb', '市净率', true],
             ['ps', '市销率', true],
             ['pcf', '市现率', true],

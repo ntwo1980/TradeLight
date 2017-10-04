@@ -14,9 +14,11 @@ class JoinQuantStocksJsonDataJob(j.JobBase):
         df_stocks = pd.read_csv(self.data_file_path)
         df_stocks['code'] = df_stocks['code'].str.slice(0, 6)
 
+        df_stocks['peg'] = df_stocks['pe'] / df_stocks['iop']
         df_stocks['mc_r'] = df_stocks['mc'].rank(ascending = True, method = 'max', pct=True)
         df_stocks['cmc_r'] = df_stocks['cmc'].rank(ascending = True, method = 'max', pct=True)
         df_stocks['pe_r'] = df_stocks['pe'].where(df_stocks['pe'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
+        df_stocks['peg_r'] = df_stocks['peg'].where(((df_stocks['pe'] >=0) & (df_stocks['iop'] >=0)), 100000).rank(ascending = True, method = 'max', pct=True)
         df_stocks['pe_lyr_r'] = df_stocks['pe_lyr'].where(df_stocks['pe_lyr'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
         df_stocks['pb_r'] = df_stocks['pb'].where(df_stocks['pb'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)
         df_stocks['ps_r'] = df_stocks['ps'].where(df_stocks['ps'] >=0, 100000).rank(ascending = True, method = 'max', pct=True)

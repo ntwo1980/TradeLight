@@ -31,10 +31,6 @@ class WatchesPostSectionGenerator(p.PostSectionGenerator):
             df = df_stocks[df_stocks['code'].isin(stock_codes)]
 
             df.loc[(df['l_pvalue'] > 0.001) | (df['l_stderror'] > 7), 'l_slop'] = np.nan
-            df['above_ma42'] = (df['close'] / df['ma42'] - 1) * 100
-            df['above_min10'] = (df['close'] / df['min10'] - 1) * 100
-            df['below_max10'] = (df['max10'] / df['close'] - 1) * 100
-            df['below_max10_atr'] = (df['max10'] - df['close']) / df['atr10']
 
             filterd_names = df.loc[(df['l_slop']> 0) & (df['above_min10'] + df['below_max10'] > 5) & (df['above_min10'] < 1), 'name']
             df.loc[(df['l_slop']> 0) & (df['above_min10'] + df['below_max10'] > 5) & (df['above_min10'] < 1), 'name'] = '**' + filterd_names + ' +++**'

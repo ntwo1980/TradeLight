@@ -103,6 +103,7 @@
             '</table>'].join('')).appendTo(postBody);
 
         var fundIndicators = [
+            ['score', '评分', function(stock){ return true; }],
             ['mc', '总市值', function(stock){ return true; }],
             ['cmc', '流通市值', function(stock){ return true; }],
             ['pe', '市盈率', function(stock){ return stock['pe'] > 0 }],

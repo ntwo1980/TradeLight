@@ -15,6 +15,7 @@ __all__ = [
     'XueQiuFetchPortfoliosJob',
     'XueQiuFetchHoldingsJob',
     'XueQiuFetchWatchesJob',
+    'StocksStatJob',
     'PostSectionGenerator',
     'UpDownPostSectionGenerator',
     'HistoryPostSectionGenerator',

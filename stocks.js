@@ -89,6 +89,8 @@
 
         $('<h3>基本面</h3>').appendTo(postBody)
 
+        $('<p>数据日期：'+ stock['stat_date'] + '</p>').appendTo(postBody);
+
         var fundTable = $([
             '<table>',
                 '<thead>',
@@ -101,18 +103,18 @@
             '</table>'].join('')).appendTo(postBody);
 
         var fundIndicators = [
-            ['mc', '总市值', true],
-            ['cmc', '流通市值', true],
-            ['pe', '市盈率', true],
-            ['pe_lyr', '静态市盈率', true],
-            ['peg', 'PEG', true],
-            ['pb', '市净率', true],
-            ['ps', '市销率', true],
-            ['pcf', '市现率', true],
-            ['iop', '营业利润同比增长率', false],     // negative iop need rank
-            ['ir', '营业收入同比增长率', false],
-            ['inp', '净利润同比增长率', false],
-            ['inps', '归属母公司股东净利润同比增长率', false],
+            ['mc', '总市值', function(stock){ return true; }],
+            ['cmc', '流通市值', function(stock){ return true; }],
+            ['pe', '市盈率', function(stock){ return stock['pe'] > 0 }],
+            ['pe_lyr', '静态市盈率', function(stock){ return stock['pe_lyr'] > 0 }],
+            ['peg', 'PEG', function(stock){ return stock['pe'] > 0 && stock['iop'] > 0}],
+            ['pb', '市净率', function(stock){ return true; }],
+            ['ps', '市销率', function(stock){ return true; }],
+            ['pcf', '市现率', function(stock){ return stock['pcf'] > 0 }],
+            ['iop', '营业利润同比增长率', function(stock){ return true; }],     // negative iop need rank
+            ['ir', '营业收入同比增长率', function(stock){ return true; }],
+            ['inp', '净利润同比增长率', function(stock){ return true; }],
+            ['inps', '归属母公司股东净利润同比增长率', function(stock){ return true; }],
         ];
 
         $($.map(fundIndicators, function(indicator){
@@ -120,7 +122,7 @@
                 '<tr>',
                     '<td>', indicator[1], '</td>',
                     '<td>', toDecimal(stock[indicator[0]]), '</td>',
-                    '<td>', toDecimal(stock[indicator[0]] >=0 || !stock[indicator[0]] ? stock[indicator[0] + '_r'] : 'N/A'), '</td>',
+                    '<td>', toDecimal(indicator[2](stock) ? stock[indicator[0] + '_r'] : 'N/A'), '</td>',
                 '</tr>',
             ].join('');
         }).join('')).appendTo(fundTable)

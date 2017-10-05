@@ -42,11 +42,13 @@
 
         var techIndicators = [
             ['close', '收盘价', toDecimal, ''],
-            ['ma42', '42日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma42']) / stock['ma42']) * 100) + '%' }],
-            ['ma120', '120日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma120']) / stock['ma120']) * 100) + '%' }],
-            ['ma250', '250日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma250']) / stock['ma250']) * 100) + '%' }],
-            ['max10', '10内最高价', toDecimal, function(stock){ return stock['max10'] === stock['close'] ? '新高' : '收盘价低于最高价' + toDecimal(((stock['max10'] - stock['close']) / stock['max10']) * 100) + '%' }],
-            ['min10', '10内最低价', toDecimal, function(stock){ return stock['min10'] === stock['close'] ? '新低' : '收盘价高于最低价' + toDecimal(((stock['close'] - stock['min10']) / stock['min10']) * 100) + '%' }],
+            ['ret', '涨跌幅', toDecimal, function(stock){return '排序值：' + toDecimal(stock['ret_r']);}],
+            ['var', 'VAR', undefined, function(stock){return '排序值：' + toDecimal(stock['var_r'])}],
+            ['ma42', '42日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma42']) / stock['ma42']) * 100) + '%' ;}],
+            ['ma120', '120日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma120']) / stock['ma120']) * 100) + '%'; }],
+            ['ma250', '250日均线', toDecimal, function(stock){ return '收盘价高于均线' + toDecimal(((stock['close'] - stock['ma250']) / stock['ma250']) * 100) + '%'; }],
+            ['max10', '10内最高价', toDecimal, function(stock){ return stock['max10'] === stock['close'] ? '新高' : '收盘价低于最高价' + toDecimal(((stock['max10'] - stock['close']) / stock['max10']) * 100) + '%'; }],
+            ['min10', '10内最低价', toDecimal, function(stock){ return stock['min10'] === stock['close'] ? '新低' : '收盘价高于最低价' + toDecimal(((stock['close'] - stock['min10']) / stock['min10']) * 100) + '%'; }],
             [function(stock){ return (stock['max10'] / stock['min10'] - 1) * 100; }, '最高价高于最低价（%）', toDecimal, ''],
             ['atr10', 'ATR10', toDecimal,
                 function(stock){
@@ -59,7 +61,7 @@
                         toDecimal((stock['max10'] - stock['close']) / stock['atr10']) +
                         (highVsLow < 0.05 ? '' : '</span>') + '个atr10';
                 }],
-            ['l_slop', '22日EMA斜率', toDecimal, function(stock){ return stock['l_pvalue'] < 0.001 && stock['l_stderror'] < 7 ? '' : '无效' }],
+            ['l_slop', '22日EMA斜率', toDecimal, function(stock){ return stock['l_pvalue'] < 0.001 && stock['l_stderror'] < 7 ? '' : '无效';}],
             ['l_pvalue', '22日EMA斜率pvalue', undefined, ''],
             ['l_stderror', '22日EMA斜率stderror', undefined, '']
         ];
@@ -107,11 +109,11 @@
             ['mc', '总市值', function(stock){ return true; }],
             ['cmc', '流通市值', function(stock){ return true; }],
             ['pe', '市盈率', function(stock){ return stock['pe'] > 0 }],
-            ['pe_lyr', '静态市盈率', function(stock){ return stock['pe_lyr'] > 0 }],
-            ['peg', 'PEG', function(stock){ return stock['pe'] > 0 && stock['iop'] > 0}],
+            ['pe_lyr', '静态市盈率', function(stock){ return stock['pe_lyr'] > 0; }],
+            ['peg', 'PEG', function(stock){ return stock['pe'] > 0 && stock['iop'] > 0;}],
             ['pb', '市净率', function(stock){ return true; }],
             ['ps', '市销率', function(stock){ return true; }],
-            ['pcf', '市现率', function(stock){ return stock['pcf'] > 0 }],
+            ['pcf', '市现率', function(stock){ return stock['pcf'] > 0; }],
             ['iop', '营业利润同比增长率', function(stock){ return true; }],     // negative iop need rank
             ['ir', '营业收入同比增长率', function(stock){ return true; }],
             ['inp', '净利润同比增长率', function(stock){ return true; }],

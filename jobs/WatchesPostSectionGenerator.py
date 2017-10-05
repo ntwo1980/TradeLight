@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import jobs.PostSectionGenerator as p
 
 class WatchesPostSectionGenerator(p.PostSectionGenerator):
-    def __init__(self, watches_data_files, stocks_file_path):
-        self.watches_data_files = watches_data_files
+    def __init__(self, watches_data, stocks_file_path):
+        self.watches_data = watches_data
         self.stocks_file_path = stocks_file_path
 
     def generate(self, blog_generator):
@@ -16,9 +16,12 @@ class WatchesPostSectionGenerator(p.PostSectionGenerator):
 
         blog_generator.h3('关注')
 
-        for data_file in self.watches_data_files:
+        for data_file in self.watches_data:
             blog_generator.h4(data_file[0])
-            df = pd.read_csv(data_file[1])
+            if isinstance(data_file[1], str):
+                df = pd.read_csv(data_file[1])
+            else:
+                df = data_file[1]
 
             first_code = df.iat[0,0]
             if len(first_code) == 8:

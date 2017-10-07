@@ -86,9 +86,6 @@ def check_join_quant_data_time_stamp(jq):
 
 def generate_everyday_blog_post():
     stocks_file_path = os.path.join(script_dir, 'data/r_stocks.csv')
-    df_stocks = pd.read_csv(stocks_file_path)
-    df_stocks.sort_values('score', ascending=False, inplace=True)
-    df_stocks = df_stocks.ix[:100,]
 
     section_generators = [
         HistoryPostSectionGenerator.HistoryPostSectionGenerator(
@@ -100,7 +97,6 @@ def generate_everyday_blog_post():
         WatchesPostSectionGenerator.WatchesPostSectionGenerator(
             watches_data=[
                 ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')],
-                ['优质股', df_stocks],
                 ['指数成分股', os.path.join(script_dir, 'data/r_index_stocks.csv')],
             ],
             stocks_file_path = stocks_file_path
@@ -123,7 +119,9 @@ if generate_joinquant:
             JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
             #StocksStatJob.StocksStatJob(os.path.join(script_dir, 'data/r_stocks.csv')).run()
 
-    StocksStatJob.StocksStatJob(os.path.join(script_dir, 'data/r_stocks.csv')).run()
+    StocksStatJob.StocksStatJob(
+        post_path = os.path.join(blog_page_path, 'r_Stocks/', 'index.md'),
+        stocks_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
     JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
         post_path = os.path.join(blog_page_path, 'r_WeekdaylyReturns/', 'index.md'),
         data_file_path = os.path.join(script_dir, 'data/r_weekdayly_returns.csv')).run()

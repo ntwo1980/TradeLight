@@ -118,6 +118,7 @@
             ['ir', '营业收入同比增长率', function(stock){ return true; }],
             ['inp', '净利润同比增长率', function(stock){ return true; }],
             ['inps', '归属母公司股东净利润同比增长率', function(stock){ return true; }],
+            ['roic', '投入资本金回报率', function(stock){ return true; }],
         ];
 
         $($.map(fundIndicators, function(indicator){

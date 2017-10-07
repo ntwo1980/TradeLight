@@ -56,6 +56,11 @@ class HexoGenerator:
         self.lines.append('![]({})'.format(url))
         self.empty_line()
 
+    def script(self, url):
+        self.line('{% raw %}')
+        self.line('<script type="text/javascript" src="' + url +  '"></script>')
+        self.line('{% endraw %}')
+
     def get_url_str(self, title, url):
         return '[{}]({})'.format(title, url)
 

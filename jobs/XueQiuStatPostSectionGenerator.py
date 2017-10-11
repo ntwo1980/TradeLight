@@ -9,6 +9,9 @@ class XueQiuStatPostSectionGenerator(p.PostSectionGenerator):
         self.holdings_data_file_path = holdings_data_file_path
 
     def generate(self, blog_generator):
+        if not os.path.isfile(self.holdings_data_file_path):
+            return
+
         blog_generator.h3('雪球组合统计')
 
         df = pd.read_csv(self.holdings_data_file_path)

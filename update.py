@@ -100,10 +100,12 @@ def generate_everyday_blog_post():
                 ['指数成分股', os.path.join(script_dir, 'data/r_index_stocks.csv')],
             ],
             stocks_file_path = stocks_file_path
-        ),
-        XueQiuStatPostSectionGenerator.XueQiuStatPostSectionGenerator(
-            holdings_data_file_path=os.path.join(script_dir, 'data/r_xq_holdings_{}.csv'.format(today_str)))
+        )
     ]
+
+    if generate_xueqiu:
+        section_generators.append(XueQiuStatPostSectionGenerator.XueQiuStatPostSectionGenerator(
+                holdings_data_file_path=os.path.join(script_dir, 'data/r_xq_holdings_{}.csv'.format(today_str))))
 
     EverydayPostJob.EverydayPostJob(
         post_path = '{}r_{}.md'.format(blog_post_path, today_str),

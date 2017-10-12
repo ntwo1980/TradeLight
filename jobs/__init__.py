@@ -18,6 +18,7 @@ __all__ = [
     'StocksStatJob',
     'PostSectionGenerator',
     'UpDownPostSectionGenerator',
+    'AboveMaPostSectionGenerator',
     'HistoryPostSectionGenerator',
     'XueQiuStatPostSectionGenerator',
     'WatchesPostSectionGenerator',

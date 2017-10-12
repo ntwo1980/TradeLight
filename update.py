@@ -94,6 +94,10 @@ def generate_everyday_blog_post():
             data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path),
+        AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path),
         WatchesPostSectionGenerator.WatchesPostSectionGenerator(
             watches_data=[
                 ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')],

@@ -55,8 +55,9 @@ class StocksStatJob(j.JobBase):
 
         df.loc[(df['l_pvalue'] > 0.001) | (df['l_stderror'] > 7), 'l_slop'] = np.nan
 
-        filterd_names = df.loc[(df['l_slop']> 0) & (df['above_min10'] + df['below_max10'] > 5) & (df['above_min10'] < 1), 'name']
+        filterd_names = df.loc[(df['close'] > df['ma42']) & (df['l_slop']> 0) & (df['above_min10'] + df['below_max10'] > 5) & (df['above_min10'] < 1), 'name']
         df.loc[(df['close'] > df['ma42']) & (df['l_slop']> 0) & (df['above_min10'] + df['below_max10'] > 5) & (df['above_min10'] < 1), 'name'] = '**' + filterd_names + ' +++**'
+        df.loc[(df['var_r'] >= 0.8) , 'name'] = df.loc[(df['var_r'] >= 0.8) , 'name'] + ' ---'
 
         df.loc[:,'name'] = [blog_generator.get_url_str(name, 'http://finance.sina.com.cn/realstock/company/' + ('sh' if code.startswith('6') else 'sz') + code + '/nc.shtml' )
                                 for (code, name) in zip(df['code'], df['name'])]
@@ -75,8 +76,6 @@ class StocksStatJob(j.JobBase):
 
         if 0.2 < stock['var_r'] < 0.7:
             score = score + 2
-        elif stock['var_r'] > 0.8:
-            return -10
 
         if stock['pb_r'] < 0.1:
             score = score + 2

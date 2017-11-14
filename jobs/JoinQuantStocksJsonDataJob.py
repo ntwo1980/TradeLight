@@ -18,3 +18,6 @@ class JoinQuantStocksJsonDataJob(j.JobBase):
             json_file = os.path.join(self.json_dir, '{}.json'.format(s['code']))
             with open(json_file, 'w', encoding='utf-8') as f:
                 s.to_json(f, force_ascii=False)
+
+        json_file = os.path.join(self.json_dir, 'stocks.json')
+        df_stocks.to_json(json_file, encoding='utf-8')

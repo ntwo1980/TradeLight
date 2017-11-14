@@ -40,12 +40,14 @@
     }
 
     window.onload = function(){
-       loadjscssfile('../../lib/stocks/all_stocks.js', 'js');
-       $('#stocks').DataTable({
-            ajax: {
-                url: '../uploads/r_stocks/stocks.json',
-                dataSrc: 'data'
-            }
-        });
+        $.getScript( "../../lib/stocks/all_stocks.js" )
+        .done(function( script, textStatus ) {
+            $('#stocks').DataTable({
+                ajax: {
+                    url: '../uploads/r_stocks/stocks.json',
+                    dataSrc: 'data'
+                }
+            });
+        })
     };
 })();

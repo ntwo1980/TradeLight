@@ -40,7 +40,7 @@
     }
 
     window.onload = function(){
-        $.getScript( "../../lib/stocks/all_stocks.js" )
+        $.getScript( "../../lib/stocks/jquery.dataTables.js" )
         .done(function( script, textStatus ) {
             $('#stocks').DataTable({
                 ajax: {

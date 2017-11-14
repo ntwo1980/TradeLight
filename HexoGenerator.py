@@ -64,7 +64,7 @@ class HexoGenerator:
     def css(self, url):
         self.raw('<link rel="Stylesheet" href="' + url + '" type="text/css" />')
 
-    def script(self, url):
+    def js(self, url):
         self.raw('<script type="text/javascript" src="' + url +  '"></script>')
 
     def get_url_str(self, title, url):

@@ -58,7 +58,7 @@ class HexoGenerator:
 
     def css(self, url):
         self.line('{% raw %}')
-        self.line('<link rel="Stylesheet" href="' + url + ''" type="text/css" />')
+        self.line('<link rel="Stylesheet" href="' + url + '" type="text/css" />')
         self.line('{% endraw %}')
 
     def script(self, url):

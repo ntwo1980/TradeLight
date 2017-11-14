@@ -26,15 +26,17 @@
     window.onload = function(){
         $.getScript( "../../lib/stocks/jquery.dataTables.js" )
         .done(function( script, textStatus ) {
-            $.getJSON( "../uploads/r_stocks/stocks.json")
-            .done(function(data) {
+            $('table').DataTable();
+
+            //$.getJSON( "../uploads/r_stocks/stocks.json")
+            //.done(function(data) {
                 //$('#stocks').DataTable({
                     //ajax: {
                         //url: ''
                     //}
                 //});
-                console.log( data );
-            })
+                //console.log( data );
+            //})
 
         })
     };

@@ -50,7 +50,8 @@ class StocksStatJob(j.JobBase):
 
     def generate_post(self, df):
         blog_generator = HexoGenerator.HexoGenerator(self.post_path, '所有股票多因子排序', tags=['数据统计'])
-        blog_generator.css('../../lib/stocks/jquery.dataTables.css')
+
+        '''
         df['code'] = df['code'].str.slice(0, 6)
         df.sort_values('score', ascending=False, inplace=True)
 
@@ -69,8 +70,14 @@ class StocksStatJob(j.JobBase):
             headers=[
                 '代码', '名称', '得分', '斜率', '高于42日均线', '高于10日低价', '低于10日高价', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速'
             ])
+        '''
 
-        blog_generator.css('../../lib/stocks/jquery.dataTables.js')
+        blog_generator.css('../../lib/stocks/jquery.dataTables.css')
+        blog_generator.js('../../lib/stocks/jquery.dataTables.js')
+        blog_generator.js('../../lib/stocks/all_stocks.js')
+
+        blog_generator.raw('<table id="stocks" class="display" cellspacing="0" width="100%">')
+
         blog_generator.write()
 
     def rate_stock(self, stock):

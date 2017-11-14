@@ -26,11 +26,16 @@
     window.onload = function(){
         $.getScript( "../../lib/stocks/jquery.dataTables.js" )
         .done(function( script, textStatus ) {
-            $('#stocks').DataTable({
-                ajax: {
-                    url: '../uploads/r_stocks/stocks.json'
-                }
-            });
+            $.getJSON( "../uploads/r_stocks/stocks.json")
+            .done(function(data) {
+                //$('#stocks').DataTable({
+                    //ajax: {
+                        //url: ''
+                    //}
+                //});
+                console.log( data );
+            })
+
         })
     };
 })();

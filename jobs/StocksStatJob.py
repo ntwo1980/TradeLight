@@ -73,7 +73,6 @@ class StocksStatJob(j.JobBase):
         '''
 
         blog_generator.css('../../lib/stocks/jquery.dataTables.css')
-        blog_generator.js('../../lib/stocks/jquery.dataTables.js')
         blog_generator.js('../../lib/stocks/all_stocks.js')
 
         blog_generator.raw('<table id="stocks" class="display" cellspacing="0" width="100%">')

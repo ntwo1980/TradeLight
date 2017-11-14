@@ -40,7 +40,7 @@
     }
 
     window.onload = function(){
-       loadjscssfile('jquery.dataTables.js', 'js');
+       loadjscssfile('../../lib/stocks/all_stocks.js', 'js');
        $('#stocks').DataTable({
             ajax: {
                 url: '../uploads/r_stocks/stocks.json',

@@ -52,7 +52,7 @@ class StocksStatJob(j.JobBase):
         blog_generator = HexoGenerator.HexoGenerator(self.post_path, '所有股票多因子排序', tags=['数据统计'])
 
         df['code'] = df['code'].str.slice(0, 6)
-        df.sort_values('score', ascending=False, inplace=True)
+        df.sort_values(by=['score', 'l_slop'], ascending=False, inplace=True)
 
         df.loc[(df['l_pvalue'] > 0.001) | (df['l_stderror'] > 7), 'l_slop'] = np.nan
 

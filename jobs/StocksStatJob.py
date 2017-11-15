@@ -70,7 +70,7 @@ class StocksStatJob(j.JobBase):
                 '代码', '名称', '得分', '斜率', '高于42日均线', '高于10日低价', '低于10日高价', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速'
             ])
 
-        blog_generator.css('../../lib/stocks/dataTables.css')
+        blog_generator.css('../../lib/stocks/datatables.css')
         blog_generator.js('../../lib/stocks/all_stocks.js')
 
         blog_generator.write()

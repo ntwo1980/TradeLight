@@ -100,7 +100,7 @@ def generate_everyday_blog_post():
             blog_upload_absolute_path = blog_upload_absolute_path),
         WatchesPostSectionGenerator.WatchesPostSectionGenerator(
             watches_data=[
-                ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')],
+                # ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')],
                 ['指数成分股', os.path.join(script_dir, 'data/r_index_stocks.csv')],
             ],
             stocks_file_path = stocks_file_path

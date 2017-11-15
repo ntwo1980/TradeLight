@@ -1,4 +1,4 @@
-JoinQuantDownloadFilesJobimport jobs.JoinQuantJobBase as j
+import jobs.JoinQuantJobBase as j
 
 class JoinQuantDownloadFilesJob(j.JoinQuantJobBase):
     def run(self):

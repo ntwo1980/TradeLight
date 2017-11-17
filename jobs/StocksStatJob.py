@@ -65,7 +65,8 @@ class StocksStatJob(j.JobBase):
         df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x))
 
 
-        blog_generator.raw('<input id="hideDown" type="checkbox" /><label for="hideDown">隐藏下跌</label>')
+        blog_generator.raw('隐藏')
+        blog_generator.raw('<input id="hideDown" type="checkbox" /><label for="hideDown">斜率小于-15</label>')
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'above_min10', 'below_max10', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'pe']],
             headers=[
                 '代码', '名称', '得分', '斜率', '高于42日均线', '高于10日低价', '低于10日高价', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速', 'PE'

@@ -70,9 +70,9 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('<input id="hideDown" type="checkbox" checked /><label for="hideDown">斜率小于-15</label>')
         blog_generator.raw('<input id="hideMA" type="checkbox" checked /><label for="hideDown">低于均线</label>')
         blog_generator.raw('</div>')
-        blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'pe']],
+        blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
-                '代码', '名称', '得分', '斜率', '高于42日均线', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速', 'PE'
+                '代码', '名称', '得分', '斜率', '高于42日均线', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速排名', '盈利增速', '上期盈利增速', 'PE'
             ])
 
         blog_generator.css('../../lib/stocks/datatables.css')

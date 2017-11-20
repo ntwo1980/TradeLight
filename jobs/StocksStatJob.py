@@ -72,7 +72,7 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('</div>')
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
-                '代码', '名称', '得分', '斜率', '高于42日均线', '低于10日高价ATR', '市净率', 'ROIC', '盈利增速排名', '盈利增速', '上期盈利增速', 'PE'
+                'Code', 'Name', 'Score', 'Slop', 'MA42', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'
             ])
 
         blog_generator.css('../../lib/stocks/datatables.css')

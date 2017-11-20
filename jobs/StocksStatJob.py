@@ -69,6 +69,7 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('隐藏：')
         blog_generator.raw('<input id="hideDown" type="checkbox" checked /><label for="hideDown">斜率小于-15</label>')
         blog_generator.raw('<input id="hideMA" type="checkbox" checked /><label for="hideDown">低于均线</label>')
+        blog_generator.raw('<input id="hideIopDown" type="checkbox" checked /><label for="hideDown">盈利下降</label>')
         blog_generator.raw('</div>')
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[

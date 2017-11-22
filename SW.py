@@ -12,11 +12,12 @@ class SW:
 
     def __init__(self):
         self.s = requests.Session()
+        self.config = config
 
         self.script_dir = os.path.dirname(__file__)
         self.data_path = os.path.join(self.script_dir, 'data/')
 
-    def login(self):
+    def init(self):
         # mock headers
         headers = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
@@ -31,7 +32,6 @@ class SW:
         self.s.headers.update(headers)
         # init cookie
         self.s.get(self.WEB_INDEX)
-
 
         return True, "succeed"
 
@@ -49,9 +49,9 @@ class SWTest(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.sw = SW()
-        succeed, reason = self.sw.login()
+        succeed, reason = self.sw.init()
         if not succeed:
-            raise Exception("login failed: " + reason)
+            raise Exception("init failed: " + reason)
 
     @classmethod
     def tearDownClass(self):

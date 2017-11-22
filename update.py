@@ -13,12 +13,13 @@ is_windows = utils.is_windows()
 script_dir = os.path.dirname(__file__)
 parser = argparse.ArgumentParser()
 
-generate_parser = parser.add_argument('-t', '--type', default='jx', nargs='?')
+generate_parser = parser.add_argument('-t', '--type', default='jxs', nargs='?')
 generate_parser = parser.add_argument('-l', '--local', default='', nargs='?')
 args = parser.parse_args()
 
 generate_xueqiu = False
 generate_joinquant = False
+generate_sw = False
 only_local_file = False
 
 if 'x' in args.type:
@@ -27,6 +28,8 @@ if 'x' in args.type:
 if 'j' in args.type:
     generate_joinquant = True
 
+if 's' in args.type:
+    generate_sw = True
 
 if args.local is None:
     only_local_file = True
@@ -47,6 +50,14 @@ blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
 blog_public_upload_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:])
 blog_public_upload_stocks_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:], 'r_stocks')
+sw_files = [
+    '801001', '801002', '801003', '801005', '801010', '801020', '801030', '801040', '801050', '801060', '801070', '801080', '801090',
+    '801100', '801110', '801120', '801130', '801140', '801150', '801160', '801170', '801180', '801190',
+    '801200', '801210', '801220', '801230', '801250', '801260', '801270', '801280', '801300',
+    '801710', '801720', '801730', '801740', '801750', '801760', '801770', '801780', '801790',
+    '801811', '801812', '801813', '801821', '801822', '801823', '801831', '801832', '801833', '801853',
+    '801880', '801890', '801903', '801905'
+]
 
 if not os.path.exists(blog_public_upload_stocks_absolute_path):
     os.makedirs(blog_public_upload_stocks_absolute_path)
@@ -70,7 +81,6 @@ def login_xueqiu():
 
     xq = XueQiu.XueQiu(xueqiu_config)
 
-    xq.login()
     succeed, reason = xq.login()
 
     if not succeed:
@@ -160,7 +170,15 @@ if generate_xueqiu and not only_local_file:
     watches_csv_path = os.path.join(script_dir, 'data/r_xq_watches.csv')
     XueQiuFetchWatchesJob.XueQiuFetchWatchesJob(xq, watches_csv_path).run()
 
-if generate_joinquant or generate_xueqiu:
+if generate_sw and not only_local_file:
+    sw = SW.SW()
+    succeed, reason = sw.init()
+    if not succeed:
+        raise Exception("sw init failed: " + reason)
+
+    SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files).run()
+
+if generate_joinquant or generate_xueqiu or generate_sw:
     generate_everyday_blog_post()
 
     # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()

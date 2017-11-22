@@ -7,6 +7,7 @@ import utils
 import pandas as pd
 import JoinQuant
 import XueQiu
+import SW
 from jobs import *
 
 is_windows = utils.is_windows()

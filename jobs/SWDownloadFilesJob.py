@@ -6,5 +6,5 @@ class SWDownloadFilesJob(j.JobBase):
         self.download_files = download_files
 
     def run(self):
-        for f in download_files:
+        for f in self.download_files:
             sw.fetch_file(f, 'r_sw_' + f)

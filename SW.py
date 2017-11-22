@@ -35,7 +35,7 @@ class SW:
 
         return True, "succeed"
 
-    def fetch_file(self, file_name, new_file_name):
+    def fetch_file(self, file_name, new_file_name=None):
         rep = self.s.get("http://www.swsindex.com/downloadfiles.aspx?swindexcode={}&type=510&columnid=8890".format(file_name))
 
         if not new_file_name is None:
@@ -45,7 +45,7 @@ class SW:
         else:
             return rep.content
 
-class JoinQuantTest(unittest.TestCase):
+class SWTest(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.sw = SW()
@@ -58,7 +58,7 @@ class JoinQuantTest(unittest.TestCase):
         pass
 
     def test_downlad_file(self):
-        self.jq.fetch_file('801001')
+        self.sw.fetch_file('801001')
 
 if __name__ == '__main__':
     unittest.main()

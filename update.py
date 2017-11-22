@@ -177,7 +177,7 @@ if generate_sw and not only_local_file:
     if not succeed:
         raise Exception("sw init failed: " + reason)
 
-    SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files).run()
+    SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
 
 if generate_joinquant or generate_xueqiu or generate_sw:
     generate_everyday_blog_post()

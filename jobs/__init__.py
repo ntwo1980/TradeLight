@@ -23,5 +23,5 @@ __all__ = [
     'XueQiuStatPostSectionGenerator',
     'WatchesPostSectionGenerator',
     'HexoGeneratorJob',
-    'SWDowloadFilesJob'
+    'SWDownloadFilesJob'
 ]

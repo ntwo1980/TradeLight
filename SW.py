@@ -12,7 +12,6 @@ class SW:
 
     def __init__(self):
         self.s = requests.Session()
-        self.config = config
 
         self.script_dir = os.path.dirname(__file__)
         self.data_path = os.path.join(self.script_dir, 'data/')

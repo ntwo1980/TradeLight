@@ -8,7 +8,8 @@ class SWDownloadFilesJob(j.JobBase):
 
     def run(self):
         for f in self.download_files:
-            html = self.sw.fetch_file(f)
+            content = self.sw.fetch_file(f)
+            html = BeautifulSoup(open(content, encoding='utf8'), "lxml")
             items = []
 
             for tr in html.find_all("tr")[1:]:

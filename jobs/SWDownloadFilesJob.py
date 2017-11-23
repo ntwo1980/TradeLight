@@ -22,17 +22,17 @@ class SWDownloadFilesJob(j.JobBase):
                 dict = {'Code': children[0].string,
                     'Name': children[1].string,
                     'Date': d,
-                    'Open': children[3].string,
-                    'High': children[4].string,
-                    'Low': children[5].string,
-                    'Close': children[6].string,
-                    'Volumn': children[7].string,
-                    'Amount': children[8].string,
-                    'Change': children[9].string,
-                    'Turnover': children[10].string,
-                    'PE': children[11].string,
-                    'PB': children[12].string,
-                    'Payout': children[17].string}
+                    'Open': self.removeComma(children[3].string),
+                    'High': self.removeComma(children[4].string),
+                    'Low': self.removeComma(children[5].string),
+                    'Close': self.removeComma(children[6].string),
+                    'Volumn': self.removeComma(children[7].string),
+                    'Amount': self.removeComma(children[8].string),
+                    'Change': self.removeComma(children[9].string),
+                    'Turnover': self.removeComma(children[10].string),
+                    'PE': self.removeComma(children[11].string),
+                    'PB': self.removeComma(children[12].string),
+                    'Payout': self.removeComma(children[12].string)}
                 # Code,Name,Date,Open,High,Low,Close,Volumn,Amount,Change,Turnover,PE,PB,Payout
                 item_str = '{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format(
                             dict["Code"], dict["Name"], dict["Date"].strftime("%m/%d/%Y"), dict['Open'],
@@ -44,3 +44,9 @@ class SWDownloadFilesJob(j.JobBase):
             with open(file_path, 'w', encoding="utf-8") as file:
                 for i in reversed(items):
                     file.write(i + "\n")
+
+    def removeComma(self, s):
+        if isinstance(s, str):
+            return s.replace(',', '')
+
+        return s

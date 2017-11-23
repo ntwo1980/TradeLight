@@ -21,18 +21,20 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
             header=None, names=columns, parse_dates=True)
         for f in csv_files]
 
-        for i in range(0, 3):
-            df = dfs[i]
-            capitalization_group_name = capitalization_group_names[i]
+        for factor in ['PB', 'PE']:
+            for i in range(0, 3):
+                df = dfs[i]
+                capitalization_group_name = capitalization_group_names[i]
 
-            last_PB = df['PB'][-1]
-            blog_generator.line('{}统计. PB: {}, PB1:{}, PB3:{}, PB5:{}, PB10:{}'.format(
-                capitalization_group_name，
-                float(last_PB),
-                float(stats.percentileofscore(df['PB'][-240:], last_PB)),
-                float(stats.percentileofscore(df['PB'][-720:], last_PB)),
-                float(stats.percentileofscore(df['PB'][-1200:], last_PB)),
-                float(stats.percentileofscore(df['PB'][-2400:], last_PB))))
+                last_factor_value = df[factor].iloc[-1]
+                blog_generator.line('{}{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
+                    capitalization_group_name,
+                    factor,
+                    float(last_factor_value),
+                    float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))))
 
         '''
         if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:

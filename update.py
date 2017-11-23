@@ -136,6 +136,10 @@ if generate_joinquant:
         AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
             data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path),
+        CapitalizationPostSectionGenerator.CapitalizationPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path)
     ]
     MarketStatJob.MarketStatJob(

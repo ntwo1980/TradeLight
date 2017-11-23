@@ -23,6 +23,7 @@ __all__ = [
     'HistoryPostSectionGenerator',
     'XueQiuStatPostSectionGenerator',
     'WatchesPostSectionGenerator',
+    'CapitalizationPostSectionGenerator',
     'HexoGeneratorJob',
     'SWDownloadFilesJob'
 ]

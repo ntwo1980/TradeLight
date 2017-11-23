@@ -138,7 +138,7 @@ if generate_joinquant:
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path),
         CapitalizationPostSectionGenerator.CapitalizationPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/.csv'),
+            data_file_path = os.path.join(script_dir, 'data/'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path)
     ]

@@ -13,13 +13,12 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
         csv_files = ['801811', '801812', '801813']
         blog_generator.h3('按市值')
 
+        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         dfs = [pd.read_csv(
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
-            index_col='date', parse_dates=True
-        ) for f in csv_files]
+            header=None, names=columns, parse_dates=True)
+        for f in csv_files]
 
-        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
-        df = pd.read_csv(self.data_file_path, header=None, names=columns, parse_dates=True)
         '''
         if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:
             df = df.ix[:-1,:]

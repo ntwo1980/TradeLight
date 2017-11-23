@@ -121,5 +121,3 @@ class StocksStatJob(j.JobBase):
             score = score + 1
 
         return score
-
-

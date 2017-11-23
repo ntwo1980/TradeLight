@@ -95,39 +95,6 @@ def check_join_quant_data_time_stamp(jq):
 
     return timestamp.decode('utf-8') == now.strftime('%Y-%m-%d')
 
-def generate_everyday_blog_post():
-    stocks_file_path = os.path.join(script_dir, 'data/r_stocks.csv')
-
-    section_generators = [
-        HistoryPostSectionGenerator.HistoryPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/')),
-        UpDownPostSectionGenerator.UpDownPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
-            blog_upload_relative_path = blog_upload_relative_path,
-            blog_upload_absolute_path = blog_upload_absolute_path),
-        AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
-            blog_upload_relative_path = blog_upload_relative_path,
-            blog_upload_absolute_path = blog_upload_absolute_path),
-        WatchesPostSectionGenerator.WatchesPostSectionGenerator(
-            watches_data=[
-                # ['我的关注', os.path.join(script_dir, 'data/r_xq_watches.csv')],
-                ['指数成分股', os.path.join(script_dir, 'data/r_index_stocks.csv')],
-            ],
-            stocks_file_path = stocks_file_path
-        )
-    ]
-
-    if generate_xueqiu:
-        section_generators.append(XueQiuStatPostSectionGenerator.XueQiuStatPostSectionGenerator(
-                holdings_data_file_path=os.path.join(script_dir, 'data/r_xq_holdings_{}.csv'.format(today_str))))
-
-    EverydayPostJob.EverydayPostJob(
-        post_path = '{}r_{}.md'.format(blog_post_path, today_str),
-        section_generators = section_generators
-    ).run()
-
-
 if generate_joinquant:
     if not only_local_file:
         jq = login_jointquant()
@@ -139,6 +106,7 @@ if generate_joinquant:
     StocksStatJob.StocksStatJob(
         post_path = os.path.join(blog_page_path, 'r_Stocks/', 'index.md'),
         stocks_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
+
     JoinQuantWeekdaylyStatJob.JoinQuantWeekdaylyStatJob(
         post_path = os.path.join(blog_page_path, 'r_WeekdaylyReturns/', 'index.md'),
         data_file_path = os.path.join(script_dir, 'data/r_weekdayly_returns.csv')).run()
@@ -157,6 +125,23 @@ if generate_joinquant:
     JoinQuantStocksJsonDataJob.JoinQuantStocksJsonDataJob(
         json_dir = blog_public_upload_stocks_absolute_path,
         data_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
+
+    section_generators = [
+        HistoryPostSectionGenerator.HistoryPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/')),
+        UpDownPostSectionGenerator.UpDownPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path),
+        AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path)
+    ]
+    MarketStatJob.MarketStatJob(
+        post_path = os.path.join(blog_page_path, 'r_Market/', 'index.md'),
+        section_generators = section_generators
+    ).run()
 
 if generate_xueqiu and not only_local_file:
     xq = login_xueqiu()
@@ -179,8 +164,8 @@ if generate_sw and not only_local_file:
 
     SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
 
-if generate_joinquant or generate_xueqiu or generate_sw:
-    generate_everyday_blog_post()
+# if generate_joinquant or generate_xueqiu or generate_sw:
+    # generate_everyday_blog_post()
 
     # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()
-    HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()
+    # HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()

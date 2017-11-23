@@ -15,9 +15,6 @@ class MarketStatJob(b.BlogPostGenerateJobBase):
 
         blog_generator = HexoGenerator.HexoGenerator(self.post_path, '市场统计', tags=['数据统计'])
         for i, sg in enumerate(self.section_generators):
-            if i == 1:
-                blog_generator.read_more()
-
             sg.generate(blog_generator)
 
         blog_generator.write()

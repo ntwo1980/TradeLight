@@ -164,8 +164,8 @@ if generate_sw and not only_local_file:
 
     SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
 
-# if generate_joinquant or generate_xueqiu or generate_sw:
+if generate_joinquant or generate_xueqiu or generate_sw:
     # generate_everyday_blog_post()
 
     # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()
-    # HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()
+    HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()

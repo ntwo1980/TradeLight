@@ -1,10 +1,10 @@
 import datetime
 import numpy as np
 import pandas as pd
-import jobs.JobBase as j
+import jobs.BlogPostGenerateJobBase as b
 import HexoGenerator
 
-class MarketStatJob(j.JobBase):
+class MarketStatJob(b.BlogPostGenerateJobBase):
     def __init__(self, post_path, section_generators=None):
         b.BlogPostGenerateJobBase.__init__(self, post_path)
         self.section_generators = section_generators if isinstance(section_generators, list) else []

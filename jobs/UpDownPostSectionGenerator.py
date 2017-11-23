@@ -40,7 +40,7 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
         ax4= ax2.twinx()
         ax4.plot(df.index, df['index'], 'y', label='399001' )
 
-        figure_name = ('r_up_down_{}.png').format(today_str)
+        figure_name = ('r_up_down.png')
         figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 
         plt.savefig(figure_path, bbox_inches='tight')

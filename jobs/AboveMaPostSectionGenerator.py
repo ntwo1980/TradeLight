@@ -30,7 +30,7 @@ class AboveMaPostSectionGenerator(p.PostSectionGenerator):
         ax2= ax1.twinx()
         ax2.plot(df.index, df['index'], 'y', label='399001')
 
-        figure_name = ('r_above_ma_{}.png').format(today_str)
+        figure_name = ('r_above_ma.png')
         figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 
         plt.savefig(figure_path, bbox_inches='tight')

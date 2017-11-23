@@ -18,7 +18,8 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         dfs = [pd.read_csv(
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
-            header=None, names=columns, parse_dates=True)
+            header=None, names=columns, parse_dates=['Date'],
+            infer_datetime_format=True)
         for f in csv_files]
 
         for factor in ['PB', 'PE']:
@@ -36,25 +37,18 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
                     float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value)),
                     float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))))
 
-        '''
-        if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:
-            df = df.ix[:-1,:]
+                fig, axes = plt.subplots(1, 1, figsize=(16, 6))
 
-        blog_generator.line('收盘价高于42日均线比例{:.2f}%。'.format(df['above_ma'][-1]))
+                ax1 = axes
+                ax1.plot(df['Date'].iloc[-2400:], pd.to_numeric(df[factor].iloc[-2400:], 'coerce', 'float'), label=factor)
+                ax1.legend(loc='upper left')
+                ax1.set_ylabel(factor)
+                ax2= ax1.twinx()
+                ax2.plot(df['Date'].iloc[-2400:], pd.to_numeric(df['Close'].iloc[-2400:], 'coerce', 'float'), label='Close', color='orange')
 
-        fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+                figure_name = 'r_{}_{}.png'.format(df['Code'].iloc[0], factor)
+                figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 
-        ax1 = axes
-        ax1.plot(df.index, df['above_ma'], label='above 42 MA pct')
-        ax1.legend(loc='upper left')
-        ax1.set_ylabel('above 42 MA pct')
-        ax2= ax1.twinx()
-        ax2.plot(df.index, df['index'], 'y', label='399001')
+                plt.savefig(figure_path, bbox_inches='tight')
 
-        figure_name = ('r_above_ma.png')
-        figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
-
-        plt.savefig(figure_path, bbox_inches='tight')
-
-        blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
-        '''
+                blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))

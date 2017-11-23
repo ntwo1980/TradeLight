@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import jobs.PostSectionGenerator as p
+from scipy import stats
 
 class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
     def __init__(self, data_file_path, blog_upload_relative_path, blog_upload_absolute_path):
@@ -11,6 +12,7 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
 
     def generate(self, blog_generator):
         csv_files = ['801811', '801812', '801813']
+        capitalization_group_names = ['大盘', '中盘', '小盘']
         blog_generator.h3('按市值')
 
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
@@ -18,6 +20,19 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
             header=None, names=columns, parse_dates=True)
         for f in csv_files]
+
+        for i in range(0, 3):
+            df = dfs[i]
+            capitalization_group_name = capitalization_group_names[i]
+
+            last_PB = df['PB'][-1]
+            blog_generator.line('{}统计. PB: {}, PB1:{}, PB3:{}, PB5:{}, PB10:{}'.format(
+                capitalization_group_name，
+                float(last_PB),
+                float(stats.percentileofscore(df['PB'][-240:], last_PB)),
+                float(stats.percentileofscore(df['PB'][-720:], last_PB)),
+                float(stats.percentileofscore(df['PB'][-1200:], last_PB)),
+                float(stats.percentileofscore(df['PB'][-2400:], last_PB))))
 
         '''
         if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:

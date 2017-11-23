@@ -68,7 +68,7 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('<div id="hide" style="display:none">')
         blog_generator.raw('隐藏：')
         blog_generator.raw('<input id="hideDown" type="checkbox" checked /><label for="hideDown">斜率小于-15</label>')
-        blog_generator.raw('<input id="hideMA" type="checkbox" checked /><label for="hideDown">低于均线</label>')
+        blog_generator.raw('<input id="hideMA" type="checkbox" checked /><label for="hideMA">低于均线</label>')
         blog_generator.raw('<input id="hideIopDown" type="checkbox" checked /><label for="hideIopDown">盈利下降</label>')
         blog_generator.raw('<input id="hideGem" type="checkbox" checked /><label for="hideGem">创业板</label>')
         blog_generator.raw('</div>')

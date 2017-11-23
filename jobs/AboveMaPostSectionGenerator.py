@@ -1,4 +1,3 @@
-import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 import jobs.PostSectionGenerator as p
@@ -10,8 +9,6 @@ class AboveMaPostSectionGenerator(p.PostSectionGenerator):
         self.blog_upload_absolute_path = blog_upload_absolute_path
 
     def generate(self, blog_generator):
-        now = datetime.datetime.now()
-        today_str = now.strftime("%Y%m%d")
         blog_generator.h3('高于均线')
         # data_path = os.path.join(script_dir, 'data/r_up_down.csv')
 

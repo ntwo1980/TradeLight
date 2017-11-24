@@ -5,6 +5,6 @@ class JobBase:
         pass
 
     @staticmethod
-    def get_today_str(x):
+    def get_today_str():
         now = datetime.datetime.now()
         return now.strftime("%Y-%m-%d")

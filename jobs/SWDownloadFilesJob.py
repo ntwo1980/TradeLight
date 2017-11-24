@@ -32,7 +32,7 @@ class SWDownloadFilesJob(j.JobBase):
                     'Turnover': self.removeComma(children[10].string),
                     'PE': self.removeComma(children[11].string),
                     'PB': self.removeComma(children[12].string),
-                    'Payout': self.removeComma(children[12].string)}
+                    'Payout': self.removeComma(children[13].string)}
                 # Code,Name,Date,Open,High,Low,Close,Volumn,Amount,Change,Turnover,PE,PB,Payout
                 item_str = '{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format(
                             dict["Code"], dict["Name"], dict["Date"].strftime("%m/%d/%Y"), dict['Open'],

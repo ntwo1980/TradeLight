@@ -126,27 +126,6 @@ if generate_joinquant:
         json_dir = blog_public_upload_stocks_absolute_path,
         data_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
 
-    section_generators = [
-        HistoryPostSectionGenerator.HistoryPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/')),
-        UpDownPostSectionGenerator.UpDownPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
-            blog_upload_relative_path = blog_upload_relative_path,
-            blog_upload_absolute_path = blog_upload_absolute_path),
-        AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
-            blog_upload_relative_path = blog_upload_relative_path,
-            blog_upload_absolute_path = blog_upload_absolute_path),
-        CapitalizationPostSectionGenerator.CapitalizationPostSectionGenerator(
-            data_file_path = os.path.join(script_dir, 'data/'),
-            blog_upload_relative_path = blog_upload_relative_path,
-            blog_upload_absolute_path = blog_upload_absolute_path)
-    ]
-    MarketStatJob.MarketStatJob(
-        post_path = os.path.join(blog_page_path, 'r_Market/', 'index.md'),
-        section_generators = section_generators
-    ).run()
-
 if generate_xueqiu and not only_local_file:
     xq = login_xueqiu()
 
@@ -167,6 +146,28 @@ if generate_sw and not only_local_file:
         raise Exception("sw init failed: " + reason)
 
     SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
+
+if generate_joinquant or generate_sw:
+    section_generators = [
+        HistoryPostSectionGenerator.HistoryPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/')),
+        UpDownPostSectionGenerator.UpDownPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_up_down.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path),
+        AboveMaPostSectionGenerator.AboveMaPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path),
+        CapitalizationPostSectionGenerator.CapitalizationPostSectionGenerator(
+            data_file_path = os.path.join(script_dir, 'data/'),
+            blog_upload_relative_path = blog_upload_relative_path,
+            blog_upload_absolute_path = blog_upload_absolute_path)
+    ]
+    MarketStatJob.MarketStatJob(
+        post_path = os.path.join(blog_page_path, 'r_Market/', 'index.md'),
+        section_generators = section_generators
+    ).run()
 
 if generate_joinquant or generate_xueqiu or generate_sw:
     # generate_everyday_blog_post()

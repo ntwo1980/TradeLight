@@ -49,7 +49,7 @@ class StocksStatJob(j.JobBase):
             df.reset_index(inplace=True)
 
     def generate_post(self, df):
-        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '所有股票多因子排序', tags=['数据统计'])
+        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '所有股票多因子排序 - {}'.format(j.JobBase.get_today_str()), tags=['数据统计'])
 
         df['code'] = df['code'].str.slice(0, 6)
         df.sort_values(by=['score', 'l_slop'], ascending=False, inplace=True)

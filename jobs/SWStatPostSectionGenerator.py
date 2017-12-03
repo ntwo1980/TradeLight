@@ -46,7 +46,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         blog_generator.h3(section_name)
 
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
-        dfs = [load_csv(f) for f in csv_files]
+        dfs = [self.load_csv(f) for f in csv_files]
 
         for factor in ['PB', 'PE']:
             blog_generator.h4(factor)
@@ -70,7 +70,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         blog_generator.h3(section_name)
 
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
-        dfs = [load_csv(f) for f in csv_files]
+        dfs = [self.load_csv(f) for f in csv_files]
 
         if group_names is None:
             group_names = [df['Name'].iloc[-1] for df in dfs]
@@ -123,7 +123,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         plt.close()
 
 
-    def load_csv (self, csv_file):
+    def load_csv(self, csv_file):
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         return pd.read_csv(
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),

@@ -51,16 +51,19 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         for factor in ['PB', 'PE']:
             blog_generator.h4(factor)
 
-            df_stat = [(
-                df['Name'].iloc[-1],
-                '{:2f}'.format(float(df[factor].iloc[-1])),
-                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], float(df[factor].iloc[-1])))),
-                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], float(df[factor].iloc[-1])))),
-                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:],float(df[factor].iloc[-1])))),
-                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], float(df[factor].iloc[-1])))),
-            ) for df in dfs]
+            stat = []
+            for df in dfs:
+                last_factor_value = df[factor].iloc[-1]
+                stat.append((
+                    df['Name'].iloc[-1],
+                    '{:2f}'.format(float(last_factor_value)),
+                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value))),
+                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value))),
+                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value))),
+                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value)))
+                ))
 
-            blog_generator.data_frame(pd.data_frame(df_stat),
+            blog_generator.data_frame(pd.DataFrame(stat),
                 headers=[
                     '名称', '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
                 ])

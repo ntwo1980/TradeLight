@@ -9,18 +9,32 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         self.data_file_path = data_file_path
         self.blog_upload_relative_path = blog_upload_relative_path
         self.blog_upload_absolute_path = blog_upload_absolute_path
+        self.all_csv_files = [
+            '801001', '801002', '801003', '801005', '801010', '801020', '801030', '801040', '801050', '801080',
+            '801110', '801120', '801130', '801140', '801150', '801160', '801170', '801180',
+            '801200', '801210', '801230', '801250', '801260', '801270', '801280', '801300',
+            '801710', '801720', '801730', '801740', '801750', '801760', '801770', '801780', '801790',
+            '801811', '801812', '801813', '801821', '801822', '801823', '801831', '801832', '801833', '801853',
+            '801880', '801890', '801903', '801905'
+        ]
 
     def generate(self, blog_generator):
         self.generate_by_group(
             blog_generator,
-            '按市值',
+            '申万-总计',
+            self.all_csv_files
+        )
+
+        self.generate_by_group(
+            blog_generator,
+            '申万-按市值',
             ['801811', '801812', '801813'],
             ['大盘', '中盘', '小盘']
         )
 
         self.generate_by_group(
             blog_generator,
-            '按行业',
+            '申万-按行业',
             [
                 '801010', '801020', '801030', '801040', '801050',
                 '801110', '801120', '801150', '801160', '801170', '801180',
@@ -28,15 +42,35 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             ]
         )
 
+    def generate_summary(self, blog_generator, section_name, csv_files):
+        blog_generator.h3(section_name)
+
+        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
+        dfs = [load_csv(f) for f in csv_files]
+
+        for factor in ['PB', 'PE']:
+            blog_generator.h4(factor)
+
+            df_stat = [(
+                df['Name'].ilock[-1],
+                '{}'.format(float(df[factor].iloc[-1])),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))),
+            ) for df in dfs]
+
+            blog_generator.data_frame(df_stat,
+                headers=[
+                    '名称 '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                ])
+
+
     def generate_by_group(self, blog_generator, section_name, csv_files, group_names = None):
         blog_generator.h3(section_name)
 
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
-        dfs = [pd.read_csv(
-            os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
-            header=None, names=columns, parse_dates=['Date'],
-            infer_datetime_format=True)
-        for f in csv_files]
+        dfs = [load_csv(f) for f in csv_files]
 
         if group_names is None:
             group_names = [df['Name'].iloc[-1] for df in dfs]
@@ -87,3 +121,13 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
         plt.savefig(figure_path, bbox_inches='tight')
         plt.close()
+
+
+    def load_csv（self, csv_file):
+        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
+        return pd.read_csv(
+            os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
+            header=None, names=columns, parse_dates=['Date'],
+            infer_datetime_format=True)
+        for f in csv_files]
+

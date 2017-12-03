@@ -53,11 +53,11 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
             df_stat = [(
                 df['Name'].iloc[-1],
-                '{}'.format(float(df[factor].iloc[-1])),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], float(df[factor].iloc[-1])))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], float(df[factor].iloc[-1])))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:],float(df[factor].iloc[-1])))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], float(df[factor].iloc[-1])))),
+                '{:2f}'.format(float(df[factor].iloc[-1])),
+                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], float(df[factor].iloc[-1])))),
+                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], float(df[factor].iloc[-1])))),
+                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:],float(df[factor].iloc[-1])))),
+                '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], float(df[factor].iloc[-1])))),
             ) for df in dfs]
 
             blog_generator.data_frame(pd.data_frame(df_stat),

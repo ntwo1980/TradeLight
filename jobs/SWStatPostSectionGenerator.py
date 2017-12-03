@@ -69,7 +69,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                     float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))
                 ))
 
-            df_stat = pd.DataFrame(stat, columns=['Name', 'Factor1', 'Factor3', 'Factor5', 'Factor10'])
+            df_stat = pd.DataFrame(stat, columns=['Name', 'Factor', 'Factor1', 'Factor3', 'Factor5', 'Factor10'])
             df_stat.sort_values('Factor3', inplace=True)
 
             blog_generator.data_frame(df_stat,

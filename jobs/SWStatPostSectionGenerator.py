@@ -129,5 +129,3 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),
             header=None, names=columns, parse_dates=['Date'],
             infer_datetime_format=True)
-        for f in csv_files]
-

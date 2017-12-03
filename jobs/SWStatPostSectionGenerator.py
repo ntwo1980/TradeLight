@@ -19,7 +19,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         ]
 
     def generate(self, blog_generator):
-        self.generate_by_group(
+        self.generate_summary(
             blog_generator,
             '申万-总计',
             self.all_csv_files
@@ -51,14 +51,13 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         for factor in ['PB', 'PE']:
             blog_generator.h4(factor)
 
-            last_factor_value = df[factor].iloc[-1]
             df_stat = [(
                 df['Name'].ilock[-1],
-                '{}'.format(float(last_factor_value)),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value))),
-                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))),
+                '{}'.format(float(df[factor].iloc[-1])),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], float(df[factor].iloc[-1])))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], float(df[factor].iloc[-1])))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:],float(df[factor].iloc[-1])))),
+                '{}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], float(df[factor].iloc[-1])))),
             ) for df in dfs]
 
             blog_generator.data_frame(pd.data_frame(df_stat),

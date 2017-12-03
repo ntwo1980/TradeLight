@@ -123,7 +123,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         plt.close()
 
 
-    def load_csv（self, csv_file):
+    def load_csv (self, csv_file):
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         return pd.read_csv(
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(f)),

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import jobs.PostSectionGenerator as p
 from scipy import stats
 
-class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
+class SWStatPostSectionGenerator(p.PostSectionGenerator):
     def __init__(self, data_file_path, blog_upload_relative_path, blog_upload_absolute_path):
         self.data_file_path = data_file_path
         self.blog_upload_relative_path = blog_upload_relative_path
@@ -21,7 +21,10 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
         self.generate_by_group(
             blog_generator,
             '按行业',
-            ['801010', '801020', '801030']
+            ['801010', '801020', '801030', '801040', '801050', '801060', '801070', '801080', '801090',
+            '801100', '801110', '801120', '801130', '801140', '801150', '801160', '801170', '801180', '801190',
+            '801200', '801210', '801220', '801230', '801250', '801260', '801270', '801280', '801300',
+            '801710', '801720', '801730', '801740', '801750', '801760', '801770', '801780', '801790']
         )
 
     def generate_by_group(self, blog_generator, section_name, csv_files, group_names = None):

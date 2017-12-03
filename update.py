@@ -159,7 +159,7 @@ if generate_joinquant or generate_sw:
             data_file_path = os.path.join(script_dir, 'data/r_above_ma.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path),
-        CapitalizationPostSectionGenerator.CapitalizationPostSectionGenerator(
+        SWStatPostSectionGenerator.SWStatPostSectionGenerator(
             data_file_path = os.path.join(script_dir, 'data/'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path)

@@ -62,7 +62,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
             blog_generator.data_frame(df_stat,
                 headers=[
-                    '名称 '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                    '名称', '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
                 ])
 
 

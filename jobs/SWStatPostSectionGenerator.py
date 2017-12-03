@@ -15,7 +15,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             '801200', '801210', '801230', '801250', '801260', '801270', '801280', '801300',
             '801710', '801720', '801730', '801740', '801750', '801760', '801770', '801780', '801790',
             '801811', '801812', '801813', '801821', '801822', '801823', '801831', '801832', '801833', '801853',
-            '801880', '801890', '801903', '801905'
+            '801880', '801890'
         ]
 
     def generate(self, blog_generator):
@@ -23,6 +23,12 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             blog_generator,
             '申万-总计',
             self.all_csv_files
+        )
+
+        self.generate_by_group(
+            blog_generator,
+            '申万-按指数',
+            ['801001', '801002', '801003', '801005', '801300']
         )
 
         self.generate_by_group(
@@ -56,14 +62,17 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                 last_factor_value = df[factor].iloc[-1]
                 stat.append((
                     df['Name'].iloc[-1],
-                    '{:2f}'.format(float(last_factor_value)),
-                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value))),
-                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value))),
-                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value))),
-                    '{:2f}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value)))
+                    float(last_factor_value),
+                    float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value)),
+                    float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))
                 ))
 
-            blog_generator.data_frame(pd.DataFrame(stat),
+            df_stat = pd.DataFrame(stat, columns=['Name', 'Factor1', 'Factor3', 'Factor5', 'Factor10'])
+            df_stat.sort_values('Factor3', inplace=True)
+
+            blog_generator.data_frame(df_stat,
                 headers=[
                     '名称', '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
                 ])

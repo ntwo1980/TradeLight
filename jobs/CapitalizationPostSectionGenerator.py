@@ -11,9 +11,21 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
         self.blog_upload_absolute_path = blog_upload_absolute_path
 
     def generate(self, blog_generator):
-        csv_files = ['801811', '801812', '801813']
-        capitalization_group_names = ['大盘', '中盘', '小盘']
-        blog_generator.h3('按市值')
+        self.generate_by_group(
+            blog_generator,
+            '按市值',
+            ['801811', '801812', '801813'],
+            ['大盘', '中盘', '小盘']
+        )
+
+        self.generate_by_group(
+            blog_generator,
+            '按行业',
+            ['801010', '801020', '801030']
+        )
+
+    def generate_by_group(self, blog_generator, section_name, csv_files, group_names = None):
+        blog_generator.h3(section_name)
 
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         dfs = [pd.read_csv(
@@ -22,15 +34,18 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
             infer_datetime_format=True)
         for f in csv_files]
 
+        if group_names is None:
+            group_names = [df['Name'].iloc[-1] for df in dfs]
+
         for factor in ['PB', 'PE']:
             blog_generator.h4(factor)
-            for i in range(0, 3):
-                df = dfs[i]
-                capitalization_group_name = capitalization_group_names[i]
+            for index, group_name in enumerate(group_names):
+                blog_generator.h5(group_name)
+                df = dfs[index]
 
                 last_factor_value = df[factor].iloc[-1]
                 blog_generator.line('{}{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
-                    capitalization_group_name,
+                    group_name,
                     factor,
                     float(last_factor_value),
                     float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)),
@@ -51,6 +66,7 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
                     )
                     blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
 
+
     def generate_factor_figure(self, figure_name, data_x, data_y1, label_y1, data_y2 = None, label_y2=None):
         fig, axes = plt.subplots(1, 1, figsize=(16, 6))
 
@@ -66,3 +82,4 @@ class CapitalizationPostSectionGenerator(p.PostSectionGenerator):
         figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 
         plt.savefig(figure_path, bbox_inches='tight')
+        plt.close()

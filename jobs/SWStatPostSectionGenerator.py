@@ -51,16 +51,17 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         for factor in ['PB', 'PE']:
             blog_generator.h4(factor)
 
+            last_factor_value = df[factor].iloc[-1]
             df_stat = [(
                 df['Name'].ilock[-1],
-                '{}'.format(float(df[factor].iloc[-1])),
+                '{}'.format(float(last_factor_value)),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], last_factor_value))),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], last_factor_value))),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value))),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value))),
             ) for df in dfs]
 
-            blog_generator.data_frame(df_stat,
+            blog_generator.data_frame(pd.data_frame(df_stat),
                 headers=[
                     '名称', '{}当前值'.format(factor), '1年分位数', '3年分位数', '5年分位数', '10年分位数'
                 ])

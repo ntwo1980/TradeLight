@@ -52,7 +52,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             blog_generator.h4(factor)
 
             df_stat = [(
-                df['Name'].ilock[-1],
+                df['Name'].iloc[-1],
                 '{}'.format(float(df[factor].iloc[-1])),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-240:], float(df[factor].iloc[-1])))),
                 '{}'.format(float(stats.percentileofscore(df[factor].iloc[-720:], float(df[factor].iloc[-1])))),

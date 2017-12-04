@@ -19,7 +19,7 @@ class StocksDownloadFilesJob(j.JobBase):
         date_format = '%Y-%m-%d'
 
         for stock in self.stocks:
-            date = dt.date(2017, 11, 30)
+            date = dt.date(2017, 11, 10)
 
             csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
             if os.path.exists(csv_file):
@@ -28,7 +28,7 @@ class StocksDownloadFilesJob(j.JobBase):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date()
 
             while date < today:
-                if date.weekday > 4:
+                if date.weekday() > 4:
                     date = date + dt.timedelta(days=1)
                     continue
 

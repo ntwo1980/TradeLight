@@ -16,16 +16,29 @@ class StocksDownloadFilesJob(j.JobBase):
         self.s.get(self.WEB_INDEX)
 
         for stock in self.stocks:
-            csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
             start_date = '2017-11-30'
 
-            rep = self.s.get(self.STOCK_QUERY.format(start_date, stock))
+            csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
+            date = start_date
+
+            rep = self.s.get(self.STOCK_QUERY.format(date, stock))
             content = rep.content
             html = BeautifulSoup(content, "lxml")
 
-            items = []
             tds = html.find_all("td")
-            print((tds[0].string, tds[1].string, tds[2].string, tds[3].string))
+            code = tds[1].string
+            name = tds[2].string
+            category_code = tds[3].string
+            category_name = tds[4].string
+            subcategory_code = tds[5].string
+            subcategory_name = tds[6].string
+            pe = tds[7].string
+            rolling_pe = tds[8].string
+            pb = tds[9].string
+            payout = tds[10].string
+
+            print((code, name, category_code, category_name, subcategory_code,
+                  subcategory_name, pe, rolling_pe, pb, payout))
 
     '''
     def run(self):

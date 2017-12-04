@@ -50,14 +50,14 @@ class StocksDownloadFilesJob(j.JobBase):
                 pb = self.clearStr(tds[9].string)
                 payout = self.clearStr(tds[10].string)
 
-                items.append(code, name, date_str, category_code, category_name, subcategory_code,
-                    subcategory_name, pe, rolling_pe, pb, payout)
+                items.append((code, name, date_str, category_code, category_name, subcategory_code,
+                    subcategory_name, pe, rolling_pe, pb, payout))
 
                 date = date + dt.timedelta(days=1)
 
             if len(items):
-                df = pd.DateFrame(items, columns= [
-                                            'code', 'name' 'category_code',
+                df = pd.DataFrame(items, columns= [
+                                            'code', 'name', 'date', 'category_code',
                                             'category_name,', 'subcategory_code',
                                             'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
                 )

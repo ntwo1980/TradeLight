@@ -24,9 +24,8 @@ class StocksDownloadFilesJob(j.JobBase):
             html = BeautifulSoup(content, "lxml")
 
             items = []
-            for tr in html.find_all("tr")[1:]:
-                children = list(tr.children)
-                print((children[0].string, children[1].string, children[2].string, children[3].string))
+            for tds in html.find_all("td"):
+                print((tds[0].string, tds[1].string, tds[2].string, tds[3].string))
 
     '''
     def run(self):

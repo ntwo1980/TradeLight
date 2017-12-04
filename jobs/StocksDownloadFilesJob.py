@@ -23,7 +23,12 @@ class StocksDownloadFilesJob(j.JobBase):
 
             csv_file = os.path.join(self.data_file_path, 'r_zz_{}.csv'.format(stock))
             if os.path.exists(csv_file):
-                df = pd.read_csv(csv_file)
+                df = pd.read_csv(csv_file,
+                                 columns=[
+                                            'code', 'name', 'date', 'category_code',
+                                            'category_name,', 'subcategory_code',
+                                            'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
+                                )
                 if len(df['date']):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date()
 

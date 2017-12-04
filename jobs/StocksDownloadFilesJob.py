@@ -2,6 +2,7 @@ import os
 import datetime as dt
 import jobs.JobBase as j
 import requests
+import pandas as pd
 from bs4 import BeautifulSoup
 
 class StocksDownloadFilesJob(j.JobBase):
@@ -14,31 +15,45 @@ class StocksDownloadFilesJob(j.JobBase):
 
     def run(self):
         self.s.get(self.WEB_INDEX)
+        today = dt.date.today()
+        date_format = '%Y-%m-%d'
 
         for stock in self.stocks:
-            start_date = '2017-11-30'
+            date = dt.date(2017, 11, 30)
 
             csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
-            date = start_date
+            if os.path.exists(csv_file):
+                df = pd.read_csv(csv_file)
+                if len(df['date']):
+                    date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date()
 
-            rep = self.s.get(self.STOCK_QUERY.format(date, stock))
-            content = rep.content
-            html = BeautifulSoup(content, "lxml")
+            while date < today:
+                if date.weekday > 4:
+                    date = date + dt.timedelta(days=1)
+                    continue
 
-            tds = html.find_all("td")
-            code = self.clearStr(tds[1].string)
-            name = self.clearStr(tds[2].string)
-            category_code = self.clearStr(tds[3].string)
-            category_name = self.clearStr(tds[4].string)
-            subcategory_code = self.clearStr(tds[5].string)
-            subcategory_name = self.clearStr(tds[6].string)
-            pe = self.clearStr(tds[7].string)
-            rolling_pe = self.clearStr(tds[8].string)
-            pb = self.clearStr(tds[9].string)
-            payout = self.clearStr(tds[10].string)
+                date_str = date.strftime(date_format)
+                rep = self.s.get(self.STOCK_QUERY.format(date_str, stock))
+                content = rep.content
+                html = BeautifulSoup(content, "lxml")
 
-            print((code, name, category_code, category_name, subcategory_code,
-                  subcategory_name, pe, rolling_pe, pb, payout))
+                tds = html.find_all("td")
+                code = self.clearStr(tds[1].string)
+                name = self.clearStr(tds[2].string)
+                category_code = self.clearStr(tds[3].string)
+                category_name = self.clearStr(tds[4].string)
+                subcategory_code = self.clearStr(tds[5].string)
+                subcategory_name = self.clearStr(tds[6].string)
+                pe = self.clearStr(tds[7].string)
+                rolling_pe = self.clearStr(tds[8].string)
+                pb = self.clearStr(tds[9].string)
+                payout = self.clearStr(tds[10].string)
+
+                print((code, name, date_str, category_code, category_name, subcategory_code,
+                    subcategory_name, pe, rolling_pe, pb, payout))
+
+                date = date + dt.timedelta(days=1)
+
 
     '''
     def run(self):

@@ -44,6 +44,10 @@ class StocksDownloadFilesJob(j.JobBase):
                 html = BeautifulSoup(content, "lxml")
 
                 tds = html.find_all("td")
+                if not len(tds):
+                    date = date + dt.timedelta(days=1)
+                    continue
+
                 code = self.clearStr(tds[1].string)
                 name = self.clearStr(tds[2].string)
                 category_code = self.clearStr(tds[3].string)

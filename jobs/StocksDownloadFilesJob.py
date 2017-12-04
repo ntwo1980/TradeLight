@@ -80,6 +80,6 @@ class StocksDownloadFilesJob(j.JobBase):
 
     def clearStr(self, s):
         if isinstance(s, str):
-            return s.replace(',', '').replace('--')
+            return s.replace(',', '').replace('--', '')
 
         return s

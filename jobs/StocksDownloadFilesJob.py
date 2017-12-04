@@ -19,7 +19,7 @@ class StocksDownloadFilesJob(j.JobBase):
         date_format = '%Y-%m-%d'
 
         for stock in self.stocks:
-            date = dt.date(2017, 11, 10)
+            date = dt.date(2011, 11, 30)
 
             csv_file = os.path.join(self.data_file_path, 'r_zz_{}.csv'.format(stock))
             if os.path.exists(csv_file):

@@ -154,7 +154,7 @@ if generate_sw and not only_local_file:
 if generate_zz and not only_local_file:
     df = pd.read_csv(os.path.join(script_dir, 'data/r_stocks.csv'))
 
-    StocksDownloadFilesJob.StocksDownloadFilesJob(df.index, data_file_path = os.path.join(script_dir, 'data/')).run()
+    StocksDownloadFilesJob.StocksDownloadFilesJob(df['code'].str.split('.').str.get(0), data_file_path = os.path.join(script_dir, 'data/')).run()
 
 if generate_joinquant or generate_sw:
     section_generators = [

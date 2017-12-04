@@ -7,12 +7,12 @@ from bs4 import BeautifulSoup
 class StocksDownloadFilesJob(j.JobBase):
     def __init__(self, stocks, data_file_path):
         self.s = requests.Session()
-        self.stocks = download_files
+        self.stocks = stocks
         self.data_file_path = data_file_path
 
     def run(self):
-        for stock in stocks:
-            print stock
+        for stock in self.stocks:
+            print(stock)
 
     '''
     def run(self):

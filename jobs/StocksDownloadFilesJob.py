@@ -62,7 +62,7 @@ class StocksDownloadFilesJob(j.JobBase):
 
             if len(items):
                 df = pd.DataFrame(items)
-                df.to_csv(csv_file, index=False, encoding='utf-8', mode='a+')
+                df.to_csv(csv_file, index=False, header=None, encoding='utf-8', mode='a+')
 
     '''
     def run(self):

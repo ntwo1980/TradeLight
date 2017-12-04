@@ -21,7 +21,7 @@ class StocksDownloadFilesJob(j.JobBase):
         for stock in self.stocks:
             date = dt.date(2017, 11, 10)
 
-            csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
+            csv_file = os.path.join(self.data_file_path, 'r_zz_{}.csv'.format(stock))
             if os.path.exists(csv_file):
                 df = pd.read_csv(csv_file)
                 if len(df['date']):
@@ -56,12 +56,8 @@ class StocksDownloadFilesJob(j.JobBase):
                 date = date + dt.timedelta(days=1)
 
             if len(items):
-                df = pd.DataFrame(items, columns= [
-                                            'code', 'name', 'date', 'category_code',
-                                            'category_name,', 'subcategory_code',
-                                            'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
-                )
-                df.to_csv(csv_file, encoding='utf-8')
+                df = pd.DataFrame(items)
+                df.to_csv(csv_file, index=False, encoding='utf-8', mode='a+')
 
     '''
     def run(self):

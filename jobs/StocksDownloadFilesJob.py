@@ -9,10 +9,19 @@ class StocksDownloadFilesJob(j.JobBase):
         self.s = requests.Session()
         self.stocks = stocks
         self.data_file_path = data_file_path
+        self.WEB_INDEX = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio'
+        self.STOCK_QUERY = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio-detail?date={}&class=1&search=1&csrc_code={}'
 
     def run(self):
+        self.s.get(self.WEB_INDEX)
+
         for stock in self.stocks:
-            print(stock)
+            csv_file = os.path.join(self.data_file_path, '{}.csv'.format(stock))
+            start_date = '2017-11-30'
+
+            rep = self.s.get(self.STOCK_QUERY.format(start_date, stock))
+
+            print(rep.content)
 
     '''
     def run(self):

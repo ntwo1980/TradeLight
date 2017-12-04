@@ -14,13 +14,14 @@ is_windows = utils.is_windows()
 script_dir = os.path.dirname(__file__)
 parser = argparse.ArgumentParser()
 
-generate_parser = parser.add_argument('-t', '--type', default='jxs', nargs='?')
+generate_parser = parser.add_argument('-t', '--type', default='jxsz', nargs='?')
 generate_parser = parser.add_argument('-l', '--local', default='', nargs='?')
 args = parser.parse_args()
 
 generate_xueqiu = False
 generate_joinquant = False
 generate_sw = False
+generate_zz = False
 only_local_file = False
 
 if 'x' in args.type:
@@ -31,6 +32,9 @@ if 'j' in args.type:
 
 if 's' in args.type:
     generate_sw = True
+
+if 'z' in args.type:
+    generate_zz = True
 
 if args.local is None:
     only_local_file = True
@@ -146,6 +150,11 @@ if generate_sw and not only_local_file:
         raise Exception("sw init failed: " + reason)
 
     SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
+
+if generate_zz and not only_local_file:
+    df = pd.read_csv(os.path.join(script_dir, 'data/r_stocks.csv'))
+
+    StocksDownloadFilesJob.StocksDownloadFilesJob(df.index, data_file_path = os.path.join(script_dir, 'data/')).run()
 
 if generate_joinquant or generate_sw:
     section_generators = [

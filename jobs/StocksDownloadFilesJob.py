@@ -20,8 +20,13 @@ class StocksDownloadFilesJob(j.JobBase):
             start_date = '2017-11-30'
 
             rep = self.s.get(self.STOCK_QUERY.format(start_date, stock))
+            content = rep.content
+            html = BeautifulSoup(content, "lxml")
 
-            print(rep.content)
+            items = []
+            for tr in html.find_all("tr")[1:]:
+                children = list(tr.children)
+                print((children[0].string, children[1].string, children[2].string, children[3].string))
 
     '''
     def run(self):

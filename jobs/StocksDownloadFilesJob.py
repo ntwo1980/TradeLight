@@ -27,6 +27,7 @@ class StocksDownloadFilesJob(j.JobBase):
                 if len(df['date']):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date()
 
+            items = []
             while date < today:
                 if date.weekday() > 4:
                     date = date + dt.timedelta(days=1)
@@ -49,11 +50,18 @@ class StocksDownloadFilesJob(j.JobBase):
                 pb = self.clearStr(tds[9].string)
                 payout = self.clearStr(tds[10].string)
 
-                print((code, name, date_str, category_code, category_name, subcategory_code,
-                    subcategory_name, pe, rolling_pe, pb, payout))
+                items.append(code, name, date_str, category_code, category_name, subcategory_code,
+                    subcategory_name, pe, rolling_pe, pb, payout)
 
                 date = date + dt.timedelta(days=1)
 
+            if len(items):
+                df = pd.DateFrame(items, columns= [
+                                            'code', 'name' 'category_code',
+                                            'category_name,', 'subcategory_code',
+                                            'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
+                )
+                df.to_csv(csv_file, encoding='utf-8')
 
     '''
     def run(self):

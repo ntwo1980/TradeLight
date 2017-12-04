@@ -26,16 +26,16 @@ class StocksDownloadFilesJob(j.JobBase):
             html = BeautifulSoup(content, "lxml")
 
             tds = html.find_all("td")
-            code = tds[1].string
-            name = tds[2].string
-            category_code = tds[3].string
-            category_name = tds[4].string
-            subcategory_code = tds[5].string
-            subcategory_name = tds[6].string
-            pe = tds[7].string
-            rolling_pe = tds[8].string
-            pb = tds[9].string
-            payout = tds[10].string
+            code = self.clearStr(tds[1].string)
+            name = self.clearStr(tds[2].string)
+            category_code = self.clearStr(tds[3].string)
+            category_name = self.clearStr(tds[4].string)
+            subcategory_code = self.clearStr(tds[5].string)
+            subcategory_name = self.clearStr(tds[6].string)
+            pe = self.clearStr(tds[7].string)
+            rolling_pe = self.clearStr(tds[8].string)
+            pb = self.clearStr(tds[9].string)
+            payout = self.clearStr(tds[10].string)
 
             print((code, name, category_code, category_name, subcategory_code,
                   subcategory_name, pe, rolling_pe, pb, payout))
@@ -78,8 +78,8 @@ class StocksDownloadFilesJob(j.JobBase):
                     file.write(i + "\n")
     '''
 
-    def removeComma(self, s):
+    def clearStr(self, s):
         if isinstance(s, str):
-            return s.replace(',', '')
+            return s.replace(',', '').replace('--')
 
         return s

@@ -157,7 +157,7 @@ if generate_zz:
 
         StocksDownloadFilesJob.StocksDownloadFilesJob(df['code'].str.split('.').str.get(0), data_file_path = os.path.join(script_dir, 'data/')).run()
 
-    StocksPBPEStatJob.StocksPBPEStatJob(data_path = os.path.join(script_dir, 'data/'), stat_output_path=blog_stocks_data_absolute_path)
+    StocksPBPEStatJob.StocksPBPEStatJob(data_path = os.path.join(script_dir, 'data/'), stat_output_path=blog_stocks_data_absolute_path).run()
 
 if generate_joinquant or generate_sw or generate_zz:
     section_generators = [

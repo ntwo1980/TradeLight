@@ -1,4 +1,6 @@
 import datetime
+import os
+import glob
 import numpy as np
 import pandas as pd
 import jobs.JobBase as j
@@ -10,5 +12,9 @@ class StocksPBPEStatJob(j.JobBase):
         self.stat_output_path = stat_output_path
 
     def run(self):
-        print(self.data_path)
-        print(self.stat_output_path)
+        files = glob.glob(os.path.join(self.data_path, 'r_zz_*.csv'))
+
+        print(len(files))
+        for f in files:
+            print(f)
+

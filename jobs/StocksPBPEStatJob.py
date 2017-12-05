@@ -19,7 +19,7 @@ class StocksPBPEStatJob(j.JobBase):
         columns =  ['code', 'name', 'date', 'category_code', 'category_name,', 'subcategory_code', 'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
 
         for f in files:
-            df = pd.read_csv(f, header=None, names=columns, parse_dates=['Date'], infer_datetime_format=True)
+            df = pd.read_csv(f, header=None, names=columns, parse_dates=['date'], infer_datetime_format=True)
             stat = {'name': df['Name'].iloc[-1]}
 
             for factor in ['pb', 'pe']:

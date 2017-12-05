@@ -20,7 +20,7 @@ class StocksPBPEStatJob(j.JobBase):
 
         for f in files:
             df = pd.read_csv(f, header=None, names=columns, parse_dates=['date'], infer_datetime_format=True)
-            stat = {'name': df['Name'].iloc[-1]}
+            stat = {'name': df['name'].iloc[-1]}
 
             for factor in ['pb', 'pe']:
                 last_factor_value = df[factor].iloc[-1]

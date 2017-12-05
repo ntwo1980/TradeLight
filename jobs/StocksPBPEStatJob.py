@@ -16,15 +16,14 @@ class StocksPBPEStatJob(j.JobBase):
 
     def run(self):
         files = glob.glob(os.path.join(self.data_path, 'r_zz_*.csv'))
-        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
+        columns =  ['code', 'name', 'date', 'category_code', 'category_name,', 'subcategory_code', 'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
+]
 
         for f in files:
             df = pd.read_csv(f, header=None, names=columns, parse_dates=['Date'], infer_datetime_format=True)
             stat = {'name': df['Name'].iloc[-1]}
 
-            print(df)
-
-            for factor in ['PB', 'PE']:
+            for factor in ['pb', 'pe']:
                 last_factor_value = df[factor].iloc[-1]
                 stat[factor + '1'] = stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)
                 stat[factor + '3'] = stats.percentileofscore(df[factor].iloc[-720:], last_factor_value)

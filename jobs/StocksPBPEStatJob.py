@@ -17,7 +17,6 @@ class StocksPBPEStatJob(j.JobBase):
     def run(self):
         files = glob.glob(os.path.join(self.data_path, 'r_zz_*.csv'))
         columns =  ['code', 'name', 'date', 'category_code', 'category_name,', 'subcategory_code', 'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
-]
 
         for f in files:
             df = pd.read_csv(f, header=None, names=columns, parse_dates=['Date'], infer_datetime_format=True)

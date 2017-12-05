@@ -88,7 +88,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                     fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                     ax1 = axes
                     ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{} {}'.format(combination[4], factor))
-                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(42).mean(), 'coerce', 'float'), label='{} {} 42 MA'.format(combination[4], factor))
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(60).mean(), 'coerce', 'float'), label='{} {} 60 MA'.format(combination[4], factor))
                     ax1.legend(loc='upper left')
 
                     figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)

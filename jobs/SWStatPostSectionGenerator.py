@@ -67,10 +67,10 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                 blog_generator.h5(factor)
                 figure_name = combination[3]
                 df1 = combination[1][combination[1][factor]!='None']
-                df2 = combination[2][combination[1][factor]!='None']
+                df2 = combination[2][combination[2][factor]!='None']
 
                 dates = df1['Date']
-                values = combination[1][factor].astype('float') / combination[2][factor].astype('float')
+                values = df1[factor].astype('float') / df2[factor].astype('float')
 
                 last_value = values[-1]
                 blog_generator.line('{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(

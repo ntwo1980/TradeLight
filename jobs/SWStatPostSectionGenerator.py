@@ -54,9 +54,9 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         blog_generator.h3('申万-按市值比')
         dfs = [self.load_csv(f) for f in ['801811', '801812', '801813']]
         combinations = [
-            ('大盘/小盘', df[0], df[2], 'large_small'),
-            ('大盘/中盘', df[0], df[1], 'large_middle'),
-            ('中盘/小盘', df[1], df[2], 'middle_small')
+            ('大盘/小盘', dfs[0], dfs[2], 'large_small'),
+            ('大盘/中盘', dfs[0], dfs[1], 'large_middle'),
+            ('中盘/小盘', dfs[1], dfs[2], 'middle_small')
         ]
 
         for combination in combinations:
@@ -64,17 +64,17 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             for factor in ['PB', 'PE']:
                 blog_generator.h5(factor)
                 figure_name = combination[3]
-                dates = combination[1]['date']
-                values = combination[1][factor] / combination[2][factor]
+                dates = combination[1]['Date'].iloc[1:]
+                values = combination[1][factor].iloc[1:].astype('float') / combination[2][factor].iloc[1:].astype('float')
 
                 last_value = values[-1]
                 blog_generator.line('{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
                     factor,
-                    float(last_value),
-                    float(stats.percentileofscore(values.iloc[-240:], last_value)),
-                    float(stats.percentileofscore(values.iloc[-720:], last_value)),
-                    float(stats.percentileofscore(values.iloc[-1200:], last_value)),
-                    float(stats.percentileofscore(values.iloc[-2400:], last_value))))
+                    last_value,
+                    stats.percentileofscore(values.iloc[-240:], last_value),
+                    stats.percentileofscore(values.iloc[-720:], last_value),
+                    stats.percentileofscore(values.iloc[-1200:], last_value),
+                    stats.percentileofscore(values.iloc[-2400:], last_value)))
 
                 for year in [1, 10]:
                     days = 240 * year

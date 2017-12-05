@@ -56,15 +56,15 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         for df in dfs:
             df.set_index('Date', drop=False, inplace=True)
         combinations = [
-            ('大盘/小盘', dfs[0], dfs[2], 'large_small'),
-            ('大盘/中盘', dfs[0], dfs[1], 'large_middle'),
-            ('中盘/小盘', dfs[1], dfs[2], 'middle_small')
+            ('大盘/小盘', dfs[0], dfs[2], 'large_small', 'large/small'),
+            ('大盘/中盘', dfs[0], dfs[1], 'large_medium', 'large/medium'),
+            ('中盘/小盘', dfs[1], dfs[2], 'medium_small', 'medium/small')
         ]
 
-        for combination in combinations:
-            blog_generator.h4(combination[0])
-            for factor in ['PB', 'PE']:
-                blog_generator.h5(factor)
+        for factor in ['PB', 'PE']:
+            blog_generator.h4(factor)
+            for combination in combinations:
+                blog_generator.h5(combination[0])
                 figure_name = combination[3]
                 df1 = combination[1][combination[1][factor]!='None']
                 df2 = combination[2][combination[2][factor]!='None']
@@ -87,9 +87,9 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
                     fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                     ax1 = axes
-                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{} {}'.format(combination[0], factor))
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{} {}'.format(combination[4], factor))
                     ax1.legend(loc='upper left')
-                    ax1.set_ylabel(label_y1)
+                    # ax1.set_ylabel(label_y1)
 
                     '''
                     if data_y2 is not None:

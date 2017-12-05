@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import jobs.JobBase as j
 import matplotlib.pyplot as plt
-import jobs.PostSectionGenerator as p
+from scipy import stats
 
 class StocksPBPEStatJob(j.JobBase):
     def __init__(self, data_path, stat_output_path):

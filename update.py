@@ -159,7 +159,7 @@ if generate_zz:
 
     StocksPBPEStatJob.StocksPBPEStatJob(data_path = os.path.join(script_dir, 'data/'), stat_output_path=blog_stocks_data_absolute_path)
 
-if generate_joinquant or generate_sw:
+if generate_joinquant or generate_sw or generate_zz:
     section_generators = [
         HistoryPostSectionGenerator.HistoryPostSectionGenerator(
             data_file_path = os.path.join(script_dir, 'data/')),
@@ -181,7 +181,7 @@ if generate_joinquant or generate_sw:
         section_generators = section_generators
     ).run()
 
-if generate_joinquant or generate_xueqiu or generate_sw:
+if generate_joinquant or generate_xueqiu or generate_sw or generate_zz:
     # generate_everyday_blog_post()
 
     # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()

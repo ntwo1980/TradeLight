@@ -10,4 +10,5 @@ class StocksPBPEStatJob(j.JobBase):
         self.stat_output_path = stat_output_path
 
     def run(self):
-        pass
+        print(self.data_path)
+        print(self.stat_output_path)

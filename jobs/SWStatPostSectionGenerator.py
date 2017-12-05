@@ -65,7 +65,6 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             blog_generator.h4(factor)
             for combination in combinations:
                 blog_generator.h5(combination[0])
-                figure_name = combination[3]
                 df1 = combination[1][combination[1][factor]!='None']
                 df2 = combination[2][combination[2][factor]!='None']
 
@@ -83,7 +82,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
                 for year in [1, 10]:
                     days = 240 * year
-                    figure_name = 'r_{}_{}.png'.format(figure_name, str(year))
+                    figure_name = 'r_{}_{}_{}.png'.format(combination[3], factor, str(year))
 
                     fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                     ax1 = axes

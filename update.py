@@ -54,7 +54,7 @@ blog_post_path = os.path.join(blog_source_path, '_posts/')
 blog_upload_relative_path = os.path.join('/uploads/')
 blog_upload_absolute_path = os.path.join(blog_source_path, blog_upload_relative_path[1:])
 blog_public_upload_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:])
-blog_public_upload_stocks_absolute_path = os.path.join(blog_public_path, blog_upload_relative_path[1:], 'r_stocks')
+blog_stocks_data_absolute_path = os.path.join(blog_public_path, 'r_Stocks_Data')
 sw_files = [
         '801001', '801002', '801003', '801005', '801010', '801020', '801030', '801040', '801050', '801080',
         '801110', '801120', '801130', '801140', '801150', '801160', '801170', '801180',
@@ -64,8 +64,8 @@ sw_files = [
         '801880', '801890'
         ]
 
-if not os.path.exists(blog_public_upload_stocks_absolute_path):
-    os.makedirs(blog_public_upload_stocks_absolute_path)
+if not os.path.exists(blog_stocks_data_absolute_path):
+    os.makedirs(blog_stocks_data_absolute_path)
 
 def login_jointquant():
     joint_quant_config_file_path = os.path.join(script_dir, 'config/JoinQuant.json')
@@ -127,7 +127,7 @@ if generate_joinquant:
         post_path = os.path.join(blog_page_path, 'r_QuarterlyReturns/', 'index.md'),
         data_file_path = os.path.join(script_dir, 'data/r_quarterly_returns.csv')).run()
     JoinQuantStocksJsonDataJob.JoinQuantStocksJsonDataJob(
-        json_dir = blog_public_upload_stocks_absolute_path,
+        json_dir = blog_stocks_data_absolute_path,
         data_file_path = os.path.join(script_dir, 'data/r_stocks.csv')).run()
 
 if generate_xueqiu and not only_local_file:

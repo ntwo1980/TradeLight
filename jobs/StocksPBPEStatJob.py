@@ -22,6 +22,8 @@ class StocksPBPEStatJob(j.JobBase):
             df = pd.read_csv(f, header=None, names=columns, parse_dates=['Date'], infer_datetime_format=True)
             stat = {'name': df['Name'].iloc[-1]}
 
+            print(df)
+
             for factor in ['PB', 'PE']:
                 last_factor_value = df[factor].iloc[-1]
                 stat[factor + '1'] = stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)
@@ -29,6 +31,6 @@ class StocksPBPEStatJob(j.JobBase):
                 stat[factor + '5'] = stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value)
                 stat[factor + '10'] = stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value)
 
-            with open(os.path.join(self.stat_output_path, basename(f) + '_PBPE.json'), 'w', encoding='utf-8') as fp:
+            with open(os.path.join(self.stat_output_path, basename(f).replace('r_zz_').replace('.csv') + '_PBPE.json'), 'w', encoding='utf-8') as fp:
                 json.dump(stat, fp)
 

@@ -53,6 +53,8 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
     def generate_mc_comparison(self, blog_generator):
         blog_generator.h3('申万-按市值比')
         dfs = [self.load_csv(f) for f in ['801811', '801812', '801813']]
+        for df in dfs:
+            df.set_index('Date', drop=False, inplace=True)
         combinations = [
             ('大盘/小盘', dfs[0], dfs[2], 'large_small'),
             ('大盘/中盘', dfs[0], dfs[1], 'large_middle'),
@@ -64,8 +66,11 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             for factor in ['PB', 'PE']:
                 blog_generator.h5(factor)
                 figure_name = combination[3]
-                dates = combination[1]['Date'].iloc[1:]
-                values = combination[1][factor].iloc[1:].astype('float') / combination[2][factor].iloc[1:].astype('float')
+                df1 = combination[1][combination[1][factor]!='None']
+                df2 = combination[2][combination[1][factor]!='None']
+
+                dates = df1['Date']
+                values = combination[1][factor].astype('float') / combination[2][factor].astype('float')
 
                 last_value = values[-1]
                 blog_generator.line('{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(

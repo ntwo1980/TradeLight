@@ -151,10 +151,13 @@ if generate_sw and not only_local_file:
 
     SWDownloadFilesJob.SWDownloadFilesJob(sw, sw_files, data_file_path = os.path.join(script_dir, 'data/')).run()
 
-if generate_zz and not only_local_file:
-    df = pd.read_csv(os.path.join(script_dir, 'data/r_stocks.csv'))
+if generate_zz:
+    if not only_local_file:
+        df = pd.read_csv(os.path.join(script_dir, 'data/r_stocks.csv'))
 
-    StocksDownloadFilesJob.StocksDownloadFilesJob(df['code'].str.split('.').str.get(0), data_file_path = os.path.join(script_dir, 'data/')).run()
+        StocksDownloadFilesJob.StocksDownloadFilesJob(df['code'].str.split('.').str.get(0), data_file_path = os.path.join(script_dir, 'data/')).run()
+
+    StocksPBPEStatJob.StocksPBPEStatJob(data_path = os.path.join(script_dir, 'data/'), stat_output_path=blog_stocks_data_absolute_path)
 
 if generate_joinquant or generate_sw:
     section_generators = [

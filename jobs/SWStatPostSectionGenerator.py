@@ -88,14 +88,8 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                     fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                     ax1 = axes
                     ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{} {}'.format(combination[4], factor))
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(42).mean(), 'coerce', 'float'), label='{} {} 42 MA'.format(combination[4], factor))
                     ax1.legend(loc='upper left')
-                    # ax1.set_ylabel(label_y1)
-
-                    '''
-                    if data_y2 is not None:
-                        ax2= ax1.twinx()
-                        ax2.plot(data_x, pd.to_numeric(data_y2, 'coerce', 'float'), label='Close', color='orange')
-                    '''
 
                     figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

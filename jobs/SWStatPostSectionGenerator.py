@@ -31,6 +31,8 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             ['801001', '801002', '801003', '801005', '801300']
         )
 
+        self.generate_mc_comparison(blog_generator)
+
         self.generate_by_group(
             blog_generator,
             '申万-按市值',
@@ -47,6 +49,55 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
                 '801210', '801710', '801730', '801740', '801750', '801760', '801770', '801780', '801790'
             ]
         )
+
+    def generate_mc_comparison(self, blog_generator):
+        blog_generator.h3('申万-按市值比')
+        dfs = [self.load_csv(f) for f in ['801811', '801812', '801813']]
+        combinations = [
+            ('大盘/小盘', df[0], df[2], 'large_small'),
+            ('大盘/中盘', df[0], df[1], 'large_middle'),
+            ('中盘/小盘', df[1], df[2], 'middle_small')
+        ]
+
+        for combination in combinations:
+            blog_generator.h4(combination[0])
+            for factor in ['PB', 'PE']:
+                blog_generator.h5(factor)
+                figure_name = combination[3]
+                dates = combination[1]['date']
+                values = combination[1][factor] / combination[2][factor]
+
+                last_value = values[-1]
+                blog_generator.line('{}统计. 当前值: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
+                    factor,
+                    float(last_value),
+                    float(stats.percentileofscore(values.iloc[-240:], last_value)),
+                    float(stats.percentileofscore(values.iloc[-720:], last_value)),
+                    float(stats.percentileofscore(values.iloc[-1200:], last_value)),
+                    float(stats.percentileofscore(values.iloc[-2400:], last_value))))
+
+                for year in [1, 10]:
+                    days = 240 * year
+                    figure_name = 'r_{}_{}.png'.format(figure_name, str(year))
+
+                    fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+                    ax1 = axes
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{} {}'.format(combination[0], factor))
+                    ax1.legend(loc='upper left')
+                    ax1.set_ylabel(label_y1)
+
+                    '''
+                    if data_y2 is not None:
+                        ax2= ax1.twinx()
+                        ax2.plot(data_x, pd.to_numeric(data_y2, 'coerce', 'float'), label='Close', color='orange')
+                    '''
+
+                    figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
+
+                    plt.savefig(figure_path, bbox_inches='tight')
+                    plt.close()
+
+                    blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
 
     def generate_summary(self, blog_generator, section_name, csv_files):
         blog_generator.h3(section_name)

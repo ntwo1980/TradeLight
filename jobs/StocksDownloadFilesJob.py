@@ -30,7 +30,7 @@ class StocksDownloadFilesJob(j.JobBase):
                                             'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
                                 )
                 if len(df['date']):
-                    date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date()
+                    date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
 
             items = []
             while date < today:

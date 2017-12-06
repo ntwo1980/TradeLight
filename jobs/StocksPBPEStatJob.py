@@ -22,7 +22,7 @@ class StocksPBPEStatJob(j.JobBase):
             df = pd.read_csv(f, header=None, names=columns, parse_dates=['date'], infer_datetime_format=True)
             stat = {'name': df['name'].iloc[-1]}
 
-            for factor in ['pb', 'pe']:
+            for factor in ['pb', 'rolling_pe']:
                 last_factor_value = df[factor].iloc[-1]
                 stat[factor + '1'] = stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)
                 stat[factor + '3'] = stats.percentileofscore(df[factor].iloc[-720:], last_factor_value)

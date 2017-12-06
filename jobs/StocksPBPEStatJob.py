@@ -41,7 +41,7 @@ class StocksPBPEStatJob(j.JobBase):
 
             for year in [1, 10]:
                 days = 240 * year
-                figure_name = '{}_{}_{}.png'.stock_code, factor, str(year))
+                figure_name = '{}_{}_{}.png'.format(stock_code, factor, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                 ax1 = axes

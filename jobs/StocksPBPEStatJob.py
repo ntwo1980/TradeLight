@@ -40,17 +40,18 @@ class StocksPBPEStatJob(j.JobBase):
             values = df[factor]
             last_value = values.iloc[-1]
 
-            for year in [1, 10]:
-                days = 240 * year
-                figure_name = '{}_{}_{}.png'.format(stock_code, factor, str(year))
+            if not pd.isnull(last_value):
+                for year in [1, 10]:
+                    days = 240 * year
+                    figure_name = '{}_{}_{}.png'.format(stock_code, factor, str(year))
 
-                fig, axes = plt.subplots(1, 1, figsize=(16, 6))
-                ax1 = axes
-                ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{}'.format(factor))
-                ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(60).mean(), 'coerce', 'float'), label='{} 42 MA'.format(factor))
-                ax1.legend(loc='upper left')
+                    fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+                    ax1 = axes
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{}'.format(factor))
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(60).mean(), 'coerce', 'float'), label='{} 42 MA'.format(factor))
+                    ax1.legend(loc='upper left')
 
-                figure_path = '{}{}'.format(self.stat_output_path, figure_name)
+                    figure_path = os.path.join(self.stat_output_path, figure_name)
 
-                plt.savefig(figure_path, bbox_inches='tight')
-                plt.close()
+                    plt.savefig(figure_path, bbox_inches='tight')
+                    plt.close()

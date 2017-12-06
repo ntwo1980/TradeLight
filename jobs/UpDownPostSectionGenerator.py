@@ -16,7 +16,7 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
         if len(df.index) > 2 and df.ix[-1, 'index'] == df.ix[-2, 'index']:
             df = df.ix[:-1,:]
 
-        blog_generator.line('五日内创一个月新低比例{:.2f}%, 五日内创一个月新高比例{:.2f}%。股价低于一个月前股价95%比例{:.2f}%，股价高于一个前股价95%比例{:.2f}。'
+        blog_generator.line('五日内创一个月新低比例{:.2f}%, 五日内创一个月新高比例{:.2f}%。股价低于一个月前股价95%比例{:.2f}%，股价高于一个前股价95%比例{:.2f}%。'
                     .format(df['low'][-1], df['high'][-1], df['down'][-1], df['up'][-1]))
 
         fig, axes = plt.subplots(2, 1, figsize=(16, 12))

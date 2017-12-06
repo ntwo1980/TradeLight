@@ -32,3 +32,24 @@ class StocksPBPEStatJob(j.JobBase):
             with open(os.path.join(self.stat_output_path, basename(f).replace('r_zz_', '').replace('.csv', '_PBPE.json')), 'w', encoding='utf-8') as fp:
                 json.dump(stat, fp)
 
+            self.generate_stat_figure(df, basename(f).replace('r_zz_', '').replace('.csv', ''))
+
+    def generate_stat_figure(self, df, stock_code):
+        for factor in ['pb', 'rolling_pe']:
+            dates = df['date']
+            last_value = df[factor]
+
+            for year in [1, 10]:
+                days = 240 * year
+                figure_name = '{}_{}_{}.png'.stock_code, factor, str(year))
+
+                fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+                ax1 = axes
+                ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{}'.format(factor))
+                ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(60).mean(), 'coerce', 'float'), label='{} 42 MA'.format(factor))
+                ax1.legend(loc='upper left')
+
+                figure_path = '{}{}'.format(self.stat_output_path, figure_name)
+
+                plt.savefig(figure_path, bbox_inches='tight')
+                plt.close()

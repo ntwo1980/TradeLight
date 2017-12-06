@@ -37,7 +37,8 @@ class StocksPBPEStatJob(j.JobBase):
     def generate_stat_figure(self, df, stock_code):
         for factor in ['pb', 'rolling_pe']:
             dates = df['date']
-            last_value = df[factor]
+            values = df[factor]
+            last_value = values.iloc[-1]
 
             for year in [1, 10]:
                 days = 240 * year

@@ -24,10 +24,10 @@ class StocksPBPEStatJob(j.JobBase):
 
             for factor in ['pb', 'rolling_pe']:
                 last_factor_value = df[factor].iloc[-1]
-                stat[factor + '1'] = stats.percentileofscore(df[factor].iloc[-240:], last_factor_value)
-                stat[factor + '3'] = stats.percentileofscore(df[factor].iloc[-720:], last_factor_value)
-                stat[factor + '5'] = stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value)
-                stat[factor + '10'] = stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value)
+                stat[factor + '1'] = stats.percentileofscore(df[factor].iloc[-240:], last_factor_value) if not pd.isnull(last_factor_value) else ''
+                stat[factor + '3'] = stats.percentileofscore(df[factor].iloc[-720:], last_factor_value) if not pd.isnull(last_factor_value) else ''
+                stat[factor + '5'] = stats.percentileofscore(df[factor].iloc[-1200:], last_factor_value) if not pd.isnull(last_factor_value) else ''
+                stat[factor + '10'] = stats.percentileofscore(df[factor].iloc[-2400:], last_factor_value) if not pd.isnull(last_factor_value) else ''
 
             with open(os.path.join(self.stat_output_path, basename(f).replace('r_zz_', '').replace('.csv', '_PBPE.json')), 'w', encoding='utf-8') as fp:
                 json.dump(stat, fp)

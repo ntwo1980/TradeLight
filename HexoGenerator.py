@@ -77,7 +77,7 @@ class HexoGenerator:
     def get_url_str(self, title, url):
         return '[{}]({})'.format(title, url)
 
-    def get_raw_str(self, text)
+    def get_raw_str(self, text):
         return '{% raw %}' + text + '{% endraw %}'
 
     def data_frame(self, df, headers = None, float_format='%.2f'):

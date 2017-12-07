@@ -61,6 +61,13 @@ class HexoGenerator:
         self.line(text)
         self.line('{% endraw %}')
 
+    def raw_inline(self, text):
+        if not self.lines:
+            self.empty_line()
+
+        last_line = self.lines[-1]
+        last_line += self.get_raw_str(text)
+
     def css(self, url):
         self.raw('<link rel="Stylesheet" href="' + url + '" type="text/css" />')
 
@@ -69,6 +76,9 @@ class HexoGenerator:
 
     def get_url_str(self, title, url):
         return '[{}]({})'.format(title, url)
+
+    def get_raw_str(self, text)
+        return '{% raw %}' + text + '{% endraw %}'
 
     def data_frame(self, df, headers = None, float_format='%.2f'):
         text = '\n'.join([

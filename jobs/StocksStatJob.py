@@ -78,6 +78,7 @@ class StocksStatJob(j.JobBase):
             ])
 
         blog_generator.css('../../lib/stocks/datatables.css')
+        blog_generator.js('../../lib/stocks/lodash.js')
         blog_generator.js('../../lib/stocks/all_stocks.js')
 
         blog_generator.write()

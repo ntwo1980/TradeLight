@@ -62,7 +62,7 @@ class StocksStatJob(j.JobBase):
 
         df.loc[:,'name'] = [blog_generator.get_url_str(name, 'http://finance.sina.com.cn/realstock/company/' + ('sh' if code.startswith('6') else 'sz') + code + '/nc.shtml' )
                                 for (code, name) in zip(df['code'], df['name'])]
-        df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x) + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>')
+        df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x))
         # df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x) + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>')
 
         blog_generator.raw('<div id="hide" style="display:none">')

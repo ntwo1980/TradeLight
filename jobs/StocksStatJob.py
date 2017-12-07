@@ -62,8 +62,7 @@ class StocksStatJob(j.JobBase):
 
         df.loc[:,'name'] = [blog_generator.get_url_str(name, 'http://finance.sina.com.cn/realstock/company/' + ('sh' if code.startswith('6') else 'sz') + code + '/nc.shtml' )
                                 for (code, name) in zip(df['code'], df['name'])]
-        df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x))
-
+        df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x) + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>')
 
         blog_generator.raw('<div id="hide" style="display:none">')
         blog_generator.raw('隐藏：')
@@ -72,7 +71,6 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('<input id="hideIopDown" type="checkbox" checked /><label for="hideIopDown">盈利下降</label>')
         blog_generator.raw('<input id="hideGem" type="checkbox" checked /><label for="hideGem">创业板</label>')
         blog_generator.raw('</div>')
-        df['code'] = df['code'] + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>'
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
                 'Code', 'Name', 'Score', 'Slop', 'MA42', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'

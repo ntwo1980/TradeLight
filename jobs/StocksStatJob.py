@@ -72,6 +72,7 @@ class StocksStatJob(j.JobBase):
         blog_generator.raw('<input id="hideIopDown" type="checkbox" checked /><label for="hideIopDown">盈利下降</label>')
         blog_generator.raw('<input id="hideGem" type="checkbox" checked /><label for="hideGem">创业板</label>')
         blog_generator.raw('</div>')
+        df['code'] = df['code'] + '<li class="fa fa-fw fa-star-o" style="color:orange"></span>'
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
                 'Code', 'Name', 'Score', 'Slop', 'MA42', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'

@@ -33,7 +33,7 @@ class StocksDownloadFilesJob(j.JobBase):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
 
             items = []
-            while date < today:
+            while date < today and 'ST' not in df['name'].iloc[-1]:
                 if date.weekday() > 4:
                     date = date + dt.timedelta(days=1)
                     continue

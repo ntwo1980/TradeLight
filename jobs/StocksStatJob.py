@@ -65,13 +65,6 @@ class StocksStatJob(j.JobBase):
         df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x))
         # df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x) + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>')
 
-        blog_generator.raw('<div id="hide" style="display:none">')
-        blog_generator.raw('隐藏：')
-        blog_generator.raw('<input id="hideDown" type="checkbox" checked /><label for="hideDown">斜率小于-15</label>')
-        blog_generator.raw('<input id="hideMA" type="checkbox" checked /><label for="hideMA">低于均线</label>')
-        blog_generator.raw('<input id="hideIopDown" type="checkbox" checked /><label for="hideIopDown">盈利下降</label>')
-        blog_generator.raw('<input id="hideGem" type="checkbox" checked /><label for="hideGem">创业板</label>')
-        blog_generator.raw('</div>')
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
                 'Code', 'Name', 'Score', 'Slop', 'MA42', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'

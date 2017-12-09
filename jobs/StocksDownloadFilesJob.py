@@ -29,11 +29,12 @@ class StocksDownloadFilesJob(j.JobBase):
                                             'category_name,', 'subcategory_code',
                                             'subcategory_name', 'pe', 'rolling_pe', 'pb', 'payout']
                                 )
+
                 if len(df['date']):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
 
-            if 'ST' in df['name'].iloc[-1] and (today - date).days > 60:
-                continue
+                    if 'ST' in df['name'].iloc[-1] and (today - date).days > 60:
+                        continue
 
             items = []
 

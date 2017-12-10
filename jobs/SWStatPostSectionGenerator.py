@@ -189,4 +189,4 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             header=None, names=columns, parse_dates=['Date'],
             infer_datetime_format=True)
 
-        df['ROE'] = df['PB'] / df ['PE']
+        df['ROE'] = df['PB'].astype('float') / df ['PE'].astype('float')

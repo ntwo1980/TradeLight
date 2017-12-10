@@ -65,8 +65,8 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             blog_generator.h4(factor)
             for combination in combinations:
                 blog_generator.h5(combination[0])
-                df1 = combination[1][combination[1][factor]!='None']
-                df2 = combination[2][combination[2][factor]!='None']
+                df1 = combination[1]
+                df2 = combination[2]
 
                 dates = df1['Date']
                 values = df1[factor].astype('float') / df2[factor].astype('float')
@@ -189,6 +189,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             header=None, names=columns, parse_dates=['Date'],
             infer_datetime_format=True)
 
+        df = df[(df['PB']!='None')&(df['PE']='None')]
         df['ROE'] = df['PB'][df['PB']!='None'].astype('float') / df ['PE'][df['PE']!='None'].astype('float')
 
         return df

@@ -61,7 +61,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
             ('中盘/小盘', dfs[1], dfs[2], 'medium_small', 'medium/small')
         ]
 
-        for factor in ['PB', 'PE']:
+        for factor in ['PB', 'PE', 'ROE']:
             blog_generator.h4(factor)
             for combination in combinations:
                 blog_generator.h5(combination[0])
@@ -100,10 +100,9 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
     def generate_summary(self, blog_generator, section_name, csv_files):
         blog_generator.h3(section_name)
 
-        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         dfs = [self.load_csv(f) for f in csv_files]
 
-        for factor in ['PB', 'PE']:
+        for factor in ['PB', 'PE', 'ROE']:
             blog_generator.h4(factor)
 
             stat = []
@@ -130,13 +129,12 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
     def generate_by_group(self, blog_generator, section_name, csv_files, group_names = None):
         blog_generator.h3(section_name)
 
-        columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
         dfs = [self.load_csv(f) for f in csv_files]
 
         if group_names is None:
             group_names = [df['Name'].iloc[-1] for df in dfs]
 
-        for factor in ['PB', 'PE']:
+        for factor in ['PB', 'PE', 'ROE']:
             blog_generator.h4(factor)
             for index, group_name in enumerate(group_names):
                 blog_generator.h5(group_name)
@@ -186,7 +184,9 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
     def load_csv(self, csv_file):
         columns =  ['Code', 'Name', 'Date', 'Open', 'High', 'Low', 'Close', 'Volumn', 'Amount', 'Change', 'Turnover', 'PE', 'PB', 'Payout']
-        return pd.read_csv(
+        df = pd.read_csv(
             os.path.join(self.data_file_path, 'r_sw_{}.csv'.format(csv_file)),
             header=None, names=columns, parse_dates=['Date'],
             infer_datetime_format=True)
+
+        df['ROE'] = df['PB'] / df ['PE']

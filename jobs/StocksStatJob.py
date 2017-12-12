@@ -69,7 +69,7 @@ class StocksStatJob(j.JobBase):
 
         blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'above_ma42', 'above_ma120', 'above_ma250', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
-                'Code', 'Name', 'Score', 'Slop', 'MA42', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'
+                'Code', 'Name', 'Score', 'Slop', 'MA42', 'MA120', 'MA250', 'ATR', 'PB', 'ROIC', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'
             ])
 
         blog_generator.css('../../lib/stocks/datatables.css')

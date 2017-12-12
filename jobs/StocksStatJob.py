@@ -16,7 +16,7 @@ class StocksStatJob(j.JobBase):
         self.generate_post(df)
 
     def stat_stocks(self, df):
-        if 'above_ma42' not in list(df.columns):
+        if 'above_ma42' not in list(df.columns) or 'above_ma120' not in list(df.columns):
             df['above_ma42'] = (df['close'] / df['ma42'] - 1) * 100
             df['above_ma120'] = (df['close'] / df['ma120'] - 1) * 100
             df['above_ma250'] = (df['close'] / df['ma250'] - 1) * 100

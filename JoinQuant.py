@@ -73,7 +73,7 @@ class JoinQuant:
         return params
 
     def fetch_file(self, file_name, new_file_name):
-        account_c?!?jedi=1, onfig = self.config['?!? (*_*url*_*, **kwargs) ?!?jedi?!?'account']
+        account_config = self.config['account']
         rep = self.s.get("https://www.joinquant.net/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
 
         if not new_file_name is None:

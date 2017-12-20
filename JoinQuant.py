@@ -7,12 +7,12 @@ import unittest
 import pandas as pd
 
 class JoinQuant:
-    LOGIN_PAGE = 'https://www.joinquant.com'
-    LOGIN_API = 'https://www.joinquant.com/user/login/doLogin?ajax=1'
-    TRANSACTION_API = 'https://www.joinquant.com/algorithm/live/transactionDetail'
-    WEB_REFERER = 'https://www.joinquant.com/user/login/index'
-    WEB_ORIGIN = 'https://www.joinquant.com'
-    JUPTER_PAGE = 'https://www.joinquant.com/hub/login?next='
+    LOGIN_PAGE = 'https://www.joinquant.net'
+    LOGIN_API = 'https://www.joinquant.net/user/login/doLogin?ajax=1'
+    TRANSACTION_API = 'https://www.joinquant.net/algorithm/live/transactionDetail'
+    WEB_REFERER = 'https://www.joinquant.net/user/login/index'
+    WEB_ORIGIN = 'https://www.joinquant.net'
+    JUPTER_PAGE = 'https://www.joinquant.net/hub/login?next='
 
     def __init__(self, config):
         self.s = requests.Session()
@@ -73,8 +73,8 @@ class JoinQuant:
         return params
 
     def fetch_file(self, file_name, new_file_name):
-        account_config = self.config['account']
-        rep = self.s.get("https://www.joinquant.com/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
+        account_c?!?jedi=1, onfig = self.config['?!? (*_*url*_*, **kwargs) ?!?jedi?!?'account']
+        rep = self.s.get("https://www.joinquant.net/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
 
         if not new_file_name is None:
             file_path = os.path.join(self.data_path, new_file_name)

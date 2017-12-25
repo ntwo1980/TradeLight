@@ -7,12 +7,14 @@ import unittest
 import pandas as pd
 
 class JoinQuant:
-    LOGIN_PAGE = 'https://www.joinquant.net'
-    LOGIN_API = 'https://www.joinquant.net/user/login/doLogin?ajax=1'
-    TRANSACTION_API = 'https://www.joinquant.net/algorithm/live/transactionDetail'
-    WEB_REFERER = 'https://www.joinquant.net/user/login/index'
-    WEB_ORIGIN = 'https://www.joinquant.net'
-    JUPTER_PAGE = 'https://www.joinquant.net/hub/login?next='
+    WEB_ROOT = 'https://www.joinquant.net'
+    LOGIN_PAGE = WEB_ROOT
+    LOGIN_API =  '{}/user/login/doLogin?ajax=1'.format(WEB_ROOT)
+    TRANSACTION_API = '{}/algorithm/live/transactionDetail'.format(WEB_ROOT)
+    WEB_REFERER = '{}/user/login/index'.format(WEB_ROOT)
+    WEB_ORIGIN = WEB_ROOT
+    JUPTER_PAGE = '{}/hub/login?next='.format(WEB_ROOT)
+    DOWNLOAD_FILES = WEB_ROOT + '/user/{}/files/data/{}?download=1'
 
     def __init__(self, config):
         self.s = requests.Session()
@@ -74,7 +76,7 @@ class JoinQuant:
 
     def fetch_file(self, file_name, new_file_name):
         account_config = self.config['account']
-        rep = self.s.get("https://www.joinquant.net/user/{}/files/data/{}?download=1".format(account_config['userid'], file_name))
+        rep = self.s.get(DOWNLOAD_FILES.format(account_config['userid'], file_name))
 
         if not new_file_name is None:
             file_path = os.path.join(self.data_path, new_file_name)

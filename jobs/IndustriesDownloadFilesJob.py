@@ -1,3 +1,4 @@
+import collections
 import os
 import datetime as dt
 # import jobs.JobBase as j
@@ -19,15 +20,28 @@ class IndustriesDownloadFilesJob:
         today = dt.date.today()
         date_format = '%Y-%m-%d'
 
-    def fetch_file(self, data_source, data_type, data_date):
+    def fetch_data(self, data_source, data_type, data_date):
         rep = self.s.get(self.INDUSTRY_QUERY.format(data_source, data_type, data_date))
         content = rep.content
-        print(content)
         html = BeautifulSoup(content, "lxml")
+        tables = html.find_all('table', class_='list-div-table')
+        df = pd.DataFrame(columns=['code', 'name', 'value', 'total_count', 'lose_count'])
+
+        for table in tables:
+            divs = table.find_all('div')
+            df = df.append({
+                'code': self.clearStr(divs[0].text),
+                'name': self.clearStr(divs[1].text),
+                'value': self.clearStr(divs[2].text),
+                'total_count': self.clearStr(divs[3].text),
+                'lose_count': self.clearStr(divs[4].text)
+            }, ignore_index=True)
+
+        return df
 
     def clearStr(self, s):
         if isinstance(s, str):
-            return s.replace(' ', '').replace('--', '')
+            return s.replace(' ', '').replace('--', '').replace('\r', '').replace('\n', '')
 
         return s
 
@@ -42,7 +56,7 @@ class IndustriesDownloadFilesJobTest(unittest.TestCase):
         pass
 
     def test_downlad_file(self):
-        self.job.fetch_file('zjh', 1, '2011-05-03')
+        self.job.fetch_data('zjh', 1, '2011-05-03')
 
 if __name__ == '__main__':
     unittest.main()

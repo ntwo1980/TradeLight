@@ -27,5 +27,6 @@ __all__ = [
     'SWStatPostSectionGenerator',
     'HexoGeneratorJob',
     'SWDownloadFilesJob',
-    'StocksDownloadFilesJob'
+    'StocksDownloadFilesJob',
+    'IndustriesDownloadFilesJob'
 ]

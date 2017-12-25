@@ -14,14 +14,19 @@ class IndustriesDownloadFilesJob:
         self.data_file_path = data_file_path
         self.WEB_INDEX = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio'
         self.INDUSTRY_QUERY = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio?type={}{}&date={}'
+        self.data_sources = ['zjh', 'zz']
+        self.data_types = [1, 2, 3]
+        self.date_format = '%Y-%m-%d'
 
     def run(self):
         self.s.get(self.WEB_INDEX)
         today = dt.date.today()
-        date_format = '%Y-%m-%d'
+        dfs = [ self.fetch_data(ds, dt, today) for ds in self.data_sources for dt in self.data_types ]
 
     def fetch_data(self, data_source, data_type, data_date):
-        rep = self.s.get(self.INDUSTRY_QUERY.format(data_source, data_type, data_date))
+        rep = self.s.get(
+            self.INDUSTRY_QUERY.format(data_source, data_type, data_date.strftime(self.date_format)))
+
         content = rep.content
         html = BeautifulSoup(content, "lxml")
         tables = html.find_all('table', class_='list-div-table')
@@ -56,7 +61,7 @@ class IndustriesDownloadFilesJobTest(unittest.TestCase):
         pass
 
     def test_downlad_file(self):
-        self.job.fetch_data('zjh', 1, '2011-05-03')
+        self.job.fetch_data('zjh', 1, dt.date.today())
 
 if __name__ == '__main__':
     unittest.main()

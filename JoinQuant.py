@@ -76,7 +76,7 @@ class JoinQuant:
 
     def fetch_file(self, file_name, new_file_name):
         account_config = self.config['account']
-        rep = self.s.get(DOWNLOAD_FILES.format(account_config['userid'], file_name))
+        rep = self.s.get(self.DOWNLOAD_FILES.format(account_config['userid'], file_name))
 
         if not new_file_name is None:
             file_path = os.path.join(self.data_path, new_file_name)

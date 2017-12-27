@@ -31,7 +31,7 @@ class IndustriesDownloadFilesJob(j.JobBase):
                 df = pd.read_csv(csv_file, parse_dates=False, header=None, names=columns)
 
                 if len(df['date']):
-                    date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
+                    date = dt.datetime.strptime(df['date'].iloc[-1], self.date_format).date() + dt.timedelta(days=1)
 
             while date < today:
                 if date.weekday() > 4:

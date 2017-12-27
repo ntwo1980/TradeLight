@@ -46,7 +46,7 @@ class IndustriesDownloadFilesJob(j.JobBase):
                 for index, df in enumerate(dfs):
                     df_industry[self.data_types_name[index]] = df['value']
 
-                df_industry['date'] = data_date.strftime(self.date_format)
+                df_industry['date'] = date.strftime(self.date_format)
                 df_industry.drop(columns=['value'])
 
                 with open(csv_file, 'a') as f:

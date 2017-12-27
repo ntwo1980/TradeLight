@@ -47,7 +47,8 @@ class IndustriesDownloadFilesJob(j.JobBase):
                     df_industry[self.data_types_name[index]] = df['value']
 
                 df_industry['date'] = date.strftime(self.date_format)
-                df_industry.drop(columns=['value'])
+                df_industry.drop(['value'], axis = 1)
+                df_industry.columns = ['code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
 
                 with open(csv_file, 'a') as f:
                     df_industry.to_csv(f, header=False)

@@ -14,14 +14,27 @@ class IndustriesDownloadFilesJob(j.JobBase):
         self.WEB_INDEX = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio'
         self.INDUSTRY_QUERY = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio?type={}{}&date={}'
         self.data_sources = ['zjh', 'zz']
-        self.data_types = [1, 2, 3]
+        self.data_types = [1, 2, 3, 4]
         self.date_format = '%Y-%m-%d'
 
     def run(self):
         self.s.get(self.WEB_INDEX)
         today = dt.date.today() - dt.timedelta(days=1)
+
         for ds in self.data_sources:
-            dfs = [ self.fetch_data(ds, dt, today) for dt in self.data_types ]
+            date = dt.date(2011, 5, 3)
+
+            csv_file = os.path.join(self.data_file_path, 'r_industry_{}.csv'.format(ds))
+            if os.path.exists(csv_file):
+                df = pd.read_csv(csv_file, parse_dates=False, header=None,
+                                 names=[
+                                    'code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
+                                )
+
+                if len(df['date']):
+                    date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
+
+            dfs = [ self.fetch_data(ds, dt, date) for dt in self.data_types ]
             print(dfs[0])
 
     def fetch_data(self, data_source, data_type, data_date):

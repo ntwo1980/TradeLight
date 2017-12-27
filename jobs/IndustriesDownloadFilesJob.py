@@ -15,6 +15,7 @@ class IndustriesDownloadFilesJob(j.JobBase):
         self.INDUSTRY_QUERY = 'http://www.csindex.com.cn/zh-CN/downloads/industry-price-earnings-ratio?type={}{}&date={}'
         self.data_sources = ['zjh', 'zz']
         self.data_types = [1, 2, 3, 4]
+        self.data_types_name = ['pe', 'rolling_pe', 'pb', 'payout']
         self.date_format = '%Y-%m-%d'
 
     def run(self):
@@ -34,8 +35,22 @@ class IndustriesDownloadFilesJob(j.JobBase):
                 if len(df['date']):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
 
-            dfs = [ self.fetch_data(ds, dt, date) for dt in self.data_types ]
-            print(dfs[0])
+            while date < today:
+                if date.weekday() > 4:
+                    date = date + dt.timedelta(days=1)
+                    continue
+
+                dfs = [ self.fetch_data(ds, dt, date) for dt in self.data_types ]
+                df_industry = dfs[0]
+
+                for index, df in enumerate(dfs):
+                    df_industry[self.data_types_name[index]] = df['value']
+
+                df_industry['date'] = data_date.strftime(self.date_format)
+                df_industry.drop(columns=['value'])
+
+                with open(csv_file, 'a') as f:
+                    df_industry.to_csv(f, header=False)
 
     def fetch_data(self, data_source, data_type, data_date):
         rep = self.s.get(

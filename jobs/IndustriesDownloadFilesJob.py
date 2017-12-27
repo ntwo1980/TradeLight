@@ -1,14 +1,13 @@
 import collections
 import os
 import datetime as dt
-# import jobs.JobBase as j
+import jobs.JobBase as j
 import unittest
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-# class IndustriesDownloadFilesJob(j.JobBase):
-class IndustriesDownloadFilesJob:
+class IndustriesDownloadFilesJob(j.JobBase):
     def __init__(self, data_file_path):
         self.s = requests.Session()
         self.data_file_path = data_file_path

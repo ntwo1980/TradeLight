@@ -51,6 +51,8 @@ class IndustriesDownloadFilesJob(j.JobBase):
                 with open(csv_file, 'a') as f:
                     df_industry.to_csv(f, header=False, index=False)
 
+                date = date + dt.timedelta(days=1)
+
     def fetch_data(self, data_source, data_type, data_date):
         rep = self.s.get(
             self.INDUSTRY_QUERY.format(data_source, data_type, data_date.strftime(self.date_format)))

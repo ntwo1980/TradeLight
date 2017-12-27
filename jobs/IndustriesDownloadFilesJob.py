@@ -20,9 +20,10 @@ class IndustriesDownloadFilesJob:
 
     def run(self):
         self.s.get(self.WEB_INDEX)
-        today = dt.date.today()
+        today = dt.date.today() - dt.timedelta(days=1)
         for ds in self.data_sources:
             dfs = [ self.fetch_data(ds, dt, today) for dt in self.data_types ]
+            print(dfs[0])
 
     def fetch_data(self, data_source, data_type, data_date):
         rep = self.s.get(

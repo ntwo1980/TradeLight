@@ -21,16 +21,14 @@ class IndustriesDownloadFilesJob(j.JobBase):
     def run(self):
         self.s.get(self.WEB_INDEX)
         today = dt.date.today() - dt.timedelta(days=1)
+        columns =['code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
 
         for ds in self.data_sources:
             date = dt.date(2011, 5, 3)
 
             csv_file = os.path.join(self.data_file_path, 'r_industry_{}.csv'.format(ds))
             if os.path.exists(csv_file):
-                df = pd.read_csv(csv_file, parse_dates=False, header=None,
-                                 names=[
-                                    'code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
-                                )
+                df = pd.read_csv(csv_file, parse_dates=False, header=None, names=columns)
 
                 if len(df['date']):
                     date = dt.datetime.strptime(df['date'].iloc[-1], date_format).date() + dt.timedelta(days=1)
@@ -48,10 +46,10 @@ class IndustriesDownloadFilesJob(j.JobBase):
 
                 df_industry['date'] = date.strftime(self.date_format)
                 df_industry.drop(['value'], axis = 1, inplace=True)
-                df_industry.columns = ['code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
+                df_industry = df_industry[columns]
 
                 with open(csv_file, 'a') as f:
-                    df_industry.to_csv(f, header=False)
+                    df_industry.to_csv(f, header=False, index=False)
 
     def fetch_data(self, data_source, data_type, data_date):
         rep = self.s.get(

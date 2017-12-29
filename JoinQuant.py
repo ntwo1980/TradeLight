@@ -7,7 +7,7 @@ import unittest
 import pandas as pd
 
 class JoinQuant:
-    WEB_ROOT = 'https://www.joinquant.net'
+    WEB_ROOT = 'https://www.joinquant.com'
     LOGIN_PAGE = WEB_ROOT
     LOGIN_API =  '{}/user/login/doLogin?ajax=1'.format(WEB_ROOT)
     TRANSACTION_API = '{}/algorithm/live/transactionDetail'.format(WEB_ROOT)

@@ -20,7 +20,7 @@ class IndustriesDownloadFilesJob(j.JobBase):
 
     def run(self):
         self.s.get(self.WEB_INDEX)
-        today = dt.date.today() - dt.timedelta(days=1)
+        today = dt.date.today()
         columns =['code', 'name', 'date', 'total_count', 'lose_count', 'pe', 'rolling_pe', 'pb', 'payout']
 
         for ds in self.data_sources:

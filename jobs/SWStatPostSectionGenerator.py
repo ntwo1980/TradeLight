@@ -28,7 +28,7 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
         self.generate_by_group(
             blog_generator,
             '申万-按指数',
-            ['801001', '801002', '801003', '801005', '801300']
+            ['801001', '801002', '801003', '801005', '801300', '801853']
         )
 
         self.generate_mc_comparison(blog_generator)
@@ -52,10 +52,11 @@ class SWStatPostSectionGenerator(p.PostSectionGenerator):
 
     def generate_mc_comparison(self, blog_generator):
         blog_generator.h3('申万-按市值比')
-        dfs = [self.load_csv(f) for f in ['801811', '801812', '801813']]
+        dfs = [self.load_csv(f) for f in ['801811', '801812', '801813', '801853']]
         for df in dfs:
             df.set_index('Date', drop=False, inplace=True)
         combinations = [
+            ('绩优/小盘', dfs[3], dfs[2], 'excellent_small', 'excellent/small'),
             ('大盘/小盘', dfs[0], dfs[2], 'large_small', 'large/small'),
             ('大盘/中盘', dfs[0], dfs[1], 'large_medium', 'large/medium'),
             ('中盘/小盘', dfs[1], dfs[2], 'medium_small', 'medium/small')

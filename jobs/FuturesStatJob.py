@@ -49,7 +49,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
 
         for _, row in df_futures_stat.iterrows():
             code = row['code']
-            blog_generator.h3(rows['display_name'])
+            blog_generator.h3(row['display_name'])
             df_future = df_futures[df_futures['code']==code]
             dates = pd.to_datetime(df_future['date'])
             closes = df_future['close']

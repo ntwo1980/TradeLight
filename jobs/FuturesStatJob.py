@@ -1,4 +1,5 @@
 import datetime
+import os
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -39,9 +40,35 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
+        blog_generator.h3('汇总')
         blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'close1', 'close3', 'close5', 'close10']],
             headers=[
                 '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
             ])
+
+        for code in df_futures_stat['code']:
+            blog_generator.h3(code)
+            df_future = df_futures[df_futures['code']==code]
+            dates = df_future['date']
+            closes = df_future['close']
+            last_close = closes.iloc[-1]
+
+            if not pd.isnull(last_close):
+                for year in [1, 10]:
+                    days = 240 * year
+                    figure_name = 'r_future_{}_{}.png'.format(code, str(year))
+
+                    fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+                    ax1 = axes
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(closes.iloc[-days:], 'coerce', 'float'), label='close')
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(closes.iloc[-days:].rolling(42).mean(), 'coerce', 'float'), label='close 42 MA')
+                    ax1.legend(loc='upper left')
+
+                    figure_path = os.path.join(os.path.dirname(self.post_path), figure_name)
+
+                    plt.savefig(figure_path, bbox_inches='tight')
+                    plt.close()
+
+                    blog_generator.img(figure_path)
 
         blog_generator.write()

@@ -48,7 +48,7 @@ class StocksPBPEStatJob(j.JobBase):
                     fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                     ax1 = axes
                     ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:], 'coerce', 'float'), label='{}'.format(factor))
-                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(60).mean(), 'coerce', 'float'), label='{} 42 MA'.format(factor))
+                    ax1.plot(dates.iloc[-days:], pd.to_numeric(values.iloc[-days:].rolling(42).mean(), 'coerce', 'float'), label='{} 42 MA'.format(factor))
                     ax1.legend(loc='upper left')
 
                     figure_path = os.path.join(self.stat_output_path, figure_name)

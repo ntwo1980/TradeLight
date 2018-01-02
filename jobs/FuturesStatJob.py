@@ -47,10 +47,11 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                 '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
             ])
 
-        for code in df_futures_stat['code']:
-            blog_generator.h3(code)
+        for rows in df_futures_stat.iterrows():
+            code = rows['code']
+            blog_generator.h3(rows['display_name'])
             df_future = df_futures[df_futures['code']==code]
-            dates = df_future['date']
+            dates = pd.to_datetime(df_future['date'])
             closes = df_future['close']
             last_close = closes.iloc[-1]
 
@@ -70,6 +71,9 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                     plt.savefig(figure_path, bbox_inches='tight')
                     plt.close()
 
-                    blog_generator.img(figure_path)
+                    blog_generator.line('收盘: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
+                        row['close'], row['close1'], row['close3'], row['close5'], row['close10']
+                    ))
+                    blog_generator.img(figure_name)
 
         blog_generator.write()

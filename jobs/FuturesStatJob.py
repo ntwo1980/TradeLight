@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from scipy import stats
+import matplotlib.pyplot as plt
 import unittest
 import jobs.JobBase as j
 import jobs.BlogPostGenerateJobBase as b

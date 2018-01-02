@@ -37,6 +37,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                             }).reset_index()
         df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
         df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
+        df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
         blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'close1', 'close3', 'close5', 'close10']],
             headers=[

@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import pandas as pd
+import unittest
 import jobs.JobBase as j
 import jobs.BlogPostGenerateJobBase as b
 import HexoGenerator
@@ -41,3 +42,18 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
 
         blog_generator.write()
         '''
+
+class FuturesStatJob(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        pass
+
+    @classmethod
+    def tearDownClass(self):
+        pass
+
+    def test_run(self):
+        #self.sw.fetch_file('801001')
+
+if __name__ == '__main__':
+    unittest.main()

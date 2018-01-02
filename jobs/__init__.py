@@ -28,5 +28,6 @@ __all__ = [
     'HexoGeneratorJob',
     'SWDownloadFilesJob',
     'StocksDownloadFilesJob',
-    'IndustriesDownloadFilesJob'
+    'IndustriesDownloadFilesJob',
+    'FuturesStatJob'
 ]

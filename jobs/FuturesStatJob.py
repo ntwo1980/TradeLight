@@ -16,6 +16,11 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_future_list = pd.read_csv(
             self.future_list_file_path,
             infer_datetime_format=True)
+        df_futures = pd.read_csv(
+            self.futures_file_path,
+            infer_datetime_format=True)
+
+        df_futures = df_futures.unstack()
 
         '''
         df_future = pd.read_csv(

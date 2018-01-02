@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import pandas as pd
+from scipy import stats
 import unittest
 import jobs.JobBase as j
 import jobs.BlogPostGenerateJobBase as b
@@ -13,7 +14,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         self.futures_file_path = futures_file_path
 
     def run(self):
-        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '商品期货 - {}'.format(j.JobBase.get_today_str()), tags=['数据统计'])
+        blog_generator = HexoGenerator.HexoGenerator(self.post_path, '期货 - {}'.format(j.JobBase.get_today_str()), tags=['数据统计'])
         df_future_list = pd.read_csv(
             self.future_list_file_path,
             infer_datetime_format=True)
@@ -22,27 +23,28 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
             index_col='date',
             infer_datetime_format=True)
 
-        df_futures = df_futures.unstack()
+        df_futures = df_futures.unstack().reset_index()
+        df_futures.columns = ['code', 'date', 'close']
+        df_futures.dropna(inplace=True)
+        df_futures_stat = df_futures.groupby('code')['close'].agg(
+                            {
+                                'count': 'count',
+                                'close': 'last',
+                                'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
+                                'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
+                                'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
+                                'close10': lambda closes: stats.percentileofscore(closes[-2400:], closes.iloc[-1])
+                            }).reset_index()
+        df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
+        df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
 
-        '''
-        df_future = pd.read_csv(
-            self.futures_file_path,
-            names=columns, parse_dates=['Date'],
-            infer_datetime_format=True)
-
-
-        total_df = pd.read_csv(self.data_file_path)
-        dfs = np.array_split(total_df, len(total_df.index) / 5 )   # split whole dataframe into dataframes of individual index
-        for df in dfs:
-            blog_generator.h3(df['index_name'].iat[0])
-            df['weekday'] = df['weekday'] + 1
-            blog_generator.data_frame(df[['weekday', 'count', 'mean', 'min', 'max', 'positive_pct']],
-                headers=[
-                    '星期', '样本数量', '平均', '最小值', '最大值', '正回报比率'
-                ])
+        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'close1', 'close3', 'close5', 'close10']],
+            headers=[
+                '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+            ])
 
         blog_generator.write()
-        '''
+
 
 class FuturesStatJob(unittest.TestCase):
     @classmethod

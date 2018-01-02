@@ -47,7 +47,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                 '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
             ])
 
-        for row in df_futures_stat.iterrows():
+        for _, row in df_futures_stat.iterrows():
             code = row['code']
             blog_generator.h3(rows['display_name'])
             df_future = df_futures[df_futures['code']==code]

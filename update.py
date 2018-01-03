@@ -105,7 +105,6 @@ if generate_joinquant:
 
         if check_join_quant_data_time_stamp(jq):
             JoinQuantDownloadFilesJob.JoinQuantDownloadFilesJob(jq).run()
-            #StocksStatJob.StocksStatJob(os.path.join(script_dir, 'data/r_stocks.csv')).run()
 
     StocksStatJob.StocksStatJob(
         post_path = os.path.join(blog_page_path, 'r_Stocks/', 'index.md'),

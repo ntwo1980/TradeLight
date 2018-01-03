@@ -68,9 +68,9 @@ class StocksStatJob(j.JobBase):
         # df.loc[:,'code'] = df['code'].map(lambda x: blog_generator.get_url_str(x, '/stocks/?code=' + x) + '<li class="fa fa-fw fa-star-o" style="color:orange"></li>')
 
         df['ret'] = df['ret'] * 100
-        blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'ret', 'above_ma42', 'above_ma120', 'above_ma250', 'below_max10_atr', 'pb_r', 'roic_r', 'iop_r', 'iop', 'iop_p', 'pe']],
+        blog_generator.data_frame(df[['code', 'name', 'score', 'l_slop', 'ret', 'above_ma42', 'above_ma120', 'above_ma250', 'below_max10_atr', 'pb_r', 'iop_r', 'iop', 'iop_p', 'pe']],
             headers=[
-                'Code', 'Name', 'Score', 'Slop', 'Ret', 'MA 42', 'MA 120', 'MA 250', 'ATR', 'PB Rank', 'ROIC Rank', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'
+                'Code', 'Name', 'Score', 'Slop', 'Ret', 'MA 42', 'MA 120', 'MA 250', 'ATR', 'PB Rank', 'IOP Rank', 'IOP', 'Prev IOP', 'PE'
             ])
 
         blog_generator.css('../../lib/stocks/datatables.css')

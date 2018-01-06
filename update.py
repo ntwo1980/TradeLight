@@ -186,8 +186,10 @@ if generate_joinquant or generate_sw or generate_zz:
         futures_file_path = os.path.join(script_dir, 'data/r_futures.csv'),
     ).run()
 
+'''
 if generate_joinquant or generate_xueqiu or generate_sw or generate_zz:
     # generate_everyday_blog_post()
 
     # HexoGeneratorJob.HexoGeneratorJob(blog_path, is_windows).run()
     HexoGeneratorJob.HexoGeneratorJob(blog_path, False).run()
+'''

@@ -4,7 +4,7 @@ import pandas as pd
 import jobs.JobBase as j
 import HexoGenerator
 
-class StocksStatJob(j.JobBase):
+class IndexStocks(j.JobBase):
     def __init__(self, post_path, stocks_file_path):
         self.post_path = post_path
         self.stocks_file_path = stocks_file_path

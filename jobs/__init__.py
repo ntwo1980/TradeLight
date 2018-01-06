@@ -29,5 +29,6 @@ __all__ = [
     'SWDownloadFilesJob',
     'StocksDownloadFilesJob',
     'IndustriesDownloadFilesJob',
-    'FuturesStatJob'
+    'FuturesStatJob',
+    'IndexStocksJson'
 ]

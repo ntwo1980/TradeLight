@@ -10,6 +10,6 @@ class IndexStocksJson(j.JobBase):
         self.index_file_path = index_file_path
 
     def run(self):
-        df = pd.read_csv(self.stocks_file_path)
+        df = pd.read_csv(self.index_file_path)
         print(df)
 

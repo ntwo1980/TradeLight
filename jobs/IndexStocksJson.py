@@ -21,6 +21,5 @@ class IndexStocksJson(j.JobBase):
 
             index_json[index[0:6]] = data
 
-        print(os.path.join(self.json_dir, 'index_stocks.json'))
         with open(os.path.join(self.json_dir, 'index_stocks.json'), 'w') as f:
             json.dump(index_json, f)

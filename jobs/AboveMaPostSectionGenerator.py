@@ -22,6 +22,7 @@ class AboveMaPostSectionGenerator(p.PostSectionGenerator):
 
         ax1 = axes
         ax1.plot(df.index, df['above_ma'], label='above 42 MA pct')
+        ax1.plot(df.index, df['above_ma']. rolling(42).mean(), label='above 42 MA pct 42 MA')
         ax1.legend(loc='upper left')
         ax1.set_ylabel('above 42 MA pct')
         ax2= ax1.twinx()

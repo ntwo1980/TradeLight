@@ -35,11 +35,11 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
         for index in stat_df.columns[1:]:
             index_name = df_names.at[index, 'display_name']
-            ratios = summary_df.ix[-days:,index]
+            ratios = stat_df.ix[-double_ma_window:,index]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
 
-            (slop, _, _, _, _) = self.get_linear(diff[-ma_window:])
+            (slop, _, _, _, _) = self.get_linear(ratios[-ma_window:])
             above_ma = diff[-1]
             summary_df.loc[len(summary_df)] = [index_name, slop, above_ma]
 
@@ -56,7 +56,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
             for year in [1, 3]:
                 days = 240 * year
-                ratios = summary_df.ix[-days:,index]
+                ratios = stat_df.ix[-days:,index]
                 ratios_rolling_ma = ratios.rolling(ma_window).mean()
                 diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))

@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import jobs.PostSectionGenerator as p
@@ -27,20 +28,21 @@ class IndexesCompareJob(p.PostSectionGenerator):
         stat = df_closes.transform(lambda x: x / benchmark)
         dates = df_closes.index
         ma_window = 30
-        double_ma_window = 30
+        double_ma_window = 60
 
-        summary_df = pd.DataFrame(columsn=['index', 'slop', 'above_ma'])
+        summary_df = pd.DataFrame(columns=['index', 'slop', 'above_ma'])
         blog_generator.h4('总计')
 
         for index in stat.columns[1:]:
             index_name = df_names.at[index, 'display_name']
             closes = df_closes.ix[-double_ma_window:,index]
-            closes_rolling_ma = df_closes.ix[-double_ma_window:,index].rolling(ma_window).mean()
+            closes_rolling_ma = closes.rolling(ma_window).mean()
             diff = (closes - closes_rolling_ma) / closes_rolling_ma
 
             (slop, _, _, _, _) = self.get_linear(diff[-ma_window:])
             above_ma = diff[-1]
             summary_df.loc[len(summary_df)] = [index_name, slop, above_ma]
+
 
         blog_generator.data_frame(summary_df,
             headers=[
@@ -55,7 +57,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
             for year in [1, 3]:
                 days = 240 * year
                 closes = df_closes.ix[-days:,index]
-                closes_rolling_ma = df_closes.ix[-days:,index].rolling(ma_window).mean()
+                closes_rolling_ma = closes.rolling(ma_window).mean()
                 diff = (closes - closes_rolling_ma) / closes_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 

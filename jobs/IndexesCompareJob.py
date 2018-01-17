@@ -44,7 +44,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 ax1.plot(dates[-days:], closes, label='close')
                 ax1.plot(dates[-days:], closes_rolling_ma, label='close MA30')
                 ax1.legend(loc='upper left')
-                ax2 = ax.twinx()
+                ax2 = axes.twinx()
                 ax2.plot(dates[-days:], diff, label='diff')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)

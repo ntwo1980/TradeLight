@@ -32,15 +32,20 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
             blog_generator.h4(index_name)
 
-            for year in [1, 2]:
+            for year in [1, 3]:
                 days = 240 * year
+                closes = df_closes.ix[-days:,index]
+                closes_rolling_ma = df_closes.ix[-days:,index].rolling(30).mean()
+                diff = closes - closes_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                 ax1 = axes
-                ax1.plot(dates[-days:], df_closes.ix[-days:,index], label='{}'.format(index_name))
-                ax1.plot(dates[-days:], df_closes.ix[-days:,index].rolling(20).mean(), label='{} MA20'.format(index_name))
+                ax1.plot(dates[-days:], closes, label='close')
+                ax1.plot(dates[-days:], closes_rolling_ma, label='close MA30')
                 ax1.legend(loc='upper left')
+                ax2 = ax.twinx()
+                ax2.plot(dates[-days:], diff, label='diff')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

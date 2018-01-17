@@ -25,7 +25,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
             parse_dates=['date'], infer_datetime_format=True)
 
         benchmark = df_closes.ix[:,0]
-        stat = df_closes.transform(lambda x: x / benchmark)
+        stat_df = df_closes.transform(lambda x: x / benchmark)
         dates = df_closes.index
         ma_window = 30
         double_ma_window = 60
@@ -33,11 +33,11 @@ class IndexesCompareJob(p.PostSectionGenerator):
         summary_df = pd.DataFrame(columns=['index', 'slop', 'above_ma'])
         blog_generator.h4('总计')
 
-        for index in stat.columns[1:]:
+        for index in stat_df.columns[1:]:
             index_name = df_names.at[index, 'display_name']
-            closes = df_closes.ix[-double_ma_window:,index]
-            closes_rolling_ma = closes.rolling(ma_window).mean()
-            diff = (closes - closes_rolling_ma) / closes_rolling_ma
+            ratios = summary_df.ix[-days:,index]
+            ratios_rolling_ma = ratios.rolling(ma_window).mean()
+            diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
 
             (slop, _, _, _, _) = self.get_linear(diff[-ma_window:])
             above_ma = diff[-1]
@@ -49,22 +49,22 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 '指数', '斜率', '高于30日平均值'
             ])
 
-        for index in stat.columns[1:]:
+        for index in stat_df.columns[1:]:
             index_name = df_names.at[index, 'display_name']
 
             blog_generator.h4(index_name)
 
             for year in [1, 3]:
                 days = 240 * year
-                closes = df_closes.ix[-days:,index]
-                closes_rolling_ma = closes.rolling(ma_window).mean()
-                diff = (closes - closes_rolling_ma) / closes_rolling_ma
+                ratios = summary_df.ix[-days:,index]
+                ratios_rolling_ma = ratios.rolling(ma_window).mean()
+                diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                 ax1 = axes
-                ax1.plot(dates[-days:], closes, label='close')
-                ax1.plot(dates[-days:], closes_rolling_ma, label='close MA' + str(ma_window))
+                ax1.plot(dates[-days:], ratios, label='ratio')
+                ax1.plot(dates[-days:], ratios_rolling_ma, label='ratio MA' + str(ma_window))
                 ax1.legend(loc='upper left')
                 ax2 = axes.twinx()
                 ax2.plot(dates[-days:], diff, label='diff', color='red')

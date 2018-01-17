@@ -16,10 +16,17 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
         df_names = pd.read_csv(
             self.index_names_file_path,
-            header=True,
-            infer_datetime_format=True)
+            header=0, index_col=0)
 
         df_closes = pd.read_csv(
             self.index_closes_file_path,
-            header=True, parse_dates=['date'],
-            infer_datetime_format=True)
+            header=0, index_col=0,
+            parse_dates=['date'], infer_datetime_format=True)
+
+        benchmark = df_closes.ix[:,0]
+        stat = df_closes.transform(lambda x: x / benchmark)
+
+        for index in stat.columns[1:]:
+            index_name = df_names.at[index, 'display_name']
+
+            blog_generator.h4(index_name)

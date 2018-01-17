@@ -25,21 +25,21 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
         benchmark = df_closes.ix[:,0]
         stat = df_closes.transform(lambda x: x / benchmark)
-        dates = df_closes['Date']
+        dates = df_closes.index
 
         for index in stat.columns[1:]:
             index_name = df_names.at[index, 'display_name']
 
             blog_generator.h4(index_name)
 
-            for year in [1, 3]:
+            for year in [1, 2]:
                 days = 240 * year
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                 ax1 = axes
-                ax1.plot(dates.iloc[-days:], df_closes.ix[-days:,index], label='{}'.format(index_name))
-                ax1.plot(dates.iloc[-days:], df_closes.ix[-days:,index].rolling(20).mean, label='{} MA20'.format(index_name))
+                ax1.plot(dates[-days:], df_closes.ix[-days:,index], label='{}'.format(index_name))
+                ax1.plot(dates[-days:], df_closes.ix[-days:,index].rolling(20).mean(), label='{} MA20'.format(index_name))
                 ax1.legend(loc='upper left')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)

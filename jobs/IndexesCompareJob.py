@@ -26,6 +26,26 @@ class IndexesCompareJob(p.PostSectionGenerator):
         benchmark = df_closes.ix[:,0]
         stat = df_closes.transform(lambda x: x / benchmark)
         dates = df_closes.index
+        ma_window = 30
+        double_ma_window = 30
+
+        summary_df = pd.DataFrame(columsn=['index', 'slop', 'above_ma'])
+        blog_generator.h4('总计')
+
+        for index in stat.columns[1:]:
+            index_name = df_names.at[index, 'display_name']
+            closes = df_closes.ix[-double_ma_window:,index]
+            closes_rolling_ma = df_closes.ix[-double_ma_window:,index].rolling(ma_window).mean()
+            diff = (closes - closes_rolling_ma) / closes_rolling_ma
+
+            (slop, _, _, _, _) = self.get_linear(diff[-ma_window:])
+            above_ma = diff[-1]
+            summary_df.loc[len(summary_df)] = [index_name, slop, above_ma]
+
+        blog_generator.data_frame(summary_df,
+            headers=[
+                '指数', '斜率', '高于30日平均值'
+            ])
 
         for index in stat.columns[1:]:
             index_name = df_names.at[index, 'display_name']
@@ -35,14 +55,14 @@ class IndexesCompareJob(p.PostSectionGenerator):
             for year in [1, 3]:
                 days = 240 * year
                 closes = df_closes.ix[-days:,index]
-                closes_rolling_ma = df_closes.ix[-days:,index].rolling(30).mean()
+                closes_rolling_ma = df_closes.ix[-days:,index].rolling(ma_window).mean()
                 diff = (closes - closes_rolling_ma) / closes_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
                 ax1 = axes
                 ax1.plot(dates[-days:], closes, label='close')
-                ax1.plot(dates[-days:], closes_rolling_ma, label='close MA30')
+                ax1.plot(dates[-days:], closes_rolling_ma, label='close MA' + str(ma_window))
                 ax1.legend(loc='upper left')
                 ax2 = axes.twinx()
                 ax2.plot(dates[-days:], diff, label='diff', color='red')
@@ -53,3 +73,14 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 plt.close()
 
                 blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
+
+    def get_linear(self, prices):
+        prices_mean = prices.mean()
+        factor = 10000 / prices_mean
+        prices = prices * factor
+
+        days = np.arange(1, len(prices) + 1)
+
+        linear = stats.linregress(days, prices)
+
+        return linear

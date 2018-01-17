@@ -36,7 +36,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 days = 240 * year
                 closes = df_closes.ix[-days:,index]
                 closes_rolling_ma = df_closes.ix[-days:,index].rolling(30).mean()
-                diff = closes - closes_rolling_ma
+                diff = (closes - closes_rolling_ma) / closes_rolling_ma
                 figure_name = 'r_index_compare_{}_{}.png'.format(index, str(year))
 
                 fig, axes = plt.subplots(1, 1, figsize=(16, 6))
@@ -45,7 +45,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 ax1.plot(dates[-days:], closes_rolling_ma, label='close MA30')
                 ax1.legend(loc='upper left')
                 ax2 = axes.twinx()
-                ax2.plot(dates[-days:], diff, label='diff')
+                ax2.plot(dates[-days:], diff, label='diff', color='red')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

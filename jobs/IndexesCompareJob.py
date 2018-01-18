@@ -68,6 +68,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 ax1.legend(loc='upper left')
                 ax2 = axes.twinx()
                 ax2.plot(dates[-days:], diff, label='diff', color='red')
+                ax2.axhline(y=0, linestyle=':')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

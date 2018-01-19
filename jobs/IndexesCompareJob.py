@@ -56,6 +56,7 @@ class IndexesCompareJob(p.PostSectionGenerator):
 
             for year in [1, 3]:
                 days = 240 * year
+                diff_watching_days = 60  * year
                 ratios = stat_df.ix[-days:,index]
                 ratios_rolling_ma = ratios.rolling(ma_window).mean()
                 diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
@@ -68,7 +69,12 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 ax1.legend(loc='upper left')
                 ax2 = axes.twinx()
                 ax2.plot(dates[-days:], diff, label='diff', color='red')
-                ax2.axhline(y=0, linestyle=':')
+
+                diff_max = max(diff[-diff_watching_days:])
+                diff_min = min(diff[-diff_watching_days:])
+                diff_range = diff_max - diff_min
+                threshold = 0.2
+                ax2.axhline(y=[diff_max - diff_range * threshold, 0, diff_min + diff_range * 0.2], linestyle=':')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

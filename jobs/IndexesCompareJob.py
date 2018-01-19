@@ -75,6 +75,9 @@ class IndexesCompareJob(p.PostSectionGenerator):
                 diff_range = diff_max - diff_min
                 threshold = 0.2
                 ax2.axhline(y=[diff_max - diff_range * threshold, 0, diff_min + diff_range * 0.2], linestyle=':')
+                ax2.axhspan(diff_max - diff_range * threshold, diff_max, color='red', alpha=0.5])
+                ax2.axhspan(diff_min, diff_min + diff_range * threshold, color='green', alpha=0.5])
+                ax2.axhline(y=0, linestyle=':')
 
                 figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 

@@ -39,6 +39,7 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
         dates = df_stocks_closes.index
         ma_window = 30
         double_ma_window = 60
+        diff_watching_days = 60
 
         summary_df = pd.DataFrame(columns=['stock', 'slop', 'above_ma'])
         blog_generator.h4('总计')
@@ -48,6 +49,14 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             ratios = stat_df.ix[-double_ma_window:,stock]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
+            diff_max = max(diff[-diff_watching_days:])
+            diff_min = min(diff[-diff_watching_days:])
+            diff_range = diff_max - diff_min
+            threshold = 0.2
+            if diff < dif_min + diff_range * threshold
+                stock_name = stock_name + '<b>+++</b>'
+            elif diff > dif_max - diff_range * threshold
+                stock_name = stock_name + '<b>---</b>'
 
             (slop, _, _, _, _) = self.get_linear(ratios[-ma_window:])
             above_ma = diff[-1]
@@ -63,7 +72,6 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
 
             blog_generator.h4(stock_name)
 
-            diff_watching_days = 60
             ratios = stat_df.ix[-days:,stock]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma

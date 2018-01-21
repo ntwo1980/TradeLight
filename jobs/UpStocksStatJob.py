@@ -46,7 +46,7 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
 
         for stock in stat_df.columns:
             stock_name = df_stocks_names.at[stock, 'display_name']
-            ratios = stat_df.ix[-double_ma_window:,stock]
+            ratios = stat_df.ix[-days:,stock]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
             diff_max = max(diff[-diff_watching_days:])
@@ -70,12 +70,21 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
         for stock in stat_df.columns:
             stock_name = df_stocks_names.at[stock, 'display_name']
 
-            blog_generator.h4(stock_name)
-
             ratios = stat_df.ix[-days:,stock]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
             figure_name = 'r_stock_compare_{}.png'.format(stock)
+            diff_max = max(diff[-diff_watching_days:])
+            diff_min = min(diff[-diff_watching_days:])
+            diff_range = diff_max - diff_min
+            threshold = 0.2
+
+            if diff[-1] < diff_min + diff_range * threshold:
+                stock_name = stock_name + '<b>+++</b>'
+            elif diff[-1] > diff_max - diff_range * threshold:
+                stock_name = stock_name + '<b>---</b>'
+
+            blog_generator.h4(stock_name)
 
             fig, axes = plt.subplots(1, 1, figsize=(16, 6))
             ax1 = axes
@@ -85,10 +94,6 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             ax2 = axes.twinx()
             ax2.plot(dates[-days:], diff, label='diff', color='red')
 
-            diff_max = max(diff[-diff_watching_days:])
-            diff_min = min(diff[-diff_watching_days:])
-            diff_range = diff_max - diff_min
-            threshold = 0.2
             ax2.axhspan(diff_max - diff_range * threshold, diff_max, color='red', alpha=0.5)
             ax2.axhspan(diff_min, diff_min + diff_range * threshold, color='green', alpha=0.5)
             ax2.axhline(y=0, linestyle=':')

@@ -92,6 +92,8 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             plt.close()
             blog_generator.img(figure_name)
 
+        blog_generator.write()
+
     def get_linear(self, prices):
         prices_mean = prices.mean()
         factor = 10000 / prices_mean

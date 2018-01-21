@@ -175,7 +175,7 @@ if generate_joinquant or generate_sw or generate_zz:
             blog_upload_absolute_path = blog_upload_absolute_path),
         IndexesCompareJob.IndexesCompareJob(
             index_closes_file_path = os.path.join(script_dir, 'data/r_indexes.csv'),
-            index_names_file_path = os.path.join(script_dir, 'data/r_indexes_names.csv'),
+            index_names_file_path = os.path.join(script_dir, 'data/r_securities.csv'),
             blog_upload_relative_path = blog_upload_relative_path,
             blog_upload_absolute_path = blog_upload_absolute_path),
         SWStatPostSectionGenerator.SWStatPostSectionGenerator(

@@ -90,8 +90,7 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
 
             plt.savefig(figure_path, bbox_inches='tight')
             plt.close()
-
-            blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
+            blog_generator.img(figure_name)
 
     def get_linear(self, prices):
         prices_mean = prices.mean()

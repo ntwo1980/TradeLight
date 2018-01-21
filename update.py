@@ -196,6 +196,7 @@ if generate_joinquant or generate_sw or generate_zz:
         post_path = os.path.join(blog_page_path, 'r_UpStocks/', 'index.md'),
         stocks_list_file_path = os.path.join(script_dir, 'data/r_securities.csv'),
         stocks_file_path = os.path.join(script_dir, 'data/r_stocks_closes.csv'),
+        index_closes_file_path = os.path.join(script_dir, 'data/r_indexes.csv'),
     ).run()
 
 '''

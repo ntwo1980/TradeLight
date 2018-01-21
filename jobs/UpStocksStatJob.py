@@ -10,72 +10,95 @@ import jobs.BlogPostGenerateJobBase as b
 import HexoGenerator
 
 class UpStocksStatJob(b.BlogPostGenerateJobBase):
-    def __init__(self, post_path, stocks_list_file_path, stocks_file_path):
+    def __init__(self, post_path, stocks_list_file_path, stocks_file_path, index_closes_file_path):
         b.BlogPostGenerateJobBase.__init__(self, post_path)
         self.stocks_list_file_path = stocks_list_file_path
         self.stocks_file_path = stocks_file_path
+        self.index_closes_file_path = index_closes_file_path
 
     def run(self):
         blog_generator = HexoGenerator.HexoGenerator(self.post_path, '个股 - {}'.format(j.JobBase.get_today_str()), tags=['数据统计'])
-        '''
-        df_future_list = pd.read_csv(
-            self.future_list_file_path,
-            infer_datetime_format=True)
-        df_futures = pd.read_csv(
-            self.futures_file_path,
-            index_col='date',
-            infer_datetime_format=True)
 
-        df_futures = df_futures.unstack().reset_index()
-        df_futures.columns = ['code', 'date', 'close']
-        df_futures.dropna(inplace=True)
-        df_futures_stat = df_futures.groupby('code')['close'].agg(
-                            {
-                                'count': 'count',
-                                'close': 'last',
-                                'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
-                                'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
-                                'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
-                                'close10': lambda closes: stats.percentileofscore(closes[-2400:], closes.iloc[-1])
-                            }).reset_index()
-        df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
-        df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
-        df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
+        df_index_closes = pd.read_csv(
+            self.index_closes_file_path,
+            header=0, index_col=0,
+            parse_dates=['date'], infer_datetime_format=True)
 
-        blog_generator.h3('汇总')
-        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'close1', 'close3', 'close5', 'close10']],
+        df_stocks_names = pd.read_csv(
+            self.stocks_list_file_path,
+            header=0, index_col=0)[['display_name']]
+
+        df_stocks_closes = pd.read_csv(
+            self.stocks_file_path,
+            header=0, index_col=0,
+            parse_dates=['date'], infer_datetime_format=True)
+
+        days = len(df_stocks_closes.index)
+        benchmark = df_index_closes.ix[-days:,0]
+        stat_df = df_stocks_closes.transform(lambda x: x * 100/ benchmark)
+        dates = df_stocks_closes.index
+        ma_window = 30
+        double_ma_window = 60
+
+        summary_df = pd.DataFrame(columns=['stock', 'slop', 'above_ma'])
+        blog_generator.h4('总计')
+
+        for stock in stat_df.columns:
+            stock_name = df_stocks_names.at[stock, 'display_name']
+            ratios = stat_df.ix[-double_ma_window:,stock]
+            ratios_rolling_ma = ratios.rolling(ma_window).mean()
+            diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
+
+            (slop, _, _, _, _) = self.get_linear(ratios[-ma_window:])
+            above_ma = diff[-1]
+            summary_df.loc[len(summary_df)] = [stock_name, slop, above_ma]
+
+        blog_generator.data_frame(summary_df,
             headers=[
-                '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                '名称', '斜率', '高于30日平均值'
             ])
 
-        for _, row in df_futures_stat.iterrows():
-            code = row['code']
-            blog_generator.h3(row['display_name'])
-            df_future = df_futures[df_futures['code']==code]
-            dates = pd.to_datetime(df_future['date'])
-            closes = df_future['close']
-            last_close = closes.iloc[-1]
+        for stock in stat_df.columns:
+            stock_name = df_names.at[stock, 'display_name']
 
-            if not pd.isnull(last_close):
-                for year in [1, 10]:
-                    days = 240 * year
-                    figure_name = 'r_future_{}_{}.png'.format(code, str(year))
+            blog_generator.h4(stock_name)
 
-                    fig, axes = plt.subplots(1, 1, figsize=(16, 6))
-                    ax1 = axes
-                    ax1.plot(dates.iloc[-days:], pd.to_numeric(closes.iloc[-days:], 'coerce', 'float'), label='close')
-                    ax1.plot(dates.iloc[-days:], pd.to_numeric(closes.iloc[-days:].rolling(42).mean(), 'coerce', 'float'), label='close 42 MA')
-                    ax1.legend(loc='upper left')
+            diff_watching_days = 60
+            ratios = stat_df.ix[-days:,stock]
+            ratios_rolling_ma = ratios.rolling(ma_window).mean()
+            diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
+            figure_name = 'r_stock_compare_{}_{}.png'.format(stock, str(year))
 
-                    figure_path = os.path.join(os.path.dirname(self.post_path), figure_name)
+            fig, axes = plt.subplots(1, 1, figsize=(16, 6))
+            ax1 = axes
+            ax1.plot(dates[-days:], ratios, label='ratio')
+            ax1.plot(dates[-days:], ratios_rolling_ma, label='ratio MA' + str(ma_window))
+            ax1.legend(loc='upper left')
+            ax2 = axes.twinx()
+            ax2.plot(dates[-days:], diff, label='diff', color='red')
 
-                    plt.savefig(figure_path, bbox_inches='tight')
-                    plt.close()
+            diff_max = max(diff[-diff_watching_days:])
+            diff_min = min(diff[-diff_watching_days:])
+            diff_range = diff_max - diff_min
+            threshold = 0.2
+            ax2.axhspan(diff_max - diff_range * threshold, diff_max, color='red', alpha=0.5)
+            ax2.axhspan(diff_min, diff_min + diff_range * threshold, color='green', alpha=0.5)
+            ax2.axhline(y=0, linestyle=':')
 
-                    blog_generator.line('收盘: {:.2f}, 1年分位数: {:.2f}, 3年分位数: {:.2f}, 5年分位数: {:.2f}, 10年分位数: {:.2f}'.format(
-                        row['close'], row['close1'], row['close3'], row['close5'], row['close10']
-                    ))
-                    blog_generator.img(figure_name)
+            figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
 
-        blog_generator.write()
-        '''
+            plt.savefig(figure_path, bbox_inches='tight')
+            plt.close()
+
+            blog_generator.img('{}{}'.format(self.blog_upload_relative_path, figure_name))
+
+    def get_linear(self, prices):
+        prices_mean = prices.mean()
+        factor = 10000 / prices_mean
+        prices = prices * factor
+
+        days = np.arange(1, len(prices) + 1)
+
+        linear = stats.linregress(days, prices)
+
+        return linear

@@ -53,9 +53,9 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             diff_min = min(diff[-diff_watching_days:])
             diff_range = diff_max - diff_min
             threshold = 0.2
-            if diff < dif_min + diff_range * threshold
+            if diff < dif_min + diff_range * threshold:
                 stock_name = stock_name + '<b>+++</b>'
-            elif diff > dif_max - diff_range * threshold
+            elif diff > dif_max - diff_range * threshold:
                 stock_name = stock_name + '<b>---</b>'
 
             (slop, _, _, _, _) = self.get_linear(ratios[-ma_window:])

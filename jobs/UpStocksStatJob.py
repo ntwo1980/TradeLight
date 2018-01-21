@@ -85,7 +85,8 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             ax2.axhspan(diff_min, diff_min + diff_range * threshold, color='green', alpha=0.5)
             ax2.axhline(y=0, linestyle=':')
 
-            figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)
+
+            figure_path = os.path.join(os.path.dirname(self.post_path), figure_name)
 
             plt.savefig(figure_path, bbox_inches='tight')
             plt.close()

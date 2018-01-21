@@ -59,7 +59,7 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             ])
 
         for stock in stat_df.columns:
-            stock_name = df_names.at[stock, 'display_name']
+            stock_name = df_stocks_names.at[stock, 'display_name']
 
             blog_generator.h4(stock_name)
 

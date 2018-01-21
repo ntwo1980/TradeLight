@@ -67,7 +67,7 @@ class UpStocksStatJob(b.BlogPostGenerateJobBase):
             ratios = stat_df.ix[-days:,stock]
             ratios_rolling_ma = ratios.rolling(ma_window).mean()
             diff = (ratios - ratios_rolling_ma) / ratios_rolling_ma
-            figure_name = 'r_stock_compare_{}_{}.png'.format(stock, str(year))
+            figure_name = 'r_stock_compare_{}.png'.format(stock)
 
             fig, axes = plt.subplots(1, 1, figsize=(16, 6))
             ax1 = axes

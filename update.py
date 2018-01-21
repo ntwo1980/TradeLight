@@ -192,6 +192,11 @@ if generate_joinquant or generate_sw or generate_zz:
         future_list_file_path = os.path.join(script_dir, 'data/r_future_list.csv'),
         futures_file_path = os.path.join(script_dir, 'data/r_futures.csv'),
     ).run()
+    UpStocksStatJob.UpStocksStatJob(
+        post_path = os.path.join(blog_page_path, 'r_UpStocks/', 'index.md'),
+        stocks_list_file_path = os.path.join(script_dir, 'data/r_securities.csv'),
+        stocks_file_path = os.path.join(script_dir, 'data/r_stocks_closes.csv'),
+    ).run()
 
 '''
 if generate_joinquant or generate_xueqiu or generate_sw or generate_zz:

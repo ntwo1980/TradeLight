@@ -31,5 +31,6 @@ __all__ = [
     'IndustriesDownloadFilesJob',
     'FuturesStatJob',
     'IndexStocksJson',
-    'IndexesCompareJob'
+    'IndexesCompareJob',
+    'UpStocksStatJob'
 ]

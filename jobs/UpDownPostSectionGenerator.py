@@ -46,7 +46,7 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
         blog_generator.line('涨幅超过9%比例{:.2f}%, 跌幅超过9%比例{:.2f}%。'
                     .format(df['great_up'][-1], df['great_down'][-1]))
 
-        fig, axes = plt.subplots(1, 1, figsize=(16, 12))
+        fig, axes = plt.subplots(1, 1, figsize=(16, 6))
 
         ax1 = axes
         df.loc[df['great_up'] > 4, ['great_up']] = 4

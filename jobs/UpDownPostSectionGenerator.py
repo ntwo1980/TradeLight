@@ -54,7 +54,7 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
         ax1.legend(loc='upper left')
         ax1.set_ylabel('up/down pct')
         ax2= ax1.twinx()
-        axw.plot(df.index, df['index'], 'y', label='399001')
+        ax2.plot(df.index, df['index'], 'y', label='399001')
 
         figure_name = ('r_great_up_down.png')
         figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)

@@ -50,7 +50,7 @@ class UpDownPostSectionGenerator(p.PostSectionGenerator):
 
         ax1 = axes
         df[df['great_up'] > 4]['great_up'] = 4
-        df[df['great_down'] < -4]['great_down'] = -4
+        df[df['great_down'] > 4]['great_down'] = 4
         ax1.plot(df.index, df['great_up'], label='great up pct')
         ax1.plot(df.index, df['great_down'], label='great down pct')
         ax1.legend(loc='upper left')

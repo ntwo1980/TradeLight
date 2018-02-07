@@ -24,7 +24,7 @@ class AboveMaPostSectionGenerator(p.PostSectionGenerator):
         ax1.legend(loc='upper left')
         ax1.set_ylabel('above 42 MA pct')
         ax2= ax1.twinx()
-        ax2.plot(df.index, df['index'], 'y', label='399001')
+        ax2.plot(df.index, df['index'], 'y', label='399001', color='gray')
 
         figure_name = ('r_above_ma.png')
         figure_path = '{}{}'.format(self.blog_upload_absolute_path, figure_name)

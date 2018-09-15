@@ -37,6 +37,8 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                 'count': 'count',
                 'close': 'last',
                 'return': lambda closes: (closes.iloc[-1] / closes.iloc[-2] - 1) * 100,
+                'max_close10': lambda closes: max(closes[-10:]),
+                'min_close10': lambda closes: min(closes[-10:]),
                 'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
                 'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
                 'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
@@ -45,12 +47,14 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
         df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
         df_futures_stat['atr'] = [atrs[s] for s in df_futures_stat['code']]
+        df_futures_stat['atr1'] = (df['max_close10'] - df['close']) / df_futures_stat['atr']
+        df_futures_stat['atr2'] = (df['close'] - df['min_close10']) / df_futures_stat['atr']
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
         blog_generator.h3('汇总')
-        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'return', 'atr', 'close1', 'close3', 'close5', 'close10']],
+        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close3', 'close5', 'close10']],
             headers=[
-                '名称', '样本数量', '收盘价', '涨幅', 'ATR10',  '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                '名称', '样本数量', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '1年分位数', '3年分位数', '5年分位数', '10年分位数'
             ])
 
         for _, row in df_futures_stat.iterrows():

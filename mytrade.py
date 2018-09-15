@@ -2,6 +2,7 @@
 from __future__ import division
 import datetime as dt
 import pandas as pd
+import numpy as np
 import myutils as u
 import six
 from dateutil.relativedelta import *
@@ -82,9 +83,15 @@ class MonthDayTradeScheduler(TradeScheduler):
         else:
             return False
 
+class SpringFestival():
+    def __init__(self):
+        sprint_festival_str = ['2001-2-5', '2001-1-24', '2002-2-12', '2003-2-1', '2004-1-22', '2005-2-9', '2006-1-29', '2007-2-18', '2008-2-7', '2009-1-26', '2010-2-14', '2011-2-3', '2012-1-23', '2013-2-10', '2014-1-31', '2015-2-19', '2016-2-8', '2017-1-28', '2018-2-16', '2019-2-5', '2020-1-25', '2021-2-12', '2022-2-1', '2023-1-22', '2024-2-10', '2025-1-29', '2026-2-17', '2027-2-6', '2028-1-26', '2029-2-13', '2030-2-3', '2031-1-23', '2032-2-11', '2033-1-31', '2034-2-19', '2035-2-8', '2036-1-28', '2037-2-15', '2038-2-4', '2039-1-24', '2040-2-12', '2041-2-1', '2042-1-22', '2043-2-10', '2044-1-30', '2045-2-17', '2046-2-6', '2047-1-26', '2048-2-14', '2049-2-2']
+        self.sprint_festivals = {int(d[:4]): dt.datetime.strptime(d, "%Y-%m-%d") for d in sprint_festival_str}
 
+    def get_spring_festival_day(self, year):
+        return self.sprint_festivals[year].date()
 
-class SprintFestivalTradeScheduler(TradeScheduler):
+class SpringFestivalTradeScheduler(TradeScheduler):
     def __init__(self, g, context, trade_func, offset):
         TradeScheduler.__init__(self, g, context, trade_func)
         self.offset = offset
@@ -295,6 +302,31 @@ class FundamentalSecuritySelector(SecuritySelector):
 
         self.stocks = list(fundamentals.index)
 
+class FundamentalSecuritySelector2(SecuritySelector):
+    def __init__(self, stocks, date, statDate=None):
+        if not statDate:
+            fundamentals = get_fundamentals(query(valuation.code, valuation.market_cap, valuation.pe_ratio, valuation.pb_ratio, valuation.ps_ratio, valuation.pcf_ratio, indicator.inc_operation_profit_year_on_year, balance.fixed_assets, balance.total_assets, balance.total_liability, cash_flow.cash_and_equivalents_at_end, income.total_profit, income.financial_expense, income.asset_impairment_loss, balance.long_deferred_expense, indicator.statDate
+                ).filter(
+                    #indicator.inc_net_profit_year_on_year > 0,
+                    cash_flow.goods_sale_and_service_render_cash > 0,
+                    indicator.code.in_(stocks)
+                ), date)
+
+        fundamentals['iop_r'] = fundamentals['inc_operation_profit_year_on_year'].rank(ascending = True, method = 'max', pct=True)
+        fundamentals['ps_r'] = fundamentals['ps_ratio'].rank(ascending = True, method = 'max', pct=True)
+        fundamentals['pe_r'] = fundamentals['pe_ratio'].rank(ascending = True, method = 'max', pct=True)
+
+        fundamentals = fundamentals[(fundamentals['iop_r'] >= 0.5) \
+                                & (fundamentals['iop_r'] <= 1)  \
+                                & (fundamentals['pe_r'] >= 0) \
+                                & (fundamentals['pe_r'] <= 0.5)\
+                                & (fundamentals['ps_r'] >= 0.5) \
+                                & (fundamentals['ps_r'] <= 1)]
+
+        fundamentals = fundamentals.set_index(['code'])
+
+        self.stocks = list(fundamentals.index)
+
 class ValueFundamentalSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date, mc, pe, pb, ps, pcf, iop):
         fundamentals = get_fundamentals(query(valuation.code, valuation.market_cap, valuation.pe_ratio, valuation.pb_ratio, valuation.ps_ratio, valuation.pcf_ratio, indicator.inc_operation_profit_year_on_year, balance.long_deferred_expense, indicator.statDate
@@ -386,8 +418,7 @@ class PegSecuritySelector(SecuritySelector):
         fundamentals['peg_pro_r'] = fundamentals['peg_pro'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['peg_re_r'] = fundamentals['peg_re'].rank(ascending = True, method = 'max', pct=True)
 
-        fundamentals = fundamentals[(fundamentals['peg_pro_r'] <= peg) \
-                                & (fundamentals['peg_re_r'] <= peg)]
+        fundamentals = fundamentals[(fundamentals['peg_pro_r'] <= peg)]
 
         fundamentals = fundamentals.set_index(['code'])
 
@@ -449,6 +480,31 @@ class VarStockFactor(PriceStockFactor):
         df_var = df_var.dropna()
         # 排序给出排序打分
         df_var['VAR_sorted_rank'] = df_var['VAR'].rank(ascending = asc, method = 'dense')
+
+        return df_var
+
+class IndexVarStockFactor(PriceStockFactor):
+    def generate(self, days, asc, date, reference_index):
+        df_var = self.prices[-(days+1):].pct_change()
+        index_prices = get_price(reference_index,
+            count = days+1,
+            end_date=date,
+            frequency='daily',
+            fields='close')['close']
+
+        df_index_var = index_prices.pct_change()
+        df_var = df_var - df_index_var
+
+        # 进行转置
+        df_var = df_var.T
+        # 生成方差
+        df_var['IndexVar'] = df_var.var(axis = 1, skipna = True)
+        # 生成新的DataFrame
+        df_var = pd.DataFrame(df_var['IndexVar'])
+        # 删除nan
+        df_var = df_var.dropna()
+        # 排序给出排序打分
+        df_var['IndexVar_sorted_rank'] = df_var['IndexVar'].rank(ascending = asc, method = 'dense')
 
         return df_var
 
@@ -808,7 +864,6 @@ def get_turning_point(prices, window = 0):
             raise ValueError("prices len should be greater than window * 3")
 
     prices = prices.reset_index()
-
     double_window = window * 2
 
     df = pd.concat([prices,
@@ -818,6 +873,7 @@ def get_turning_point(prices, window = 0):
                 pd.rolling_apply(prices.ix[:,-1:], double_window, lambda x: pd.Series(x).argmax())
               ], axis=1)
 
+
     df.columns = ['date', 'close', 'rolling_min_close', 'rolling_min_index', 'rolling_max_close', 'rolling_max_index']
     df['rolling_min_date'] = df.ix[df.index - (window - 1 - df['rolling_min_index'])]['date'].values
     df['rolling_max_date'] = df.ix[df.index - (window - 1 - df['rolling_max_index'])]['date'].values
@@ -826,16 +882,12 @@ def get_turning_point(prices, window = 0):
     df.index = df['date']
     df = df[df.rolling_date.notnull()]
 
-    df_min = df[df['date'] == df['rolling_min_date']][['rolling_date', 'close']]
-    df_max = df[df['date'] == df['rolling_max_date']][['rolling_date', 'close']]
+    df_min = df[df['date'] == df['rolling_min_date']][['rolling_date']]
+    df_max = df[df['date'] == df['rolling_max_date']][['rolling_date']]
 
-    df_min.index = df_min['rolling_date']
-    df_min.index.name = None
-    del df_min['rolling_date']
+    df_min = df[df['date'].isin(df_min['rolling_date'])][['close']]
+    df_max = df[df['date'].isin(df_max['rolling_date'])][['close']]
 
-    df_max.index = df_max['rolling_date']
-    df_max.index.name = None
-    del df_max['rolling_date']
 
     return df_min['close'], df_max['close']
 

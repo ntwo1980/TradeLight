@@ -10,6 +10,7 @@ import prettytable as pt
 import mytrade as t
 import jqlib.technical_analysis as ta
 from scipy import stats
+from dateutil.relativedelta import *
 
 '''
 ================================================================================
@@ -19,17 +20,21 @@ from scipy import stats
 def stat(context):
 #def before_trading_start(context):
     g.feasible_stocks = []  # 当前可交易股票池
+    g.spring_festival_buy = True
     g.holding_list_backup = []
+    g.trading_postponed = False
     g.num_stocks = 0        # 设置持仓股票数目
     g.buy_stock = []
     g.sell_stock = []
     g.change_use_hl_index = False
     g.fundamental_selector_config = {'mc': (0, 0.8), 'pb': (0, 0.4), 'iop': (0.6, 1), 'roic': (0.6, 1)}
+    g.exclude_industries = ['HY480', 'HY481']
+    g.cyclical_industries = ['801020', '801040', '801050', '801143', '801711']
 
     schduler = t.EverydayTradeScheduler(g, context, lambda: trade(context), 1)
     schduler.trade()
 
-    if g.if_trade:
+    if g.if_trade and not g.trading_postponed:
         if bool(g.factors) == True:
             rebalance(context, *get_factors(g.feasible_stocks, context, g.factors))
         else:
@@ -46,8 +51,9 @@ def initialize(context):
 
 #1 设置策略参数
 def set_params(context):
-    #g.fundamental_selector_config = {'mc': (0, 0.8), 'pb': (0, 0.4), 'iop': (0.6, 1), 'roic': (0.6, 1)}  # for parameters optim
-    g.trade_day = 1
+    #g.fundamental_selector_config = {'mc': (0, 0.8), 'pb': (0, 0.4), 'iop': (0.6, 1), 'roic': (0.6, 1)}  # for parameters opti
+    g.default_trade_day = 1
+    g.trade_day = g.default_trade_day
     g.buy_orders = {}
     g.stock_max_price = {}
     g.factor = 'VAR'          # 前回测的单因子
@@ -60,18 +66,19 @@ def set_params(context):
     g.max_total_value = 0
     g.max_total_value_date = None
     g.prev_total_value = 0
+    g.prev_buy_total_value = 0
     g.holding_day_count = 0
     g.total_value = 0
-    g.xp_bear_market_slop = -12
+    g.xp_bear_market_slop = -10
     g.bear_market_slop = -10
-    g.hl_bear_market_slop = 0
+    g.hl_bear_market_slop = -10
     g.index_slop = 0
     g.consecutive_bear_month = 0
     g.bear_stock_slop = -15
     g.prev_stop_lose_date = None
     g.stop_lose_total_threshold = 0.90
     g.all_stocks = None
-    g.exclude_industries = ['HY480', 'HY481']
+    g.rise = 0
     g.mandatory_month = [2]
     g.forbidden_month = [6]
     g.dangerous_month = [1, 6, 12]
@@ -83,13 +90,15 @@ def set_params(context):
     g.trading_days_of_last_month = None
     g.is_bull_market = False
     g.is_bear_market = False
-    g.stock_stop_lose_percentage = 0.85
+    g.stock_stop_lose_percentage = 0.9
     g.buy_in_fall = False
     g.use_hl_index = False
-    g.print_candidates = True
+    g.print_candidates = False
+    g.hl_check_slop = 0
+    g.hl_check_diff = 5
 
 def set_factors(context, is_hl_win):
-     # 多因子合并称DataFrame，单因子测试时可以把无用部分删除提升回测速度
+    # 多因子合并称DataFrame，单因子测试时可以把无用部分删除提升回测速度
     # 定义因子以及排序方式，默认False方式为降序排列，原值越大sort_rank排序越小
     if is_hl_win:
         g.factors = {
@@ -106,6 +115,7 @@ def set_factors(context, is_hl_win):
 
     '''
     g.factors = {
+        'IndexVar': (t.IndexVarStockFactor, {'data_type': 'price', 'prices_len': g.shift + 1}, {}, {'days': g.shift, 'asc': True, 'date': context.previous_date, 'reference_index': '399001.XSHE'})
         #122'VAR': (t.VarStockFactor, {'data_type': 'price', 'prices_len': g.shift + 1}, {}, {'days': g.shift, 'asc': True}),
         'VVAR': (t.VVarStockFactor, {'data_type': 'volume', 'volumes_len': g.shift + 1}, {}, {'days': g.shift, 'asc': True}),
         #'VARC': (t.VarChangeStockFactor, {'data_type': 'price', 'prices_len': 2 * g.shift + 1}, {}, {'days': g.shift, 'asc': False}),
@@ -138,19 +148,33 @@ def set_factors(context, is_hl_win):
 
 def set_feasible_stocks(context):
     current_month = context.current_dt.month
+    current_day = context.current_dt.day
     g.use_hl_index = False
 
     if False and current_month in g.forbidden_month:
         g.feasible_stocks = []
     else:
-        index_prices = get_price(
-            [
+        if context.previous_date >= dt.datetime(2013,1, 1).date():
+            indexes = [
                 '399001.XSHE',   # 深证成指
                 '399006.XSHE',   # 创业板指
                 '399550.XSHE',   # 央视50
                 '000905.XSHG',   # 中证500
                 '399316.XSHE',   # 巨潮小盘
-            ],
+                '000932.XSHG',   # 中证消费
+            ]
+        else:
+            indexes = [
+                '399001.XSHE',   # 深证成指
+                '399006.XSHE',   # 创业板指
+                '000932.XSHG',   # 中证消费
+                '000905.XSHG',   # 中证500
+                '399316.XSHE',   # 巨潮小盘
+                '000932.XSHG',   # 中证消费
+            ]
+
+        index_prices = get_price(
+           indexes,
            count = 240,
            end_date = context.previous_date,
            frequency = 'daily',
@@ -160,6 +184,34 @@ def set_feasible_stocks(context):
         is_hl_win = (index_prices.ix[-21, 0] / index_prices.ix[-21, 2]) > (index_prices.ix[-1, 0] / index_prices.ix[-1, 2])
         is_xp_win = (index_prices.ix[-21, 0] / index_prices.ix[-21, 3]) > (index_prices.ix[-1, 0] / index_prices.ix[-1, 3])
         is_xxp_win = (index_prices.ix[-21, 3] / index_prices.ix[-21, 4]) > (index_prices.ix[-1, 3] / index_prices.ix[-1, 4])
+        g.rise = index_prices.ix[-1, 0] / index_prices.ix[-60, 0] - 1
+
+        macd_decrease = False
+        '''
+        if len(context.portfolio.positions.keys()) == 0:
+            monthly_returns = (index_prices.ix[:, 0].asfreq('M', method='ffill')).pct_change()
+
+            if monthly_returns[-1] * 0.01 and \
+               monthly_returns[-2] * 0.01 and \
+               monthly_returns[-3] * 0.01 and\
+               max(index_prices.ix[-100:, 0]) > index_prices.ix[-1, 0] * 1.2:
+
+                _, _, macd_macd_prev = ta.MACD(indexes[2],check_date=context.previous_date)
+                _, _, macd_macd_prev2 = ta.MACD(indexes[2],check_date=t.shift_trading_day(context.previous_date, -1))
+                macd_decrease = macd_macd_prev2 > macd_macd_prev
+
+        if macd_decrease:
+            print('macd_decrease')
+        '''
+
+        if (index_prices.ix[-2, 0] / index_prices.ix[-1, 0] > 1.01 or macd_decrease) and current_day < 10:
+            g.trade_day = current_day + 1
+            g.feasible_stocks = []
+            g.trading_postponed = True
+            print("post trading day to " + str(g.trade_day))
+            return
+
+        g.trade_day = g.default_trade_day
 
         is_hl_win = False
         index_fall_a_lot_days = g.days_since_last_buy if g.days_since_last_buy > 30 else 21
@@ -178,6 +230,7 @@ def set_feasible_stocks(context):
 
         hl_index_price = index_prices.ix[:, 2]
         index_price = index_prices.ix[:, 3]
+        xf_index_price = index_prices.ix[:, 5]
         #g.is_bear_market = min(index_price[-21:]) < min(index_price[:-21]) * 0.97
         #g.is_bull_market = min(index_price[-21:]) < min(index_price[:-21]) * 1.03
 
@@ -187,17 +240,35 @@ def set_feasible_stocks(context):
         (g.index_slop, _, _, _, _) = t.get_linear(index_price[-g.trading_days_of_last_month:])
         (sma_slop, _, _, _, _) = t.get_linear(talib.EMA(np.array(index_price[-100:]), timeperiod=20)[-19:])
         (hl_index_slop, _, _, _, _) = t.get_linear(hl_index_price[-g.trading_days_of_last_month:])
+        (xf_index_slop, _, _, _, _) = t.get_linear(xf_index_price[-g.trading_days_of_last_month:])
+
+        if xf_index_slop > hl_index_slop:
+            hl_index_slop = xf_index_slop
+            hl_index_price = xf_index_price
+
         g.is_bear_market = (g.index_slop < g.bear_market_slop or \
-            (hl_index_slop > g.index_slop + 5 and g.index_slop < 0)) and \
+            (hl_index_slop > g.index_slop + g.hl_check_diff and g.index_slop < g.hl_check_slop)) and \
             not is_mandatory_month and g.trade_day != 'all'
 
+        '''
+        ma = talib.MA(np.array(index_price), timeperiod=20)[-60:]
+        print(sum(index_price.ix[-60:] > ma))
 
-        #if not g.is_bear_market and g.holding_day_count > 25 and days_since_max_total > 25 and hl_index_slop >= g.hl_bear_market_slop:
-            #g.is_bear_market = True
+        if index_price[-1] < ma[-1] and sum(index_price.ix[-60:] > ma) < 20:
+            g.is_bear_market = True
+        '''
 
         if g.is_bear_market:
             g.index_slop =  hl_index_slop
             g.is_bear_market = g.index_slop < g.hl_bear_market_slop
+
+            '''
+            if not g.is_bear_market:
+                ma = talib.MA(np.array(hl_index_price), timeperiod=20)[-60:]
+                print(sum(hl_index_price.ix[-60:] > ma))
+                if hl_index_price.ix[-1] < ma[-1] and sum(hl_index_price.ix[-60:] > ma) < 20:
+                    g.is_bear_market = True
+            '''
 
             if not g.is_bear_market:
                 g.use_hl_index = True
@@ -218,7 +289,6 @@ def set_feasible_stocks(context):
             #g.fundamental_selector_config['mc'] = (0, 0.25)
             #g.fundamental_selector_config['iop'] = (0, 1)
             #g.fundamental_selector_config['roic'] = (0, 1)
-
 
         if not g.use_hl_index:
             selector = t.NotIndustrySecuritySelector(all_stocks, context.previous_date, g.exclude_industries)
@@ -259,7 +329,10 @@ def set_feasible_stocks(context):
     g.num_stocks = int(len(g.feasible_stocks)*g.precent)
 
 def set_hl_feasible_stocks(context):
-    selector = t.StockIndicesSecuritySelector(['399550.XSHE', '000932.XSHG'], context.previous_date)
+    if context.previous_date >= dt.datetime(2013,1, 1).date():
+        selector = t.StockIndicesSecuritySelector(['399550.XSHE', '000932.XSHG'], context.previous_date)
+    else:
+        selector = t.StockIndicesSecuritySelector(['000932.XSHG'], context.previous_date)
     '''
     selector = t.FundamentalSecuritySelector(selector.get_stocks(), context.previous_date,
                             mc = (0, 1),
@@ -271,6 +344,7 @@ def set_hl_feasible_stocks(context):
     '''
     selector = t.PegSecuritySelector(selector.get_stocks(), context.previous_date, 0.5)
     stocks = selector.get_stocks()
+
     g.feasible_stocks = t.set_feasible_stocks(stocks, g.shift, context.previous_date)
 
 def trade(context):
@@ -299,13 +373,18 @@ def trade(context):
     if not is_stop_lose \
         or current_month in g.mandatory_month \
         or last_month in g.mandatory_month:
-
         if (g.days_since_last_buy is None or g.days_since_last_buy >= 10) and (current_month not in g.dangerous_month \
             or g.prev_stop_lose_date is None \
             or t.shift_trading_day(context.previous_date, -5) > g.prev_stop_lose_date):
             scheduler = t.MonthDayTradeScheduler(g, context, lambda: set_feasible_stocks(context), g.trade_day)
-            if_trade = scheduler.trade()
+            scheduler.trade()
 
+    if not g.if_trade and g.spring_festival_buy and len(context.portfolio.positions.keys()) < g.min_stocks_to_buy:
+        schduler = t.SpringFestivalTradeScheduler(g, context, lambda: set_feasible_stocks(context), 6)
+        schduler.trade()
+
+        if g.if_trade:
+            print("spring festival buy")
 '''
 ================================================================================
 每天交易时
@@ -318,6 +397,9 @@ def handle_data(context,data):
 # stocks_list调用g.feasible_stocks factors调用字典g.factors
 # 输出所有对应数据和对应排名，DataFrame
 def get_factors(stocks_list, context, factors):
+    if g.trading_postponed:
+        return (None, None)
+
     need_price_data = any([config.get('data_type') == 'price' for _, (_, config, _, _) in g.factors.items()])
     prices = None
 
@@ -371,7 +453,6 @@ def get_factors(stocks_list, context, factors):
         df_factor = factor.generate(**paras)
         df_all_raw = pd.concat([df_all_raw, df_factor], axis=1)
 
-
     return df_all_raw, prices
 
 # 9交易调仓
@@ -379,6 +460,9 @@ def get_factors(stocks_list, context, factors):
 # 借用买入信号结果，不需额外输入
 # 输入：context（见API）
 def rebalance(context, df_all, stock_prices = None):
+    if g.trading_postponed:
+        return
+
     is_bear_market = g.is_bear_market
     is_mandatory_month = context.current_dt.month in g.mandatory_month
 
@@ -400,12 +484,19 @@ def rebalance(context, df_all, stock_prices = None):
     stock_volumes = prices_data['volume'][-50:]
     stock_money = prices_data['money'][-50:]
 
-    linears = {s: t.get_linear(talib.EMA(np.array(stock_prices[s]), timeperiod=20)[-19:]) for s in holding_list}
 
-    #linears = {s: t.get_linear(stock_prices[s][-g.trading_days_of_last_month:]) for s in holding_list}
     rsis = {s: talib.RSI(np.array(stock_prices[s]), timeperiod=5)[-1] for s in holding_list}
-
     min_slop = min(g.index_slop * 1.2 if g.index_slop < 0 else g.index_slop, g.bear_stock_slop)
+
+    linears = {s: t.get_linear(talib.EMA(np.array(stock_prices[s]), timeperiod=20)[-19:]) for s in holding_list}
+    len1= len([s for s in linears if linears[s][0] > min_slop])
+
+    if len1 < g.min_stocks_to_buy:
+        linears1 = {s: t.get_linear(stock_prices[s][-g.trading_days_of_last_month:]) for s in holding_list}
+        len2= len([s for s in linears1 if linears1[s][0] > min_slop])
+        if len2 > len1:
+            linears = linears1
+
     if not g.buy_in_fall:
         holding_list_linears = [s for s in holding_list if ((g.days_since_last_buy > 30 and g.index_fall_a_lot)
             or linears[s][0] > min_slop)
@@ -418,7 +509,6 @@ def rebalance(context, df_all, stock_prices = None):
         holding_list = holding_list_linears
     else:
         holding_list = holding_list_linears + list(set(holding_list) - set(holding_list_linears))
-
 
     if not g.use_hl_index and g.index_slop < 12:
         stock_prices_returns = prices_data['close'].pct_change()
@@ -433,6 +523,7 @@ def rebalance(context, df_all, stock_prices = None):
         holding_list = [s for s in holding_list if s not in least_money_stocks]
 
     all_stocks_index = list(g.all_stocks.index)
+
     if holding_list:
         x = pt.PrettyTable(["code", "name", "slop", "intercept", 'rvalue', 'pvalue', 'std_err', 'rsi'])
         for s in holding_list:
@@ -454,10 +545,9 @@ def rebalance(context, df_all, stock_prices = None):
     # 每只股票购买金额
 
     #industrySecuritySelector = t.IndustrySecuritySelector(holding_list, context.previous_date, t.cyclical_industries)
-
     if not g.use_hl_index and len(holding_list) < g.min_stocks_to_buy * 3:
-        g.use_hl_index = True
         g.holing_list_backup = holding_list
+        g.use_hl_index = True
         g.change_use_hl_index = True
         set_hl_feasible_stocks(context)
         rebalance(context, *get_factors(g.feasible_stocks, context, g.factors))
@@ -467,12 +557,25 @@ def rebalance(context, df_all, stock_prices = None):
         g.use_hl_index = False
         g.change_use_hl_index = False
 
+    '''
+    if not g.use_hl_index:
+        locked_shares = [str(s) for s in get_locked_shares(holding_list, start_date=context.current_dt, forward_count=20)['code']]
+        if len(locked_shares):
+            holding_list = [s for s in holding_list if s[:6] not in locked_shares]
+    '''
+
     num_stocks = min(len(holding_list), g.num_stocks)
     if g.max_stocks_to_buy > 0 and num_stocks > g.max_stocks_to_buy:
         num_stocks = g.max_stocks_to_buy
 
     if num_stocks < g.min_stocks_to_buy:
          holding_list = []
+
+    if len(holding_list) < g.min_stocks_to_buy * 3:
+        zq_stocks = {s for industry in g.cyclical_industries for s in get_industry_stocks(industry, date=context.previous_date)}
+
+        if len(zq_stocks & set(holding_list)) > len(holding_list) / 2:
+            holding_list = []
 
     g.every_stock_amount = context.portfolio.total_value / num_stocks if num_stocks > 0 else 0
     operate_stock_list =  holding_list[:num_stocks]
@@ -504,14 +607,16 @@ def operate(context):
     if g.trade_day == 'all':
         return
 
-    today = context.current_dt
-
     for stock in g.sell_stock:
         order_target_value(stock, 0)
     #for stock, amount in g.buy_stock:
     #    order_target_value(stock, amount)
-    for stock in g.buy_stock:
-        order_target_value(stock, g.every_stock_amount)
+
+    if g.buy_stock:
+        g.prev_buy_total_value = context.portfolio.total_value
+
+        for stock in g.buy_stock:
+            order_target_value(stock, g.every_stock_amount)
 
     if g.max_positions_value == 0:
         g.max_positions_value = context.portfolio.positions_value
@@ -562,7 +667,7 @@ def stop_win_lose(context):
     days_since_stop_lose =  t.get_trading_day_num_from(g.prev_stop_lose_date, context.previous_date) if g.prev_stop_lose_date else 0
 
     if (not all_down
-        and context.portfolio.total_value < g.max_total_value * 0.95
+        and (context.portfolio.total_value < g.max_total_value * 0.95 or context.portfolio.total_value < g.prev_buy_total_value * 0.95)
         and len(holding_stocks) > 2
         and (days_since_stop_lose > 21 or not g.prev_stop_lose_date)
         and not g.use_hl_index):
@@ -579,16 +684,16 @@ def stop_win_lose(context):
     if context.portfolio.total_value > g.max_total_value:
         g.max_total_value = context.portfolio.total_value
         g.max_total_value_date = today
-
     if g.max_positions_value == 0 and not all_down:
         g.max_positions_value = context.portfolio.positions_value
     elif context.portfolio.total_value < g.max_total_value * g.stop_lose_total_threshold \
         or all_down:
         #or context.portfolio.positions_value < g.max_positions_value * g.stop_lose_total_threshold \
         for stock in holding_stocks:
-            order_target_value(stock, 0)
-            holding_stocks = []
-            g.stock_max_price = {}
+            print('{} stop loss1'.format(stock))
+            g.sell_stock.append(stock)
+        holding_stocks = []
+        g.stock_max_price = {}
 
         g.max_total_value = context.portfolio.total_value
         g.max_total_value_date = today
@@ -604,7 +709,7 @@ def stop_win_lose(context):
 
     total_lose_pct = (current_total / buy_total) - 1 if buy_total > 0 else 0
 
-    _, stocks_atr = ta.ATR(holding_stocks,context.previous_date, timeperiod=10)
+    stocks_mtr, stocks_atr = ta.ATR(holding_stocks,context.previous_date, timeperiod=10)
 
     for i, stock in enumerate((s for s in holding_stocks if s in g.buy_orders)):
         prices_close = prices['close'][stock]
@@ -623,21 +728,23 @@ def stop_win_lose(context):
 
         highest_close = max(prices_close)
         _is_forbidden_month = current_month in g.forbidden_month
+
         if (g.atr_stop_win and today.day >= g.stop_win_day and current_price > buy_price * 1.05) or \
             _is_forbidden_month:
-
             stop_win_atr_factor = 1.5 if _is_forbidden_month else 2
             atr = stocks_atr[stock]
+
             if current_price < max(max_price, highest_close) - atr * stop_win_atr_factor:
                 if g.max_positions_value > 0:
                     g.max_positions_value = g.max_positions_value - context.portfolio.positions[stock].value
                 print('{} atr stop'.format(stock))
-                order_target_value(stock, 0)
+                g.sell_stock.append(stock)
         elif (current_price < buy_price * g.stock_stop_lose_percentage or
             (total_lose_pct < -0.02 and lose_pct < total_lose_pct * 10)):
             if g.max_positions_value > 0:
                 g.max_positions_value = g.max_positions_value - context.portfolio.positions[stock].value
-            order_target_value(stock, 0)
+            print('{} stop loss2'.format(stock))
+            g.sell_stock.append(stock)
             stock_stop_lose = True
             sell_count = sell_count + 1
 

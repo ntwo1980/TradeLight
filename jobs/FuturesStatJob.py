@@ -32,7 +32,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                             {
                                 'count': 'count',
                                 'close': 'last',
-                                'return': (lambda closes: closes.iloc[-1] / closes.iloc[-2] - 1) * 100,
+                                'return': lambda closes: (closes.iloc[-1] / closes.iloc[-2] - 1) * 100,
                                 'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
                                 'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
                                 'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),

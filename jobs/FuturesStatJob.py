@@ -32,6 +32,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
                             {
                                 'count': 'count',
                                 'close': 'last',
+                                'return': lambda closes: closes.iloc[-1]) / closes.iloc[-2) - 1,
                                 'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
                                 'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
                                 'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
@@ -42,9 +43,9 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
         blog_generator.h3('汇总')
-        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'close1', 'close3', 'close5', 'close10']],
+        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'return', 'close1', 'close3', 'close5', 'close10']],
             headers=[
-                '名称', '样本数量', '收盘价', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                '名称', '样本数量', '收盘价', '涨幅', '1年分位数', '3年分位数', '5年分位数', '10年分位数'
             ])
 
         for _, row in df_futures_stat.iterrows():

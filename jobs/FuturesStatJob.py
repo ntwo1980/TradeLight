@@ -1,5 +1,6 @@
 import datetime
 import os
+import json
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -10,10 +11,11 @@ import jobs.BlogPostGenerateJobBase as b
 import HexoGenerator
 
 class FuturesStatJob(b.BlogPostGenerateJobBase):
-    def __init__(self, post_path, future_list_file_path, futures_file_path):
+    def __init__(self, post_path, future_list_file_path, futures_file_path, futures_atr_file_path):
         b.BlogPostGenerateJobBase.__init__(self, post_path)
         self.future_list_file_path = future_list_file_path
         self.futures_file_path = futures_file_path
+        self.futures_atr_file_path = futures_atr_file_path
 
     def run(self):
         blog_generator = HexoGenerator.HexoGenerator(self.post_path, '期货 - {}'.format(j.JobBase.get_today_str()), tags=['数据统计'])
@@ -24,20 +26,22 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
             self.futures_file_path,
             index_col='date',
             infer_datetime_format=True)
+        with open(self.futures_atr_file_path, 'r') as f:
+            atrs = json.load(f)[0]
 
         df_futures = df_futures.unstack().reset_index()
         df_futures.columns = ['code', 'date', 'close']
         df_futures.dropna(inplace=True)
         df_futures_stat = df_futures.groupby('code')['close'].agg(
-                            {
-                                'count': 'count',
-                                'close': 'last',
-                                'return': lambda closes: (closes.iloc[-1] / closes.iloc[-2] - 1) * 100,
-                                'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
-                                'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
-                                'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
-                                'close10': lambda closes: stats.percentileofscore(closes[-2400:], closes.iloc[-1])
-                            }).reset_index()
+            {
+                'count': 'count',
+                'close': 'last',
+                'return': lambda closes: (closes.iloc[-1] / closes.iloc[-2] - 1) * 100,
+                'close1': lambda closes: stats.percentileofscore(closes[-240:], closes.iloc[-1]),
+                'close3': lambda closes: stats.percentileofscore(closes[-720:], closes.iloc[-1]),
+                'close5': lambda closes: stats.percentileofscore(closes[-1200:], closes.iloc[-1]),
+                'close10': lambda closes: stats.percentileofscore(closes[-2400:], closes.iloc[-1])
+            }).reset_index()
         df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
         df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')

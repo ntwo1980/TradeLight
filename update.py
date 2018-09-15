@@ -162,6 +162,7 @@ if generate_zz:
     StocksPBPEStatJob.StocksPBPEStatJob(data_path = os.path.join(script_dir, 'data/'), stat_output_path=blog_stocks_data_absolute_path).run()
 
 if generate_joinquant or generate_sw or generate_zz:
+    '''
     section_generators = [
         HistoryPostSectionGenerator.HistoryPostSectionGenerator(
             data_file_path = os.path.join(script_dir, 'data/')),
@@ -187,18 +188,20 @@ if generate_joinquant or generate_sw or generate_zz:
         post_path = os.path.join(blog_page_path, 'r_Market/', 'index.md'),
         section_generators = section_generators
     ).run()
+    '''
     FuturesStatJob.FuturesStatJob(
         post_path = os.path.join(blog_page_path, 'r_Futures/', 'index.md'),
         future_list_file_path = os.path.join(script_dir, 'data/r_future_list.csv'),
         futures_file_path = os.path.join(script_dir, 'data/r_futures.csv'),
     ).run()
+    '''
     UpStocksStatJob.UpStocksStatJob(
         post_path = os.path.join(blog_page_path, 'r_UpStocks/', 'index.md'),
         stocks_list_file_path = os.path.join(script_dir, 'data/r_securities.csv'),
         stocks_file_path = os.path.join(script_dir, 'data/r_stocks_closes.csv'),
         index_closes_file_path = os.path.join(script_dir, 'data/r_indexes.csv'),
     ).run()
-
+    '''
 '''
 if generate_joinquant or generate_xueqiu or generate_sw or generate_zz:
     # generate_everyday_blog_post()

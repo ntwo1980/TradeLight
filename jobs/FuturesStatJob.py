@@ -54,7 +54,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         blog_generator.h3('汇总')
         blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close3', 'close5', 'close10']],
             headers=[
-                '名称', '样本数量', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '1年分位数', '3年分位数', '5年分位数', '10年分位数'
+                '名称', '样本数量', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '1年分位', '3年分位', '5年分位', '10年分位'
             ])
 
         for _, row in df_futures_stat.iterrows():

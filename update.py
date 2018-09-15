@@ -192,7 +192,7 @@ if generate_joinquant or generate_sw or generate_zz:
     FuturesStatJob.FuturesStatJob(
         post_path = os.path.join(blog_page_path, 'r_Futures/', 'index.md'),
         future_list_file_path = os.path.join(script_dir, 'data/r_future_list.csv'),
-        futures_file_path = os.path.join(script_dir, 'data/r_futures.csv')
+        futures_file_path = os.path.join(script_dir, 'data/r_futures.csv'),
         futures_atr_file_path = os.path.join(script_dir, 'data/r_futures_atr.json')
     ).run()
     '''

@@ -16,4 +16,4 @@ class JoinQuantDownloadFilesJob(j.JoinQuantJobBase):
         self.jq.fetch_file('indexes.csv', 'r_indexes.csv')
         self.jq.fetch_file('future_list.csv', 'r_future_list.csv')
         self.jq.fetch_file('futures.csv', 'r_futures.csv')
-        self.jq.fetch_file('futures_atr.json', 'futures_atr.json')
+        self.jq.fetch_file('futures_atr.json', 'r_futures_atr.json')

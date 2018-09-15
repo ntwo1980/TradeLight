@@ -47,8 +47,8 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat = df_futures_stat[df_futures_stat['count']>240]
         df_futures_stat = pd.merge(df_futures_stat, df_future_list, how='left')
         df_futures_stat['atr'] = [atrs[s] for s in df_futures_stat['code']]
-        df_futures_stat['atr1'] = (df['max_close10'] - df['close']) / df_futures_stat['atr']
-        df_futures_stat['atr2'] = (df['close'] - df['min_close10']) / df_futures_stat['atr']
+        df_futures_stat['atr1'] = (df_futures_stat['max_close10'] - df_futures_stat['close']) / df_futures_stat['atr']
+        df_futures_stat['atr2'] = (df_futures_stat['close'] - df_futures_stat['min_close10']) / df_futures_stat['atr']
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
         blog_generator.h3('汇总')

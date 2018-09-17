@@ -52,9 +52,9 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
 
         blog_generator.h3('汇总')
-        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close3', 'close5', 'close10']],
+        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'slop', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close3', 'close5', 'close10']],
             headers=[
-                '名称', '样本数量', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '1年分位', '3年分位', '5年分位', '10年分位'
+                '名称', '样本数量', '斜率', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '位1', '位3', '位5', '位10'
             ])
 
         for _, row in df_futures_stat.iterrows():

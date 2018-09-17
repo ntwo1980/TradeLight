@@ -50,8 +50,8 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat['atr1'] = (df_futures_stat['max_close10'] - df_futures_stat['close']) / df_futures_stat['atr']
         df_futures_stat['atr2'] = (df_futures_stat['close'] - df_futures_stat['min_close10']) / df_futures_stat['atr']
         df_futures_stat['J_move'] = 0
-        df_futures_stat['J_move'] = df_futures_stat[df_futures_stat['J_prev'] > 90 & df_futures_stat['J'] < df_futures_stat['J_prev']] = -1
-        df_futures_stat['J_move'] = df_futures_stat[df_futures_stat['J_prev'] < 10 & df_futures_stat['J'] > df_futures_stat['J_prev']] = 1
+        df_futures_stat['J_move'] = df_futures_stat[(df_futures_stat['J_prev'] > 90) & (df_futures_stat['J'] < df_futures_stat['J_prev'])] = -1
+        df_futures_stat['J_move'] = df_futures_stat[(df_futures_stat['J_prev'] < 10) & (df_futures_stat['J'] > df_futures_stat['J_prev'])] = 1
         df_futures_stat['score'] = np.sign(df_futures_stat["slop"]) + df_futures_stat['J_move']
         df_futures_stat['score_abs'] = df_futures_stat['score'].abs()
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')

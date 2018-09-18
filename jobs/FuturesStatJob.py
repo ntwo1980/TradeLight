@@ -54,7 +54,7 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat[(df_futures_stat['J_prev'] < 10) & (df_futures_stat['J'] > df_futures_stat['J_prev'])]['J_move'] = 1
         df_futures_stat['score'] = np.sign(df_futures_stat["slop20"]) + np.sign(df_futures_stat["slop60"]) + df_futures_stat['J_move']
         df_futures_stat['score_abs'] = df_futures_stat['score'].abs()
-        df_futures_stat['slop_abs'] = df_futures_stat['slop_20'].abs()
+        df_futures_stat['slop_abs'] = df_futures_stat['slop'].abs()
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
         df_futures_stat.sort_values(by=['score_abs', 'slop_abs'], ascending=[False, True], inplace=True)
 

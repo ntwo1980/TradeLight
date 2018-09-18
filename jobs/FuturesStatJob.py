@@ -52,16 +52,15 @@ class FuturesStatJob(b.BlogPostGenerateJobBase):
         df_futures_stat['J_move'] = 0
         df_futures_stat[(df_futures_stat['J_prev'] > 90) & (df_futures_stat['J'] < df_futures_stat['J_prev'])]['J_move'] = -1
         df_futures_stat[(df_futures_stat['J_prev'] < 10) & (df_futures_stat['J'] > df_futures_stat['J_prev'])]['J_move'] = 1
-        df_futures_stat['score'] = np.sign(df_futures_stat["slop20"]) + np.sign(df_futures_stat["slop60"]) + df_futures_stat['J_move']
+        df_futures_stat['score'] = df_futures_stat['J_move']
         df_futures_stat['score_abs'] = df_futures_stat['score'].abs()
-        df_futures_stat['slop_abs'] = df_futures_stat['slop20'].abs()
         df_futures_stat['display_name'] = df_futures_stat['display_name'].str.replace('主力合约', '')
-        df_futures_stat.sort_values(by=['score_abs', 'slop_abs'], ascending=[False, True], inplace=True)
+        df_futures_stat.sort_values(by=['score_abs'], ascending=[False], inplace=True)
 
         blog_generator.h3('汇总')
-        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'slop20', 'slop60', 'score', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close10']],
+        blog_generator.data_frame(df_futures_stat[['display_name', 'count', 'J_prev', 'J', 'score', 'close', 'return', 'atr', 'atr1' , 'atr2',  'close1', 'close10']],
             headers=[
-                '名称', '样本数量', '斜率20', '斜率60', '得分', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '位1', '位10'
+                '名称', '样本数量', 'J1', 'J2', '得分', '收盘价', '涨幅', 'ATR10', 'ATR-', 'ATR+',  '位1', '位10'
             ])
 
         for _, row in df_futures_stat.iterrows():

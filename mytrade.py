@@ -30,13 +30,13 @@ class TradeScheduler:
         self.trade_func = trade_func
         self.context = context
         g.if_trade = False
-
+    
     def trade(self):
         trade = False
-
+        
         if not hasattr(self.g, 'trade_count'):
             self.g.trade_count = 0
-
+        
         if(self.need_trade()):
             self.g.if_trade = True
             trade = True
@@ -44,20 +44,20 @@ class TradeScheduler:
                 self.trade_func()
         else:
             self.g.if_trade = False
-
+            
         self.g.trade_count += 1
-
+        
         return trade
 
 class MonthDayTradeScheduler(TradeScheduler):
     def __init__(self, g, context, trade_func, day):
         TradeScheduler.__init__(self, g, context, trade_func)
         self.day = day
-
+    
     def need_trade(self):
         if self.day == 'all':
             return True
-
+        
         today = self.context.current_dt.date()
         if self.day > 0:
             yesterday = self.context.previous_date
@@ -67,27 +67,27 @@ class MonthDayTradeScheduler(TradeScheduler):
         elif self.day < 0:
             current_year = today.year
             current_month = today.month
-
+            
             scheduled_trade_day = None
             for day in range(1, 20):
                 next_month_first_day = (today + relativedelta(months=+1)).replace(day=day)
-
+                
                 try:
                     scheduled_trade_day = shift_trading_day(next_month_first_day, -1)
                 except:
                     continue
                 else:
                     break
-
+            
             return yesterday < scheduled_trade_day <= today
         else:
             return False
-
+        
 class SpringFestival():
     def __init__(self):
         sprint_festival_str = ['2001-2-5', '2001-1-24', '2002-2-12', '2003-2-1', '2004-1-22', '2005-2-9', '2006-1-29', '2007-2-18', '2008-2-7', '2009-1-26', '2010-2-14', '2011-2-3', '2012-1-23', '2013-2-10', '2014-1-31', '2015-2-19', '2016-2-8', '2017-1-28', '2018-2-16', '2019-2-5', '2020-1-25', '2021-2-12', '2022-2-1', '2023-1-22', '2024-2-10', '2025-1-29', '2026-2-17', '2027-2-6', '2028-1-26', '2029-2-13', '2030-2-3', '2031-1-23', '2032-2-11', '2033-1-31', '2034-2-19', '2035-2-8', '2036-1-28', '2037-2-15', '2038-2-4', '2039-1-24', '2040-2-12', '2041-2-1', '2042-1-22', '2043-2-10', '2044-1-30', '2045-2-17', '2046-2-6', '2047-1-26', '2048-2-14', '2049-2-2']
         self.sprint_festivals = {int(d[:4]): dt.datetime.strptime(d, "%Y-%m-%d") for d in sprint_festival_str}
-
+        
     def get_spring_festival_day(self, year):
         return self.sprint_festivals[year].date()
 
@@ -103,9 +103,11 @@ class SpringFestivalTradeScheduler(TradeScheduler):
         if self.offset > 0:
             yesterday = self.context.previous_date
             current_year = today.year
-            sprint_festival = self.sprint_festivals[current_year]
-            scheduled_trade_day = (sprint_festival + relativedelta(days=-self.offset)).date()
-
+            first_day_of_year = str(current_year) + '-1-1'
+            sprint_festival = self.sprint_festivals[current_year]       
+            trading_days = get_trade_days(first_day_of_year, sprint_festival)
+            scheduled_trade_day = trading_days[-self.offset]
+            
             return yesterday < scheduled_trade_day <= today
         else:
             return False
@@ -114,16 +116,16 @@ class WeekDayTradeScheduler(TradeScheduler):
     def __init__(self, g, context, trade_func, weekday):
         TradeScheduler.__init__(self, g, context, trade_func)
         self.weekday = weekday
-
+        
     def need_trade(self):
         if self.weekday == 'all':
             return True
-
+        
         if self.weekday <=0 or self.weekday >= 6:
             return False
-
+        
         today = self.context.current_dt
-
+        
         return today.weekday() + 1 == self.weekday  # Monday weekday is 1
 
 class EverydayTradeScheduler(TradeScheduler):
@@ -133,8 +135,8 @@ class EverydayTradeScheduler(TradeScheduler):
 
     def need_trade(self):
         return self.g.trade_count % self.interval == 0
-
-class SecuritySelector:
+    
+class SecuritySelector:         
     def get_stocks(self):
         return self.stocks
 
@@ -144,14 +146,14 @@ class StockIndicesSecuritySelector(SecuritySelector):
             self.indices = list(indices)
         else:
             self.indices = indices
-
+            
         stocks = set()
         for index in indices:
             stocks.update(get_index_stocks(index, date))
 
         if exclude_gem:
             stocks = [s for s in stocks if not str(s).startswith('300')]
-
+        
         self.stocks = list(stocks)
 
 class FosterSecuirtySelector(SecuritySelector):
@@ -166,45 +168,45 @@ class FosterSecuirtySelector(SecuritySelector):
                 income.operating_profit / income.operating_revenue > prr,
                 indicator.code.in_(stocks)
             ), date)
-
+        
         self.stocks = list(df.code)
 
 class NotNewSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date):
         past_stocks = get_all_securities(date=shift_trading_day(date, -120))
-
+        
         self.stocks = list(set(stocks).intersection(set(past_stocks.index)))
 
 class NotSTSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date):
         st = get_extras('is_st', stocks, end_date=date, count = 1, df=True)
         st=st.iloc[0]
-
+        
         self.stocks=list(st[st==False].index)
 
 class NotBlackListSecuritySelector(SecuritySelector):
     def __init__(self, stocks):
         blacklist = {'002087.XSHE'}
-
+        
         self.stocks = list(set(stocks) - blacklist)
 
 class NotIndustrySecuritySelector(SecuritySelector):
      def __init__(self, stocks, date, industries):
         exclude_stocks = {s for industry in industries for s in get_industry_stocks(industry, date=date)}
         self.stocks = list(set(stocks) - exclude_stocks)
-
+        
 class IndustrySecuritySelector(SecuritySelector):
      def __init__(self, stocks, date, industries):
         industry_stocks = {s for industry in industries for s in get_industry_stocks(industry, date=date)}
         self.stocks = list(set(stocks) & industry_stocks)
-
+        
 class FundamentalSecuritySelector1(SecuritySelector):
     def __init__(self, stocks, date, mc, pb, iop, roic):
-        fundamentals = get_fundamentals(query(valuation.code,
+        fundamentals = get_fundamentals(query(valuation.code, 
                 indicator.inc_operation_profit_year_on_year,
                 indicator.gross_profit_margin,
                 valuation.pb_ratio,
-                valuation.pe_ratio,
+                valuation.pe_ratio, 
                 valuation.market_cap,
                 income.net_profit,
                 income.income_tax_expense,
@@ -218,19 +220,19 @@ class FundamentalSecuritySelector1(SecuritySelector):
             ).filter(
                 indicator.code.in_(stocks)
             ), date)
-
+       
         fundamentals.fillna(0, inplace=True)
         fundamentals['mc_r'] = fundamentals['market_cap'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['gpm_r'] = fundamentals['gross_profit_margin'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pb_r'] = fundamentals['pb_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['iop_r'] = fundamentals['inc_operation_profit_year_on_year'].rank(ascending = True, method = 'max', pct=True)
-        fundamentals['ROIC'] = ((fundamentals['net_profit'] + fundamentals['income_tax_expense'] + fundamentals['financial_expense'])
-                    / (fundamentals['total_owner_equities'] + fundamentals['shortterm_loan'] + fundamentals['longterm_loan'] +
+        fundamentals['ROIC'] = ((fundamentals['net_profit'] + fundamentals['income_tax_expense'] + fundamentals['financial_expense']) 
+                    / (fundamentals['total_owner_equities'] + fundamentals['shortterm_loan'] + fundamentals['longterm_loan'] + 
                       fundamentals['non_current_liability_in_one_year'] + fundamentals['bonds_payable'] +  fundamentals['longterm_account_payable']))
         fundamentals['ROIC_r'] = fundamentals['ROIC'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['peg'] = fundamentals['pe_ratio'] / fundamentals['inc_operation_profit_year_on_year']
         fundamentals['peg_r'] = fundamentals['peg'].rank(ascending = True, method = 'max', pct=True)
-
+    
         fundamentals1 = fundamentals[(fundamentals['mc_r'] >= mc[0]) \
                                 & (fundamentals['mc_r'] <= mc[1]) \
                                 & (fundamentals['pb_r'] >= pb[0]) \
@@ -240,7 +242,7 @@ class FundamentalSecuritySelector1(SecuritySelector):
                                 & (fundamentals['gpm_r'] >= 0.1) \
                                 & (fundamentals['ROIC_r'] >= roic[0]) \
                                 & (fundamentals['ROIC_r'] <= roic[1])]
-
+        
         fundamentals2 = fundamentals[(fundamentals['mc_r'] >= mc[0]) \
                                 & (fundamentals['mc_r'] <= mc[1]) \
                                 & (fundamentals['peg_r'] >= 0) \
@@ -250,13 +252,13 @@ class FundamentalSecuritySelector1(SecuritySelector):
                                 & (fundamentals['gpm_r'] >= 0.1) \
                                 & (fundamentals['ROIC_r'] >= roic[0]) \
                                 & (fundamentals['ROIC_r'] <= roic[1])]
-
+                             
         fundamentals1 = fundamentals1.set_index(['code'])
         fundamentals2 = fundamentals2.set_index(['code'])
-
+        
         #self.stocks = set(fundamentals1.index) | set(fundamentals2.index)
         self.stocks = set(fundamentals1.index)
-
+        
 class FundamentalSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date, mc, pe, pb, ps, iop, facr, statDate=None):
         if not statDate:
@@ -276,7 +278,7 @@ class FundamentalSecuritySelector(SecuritySelector):
                     indicator.statDate == statDate,
                     indicator.code.in_(stocks)
                 ), date)
-
+        
         fundamentals['facr'] = fundamentals['fixed_assets'] / fundamentals['total_assets']
         fundamentals['ev_ebitda'] = (fundamentals['market_cap'] * 100000000 + fundamentals['total_liability'] -                                          fundamentals['cash_and_equivalents_at_end']) / (fundamentals['total_profit'] + fundamentals['financial_expense'] +                          fundamentals['asset_impairment_loss'] + fundamentals['long_deferred_expense'])
         fundamentals['mc_r'] = fundamentals['market_cap'].rank(ascending = True, method = 'max', pct=True)
@@ -285,8 +287,8 @@ class FundamentalSecuritySelector(SecuritySelector):
         fundamentals['ps_r'] = fundamentals['ps_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pcf_r'] = fundamentals['pcf_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['facr_r'] = fundamentals['facr'].rank(ascending = True, method = 'max', pct=True)
-        fundamentals['ev_ebitda_r'] = fundamentals['ev_ebitda'].rank(ascending = True, method = 'max', pct=True)
-
+        fundamentals['ev_ebitda_r'] = fundamentals['ev_ebitda'].rank(ascending = True, method = 'max', pct=True)       
+        
         fundamentals = fundamentals[(fundamentals['mc_r'] >= mc[0]) \
                                 & (fundamentals['mc_r'] <= mc[1]) \
                                 & (fundamentals['pe_r'] >= pe[0]) \
@@ -297,11 +299,11 @@ class FundamentalSecuritySelector(SecuritySelector):
                                 & (fundamentals['ps_r'] <= ps[1]) \
                                 & (fundamentals['facr_r'] >= facr[0]) \
                                 & (fundamentals['facr_r'] <= facr[1])]
-
+                             
         fundamentals = fundamentals.set_index(['code'])
-
+        
         self.stocks = list(fundamentals.index)
-
+        
 class FundamentalSecuritySelector2(SecuritySelector):
     def __init__(self, stocks, date, statDate=None):
         if not statDate:
@@ -311,22 +313,22 @@ class FundamentalSecuritySelector2(SecuritySelector):
                     cash_flow.goods_sale_and_service_render_cash > 0,
                     indicator.code.in_(stocks)
                 ), date)
-
+        
         fundamentals['iop_r'] = fundamentals['inc_operation_profit_year_on_year'].rank(ascending = True, method = 'max', pct=True)
-        fundamentals['ps_r'] = fundamentals['ps_ratio'].rank(ascending = True, method = 'max', pct=True)
+        fundamentals['ps_r'] = fundamentals['ps_ratio'].rank(ascending = True, method = 'max', pct=True)    
         fundamentals['pe_r'] = fundamentals['pe_ratio'].rank(ascending = True, method = 'max', pct=True)
-
+        
         fundamentals = fundamentals[(fundamentals['iop_r'] >= 0.5) \
                                 & (fundamentals['iop_r'] <= 1)  \
                                 & (fundamentals['pe_r'] >= 0) \
                                 & (fundamentals['pe_r'] <= 0.5)\
                                 & (fundamentals['ps_r'] >= 0.5) \
                                 & (fundamentals['ps_r'] <= 1)]
-
+                             
         fundamentals = fundamentals.set_index(['code'])
-
+        
         self.stocks = list(fundamentals.index)
-
+        
 class ValueFundamentalSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date, mc, pe, pb, ps, pcf, iop):
         fundamentals = get_fundamentals(query(valuation.code, valuation.market_cap, valuation.pe_ratio, valuation.pb_ratio, valuation.ps_ratio, valuation.pcf_ratio, indicator.inc_operation_profit_year_on_year, balance.long_deferred_expense, indicator.statDate
@@ -334,14 +336,14 @@ class ValueFundamentalSecuritySelector(SecuritySelector):
                 valuation.pe_ratio > 0,
                 indicator.code.in_(stocks)
             ), date)
-
+        
         fundamentals['mc_r'] = fundamentals['market_cap'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pe_r'] = fundamentals['pe_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pb_r'] = fundamentals['pb_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['ps_r'] = fundamentals['ps_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pcf_r'] = fundamentals['pcf_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['iop_r'] = fundamentals['inc_operation_profit_year_on_year'].rank(ascending = True, method = 'max', pct=True)
-
+        
         fundamentals = fundamentals[(fundamentals['mc_r'] >= mc[0]) \
                                 & (fundamentals['mc_r'] <= mc[1]) \
                                 & (fundamentals['pe_r'] >= pe[0]) \
@@ -354,16 +356,16 @@ class ValueFundamentalSecuritySelector(SecuritySelector):
                                 & (fundamentals['pcf_r'] <= pcf[1]) \
                                 & (fundamentals['iop_r'] >= iop[0]) \
                                 & (fundamentals['iop_r'] <= iop[1])]
-
+                                
         fundamentals = fundamentals.set_index(['code'])
-
+        
         self.stocks = list(fundamentals.index)
-
+        
 class TestFundamentalSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date):
-        fundamentals = get_fundamentals(query(valuation.code,
+        fundamentals = get_fundamentals(query(valuation.code, 
                 indicator.inc_operation_profit_year_on_year,
-                valuation.pb_ratio,
+                valuation.pb_ratio, 
                 valuation.market_cap,
                 income.net_profit,
                 income.income_tax_expense,
@@ -378,25 +380,25 @@ class TestFundamentalSecuritySelector(SecuritySelector):
                 valuation.pe_ratio > 0,
                 indicator.code.in_(stocks)
             ), date)
-
+        
         fundamentals.fillna(0, inplace=True)
         fundamentals['mc_r'] = fundamentals['market_cap'].rank(ascending = True, method = 'max', pct=True)
-        fundamentals['ROIC'] = ((fundamentals['net_profit'] + fundamentals['income_tax_expense'] + fundamentals['financial_expense'])
-                    / (fundamentals['total_owner_equities'] + fundamentals['shortterm_loan'] + fundamentals['longterm_loan'] +
+        fundamentals['ROIC'] = ((fundamentals['net_profit'] + fundamentals['income_tax_expense'] + fundamentals['financial_expense']) 
+                    / (fundamentals['total_owner_equities'] + fundamentals['shortterm_loan'] + fundamentals['longterm_loan'] + 
                       fundamentals['non_current_liability_in_one_year'] + fundamentals['bonds_payable'] +  fundamentals['longterm_account_payable']))
         fundamentals['ROIC_r'] = fundamentals['ROIC'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['pb_r'] = fundamentals['pb_ratio'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['iop_r'] = fundamentals['inc_operation_profit_year_on_year'].rank(ascending = True, method = 'max', pct=True)
-
-        fundamentals = fundamentals[(fundamentals['mc_r'] <= 0.8)
+        
+        fundamentals = fundamentals[(fundamentals['mc_r'] <= 0.8) 
                                 & (fundamentals['pb_r'] <= 0.4)
                                 & (fundamentals['ROIC_r'] >= 0.6)
                                 & (fundamentals['iop_r'] >= 0.6 )]
-
+                                
         fundamentals = fundamentals.set_index(['code'])
-
+        
         self.stocks = list(fundamentals.index)
-
+        
 class PegSecuritySelector(SecuritySelector):
     def __init__(self, stocks, date, peg):
         fundamentals = get_fundamentals(query(
@@ -411,17 +413,17 @@ class PegSecuritySelector(SecuritySelector):
                 valuation.pe_ratio < 50,
                 indicator.code.in_(stocks)
             ), date)
-
+        
         fundamentals['peg_pro'] = fundamentals['pe_ratio'] / fundamentals['inc_net_profit_to_shareholders_year_on_year']
         fundamentals['peg_re'] = fundamentals['pe_ratio'] / fundamentals['inc_revenue_year_on_year']
-
+        
         fundamentals['peg_pro_r'] = fundamentals['peg_pro'].rank(ascending = True, method = 'max', pct=True)
         fundamentals['peg_re_r'] = fundamentals['peg_re'].rank(ascending = True, method = 'max', pct=True)
-
+        
         fundamentals = fundamentals[(fundamentals['peg_pro_r'] <= peg)]
-
+        
         fundamentals = fundamentals.set_index(['code'])
-
+        
         self.stocks = list(fundamentals.index)
 
 class IndustryFundamentalSecuritySelector(SecuritySelector):
@@ -438,7 +440,7 @@ class IndustryFundamentalSecuritySelector(SecuritySelector):
 
         fundamentals = get_fundamentals(query(valuation.code, valuation.market_cap, valuation.pb_ratio, indicator.inc_operation_profit_year_on_year, cash_flow.goods_sale_and_service_render_cash
                     ).filter(valuation.code.in_(set(stocks) & stocks_industry)))
-
+        
         fundamentals['mc_r'] = fundamentals['market_cap'].rank(ascending = True, method = 'max', pct=True)
         fundamentals = fundamentals[fundamentals['mc_r'] <= mc]
         fundamentals = fundamentals.set_index(['code'])
@@ -454,120 +456,134 @@ class IndustryFundamentalSecuritySelector(SecuritySelector):
 
         df_industry = df_industry.join(df_stat, on='industry')
         df_industry = df_industry[df_industry['pb_ratio'] < df_industry['pb']]
-
+        
         self.stocks = list(df_industry.index)
-
+        
 class StockFactor():
     def __init__(self, stocks):
-        self.stocks = stocks
+        self.stocks = stocks    
 
 class PriceStockFactor(StockFactor):
     def __init__(self, stocks, prices):
         StockFactor.__init__(self, stocks)
         self.prices = prices
 
+class PStockFactor(PriceStockFactor):
+    def generate(self, days, asc):
+        df_price = self.prices
+         
+        # 进行转置
+        df_price = df_price.T 
+
+        df_price = df_price.dropna()
+        
+        # 排序给出排序打分
+        df_price['P_sorted_rank'] = df_price.rank(ascending = asc, method = 'dense')
+        
+        return df_price
+
 class VarStockFactor(PriceStockFactor):
     def generate(self, days, asc):
         df_var = self.prices[-(days+1):].pct_change()
 
         # 进行转置
-        df_var = df_var.T
+        df_var = df_var.T 
         # 生成方差
-        df_var['VAR'] = df_var.var(axis = 1, skipna = True)
+        df_var['VAR'] = df_var.var(axis = 1, skipna = True) 
         # 生成新的DataFrame
         df_var = pd.DataFrame(df_var['VAR'])
         # 删除nan
         df_var = df_var.dropna()
         # 排序给出排序打分
         df_var['VAR_sorted_rank'] = df_var['VAR'].rank(ascending = asc, method = 'dense')
-
+        
         return df_var
 
 class IndexVarStockFactor(PriceStockFactor):
     def generate(self, days, asc, date, reference_index):
         df_var = self.prices[-(days+1):].pct_change()
-        index_prices = get_price(reference_index,
-            count = days+1,
-            end_date=date,
-            frequency='daily',
+        index_prices = get_price(reference_index, 
+            count = days+1, 
+            end_date=date, 
+            frequency='daily', 
             fields='close')['close']
-
+        
         df_index_var = index_prices.pct_change()
         df_var = df_var - df_index_var
 
         # 进行转置
-        df_var = df_var.T
+        df_var = df_var.T 
         # 生成方差
-        df_var['IndexVar'] = df_var.var(axis = 1, skipna = True)
+        df_var['IndexVar'] = df_var.var(axis = 1, skipna = True) 
         # 生成新的DataFrame
         df_var = pd.DataFrame(df_var['IndexVar'])
         # 删除nan
         df_var = df_var.dropna()
         # 排序给出排序打分
         df_var['IndexVar_sorted_rank'] = df_var['IndexVar'].rank(ascending = asc, method = 'dense')
-
+        
         return df_var
-
+  
 class VarChangeStockFactor(PriceStockFactor):
     def generate(self, days, asc):
         this_period_var_factor = VarStockFactor(self.stocks, self.prices)
         df_var_this_period = this_period_var_factor.generate(days, asc)
         del df_var_this_period['VAR_sorted_rank']
         df_var_this_period.columns = ["VAR_This"]
-
+        
         last_period_var_factor = VarStockFactor(self.stocks, self.prices[-2 * days:-days])
-        df_var_last_period = last_period_var_factor.generate(days, asc)
+        df_var_last_period = last_period_var_factor.generate(days, asc)     
         del df_var_last_period['VAR_sorted_rank']
         df_var_last_period.columns = ["VAR_Last"]
-
+        
         df = pd.concat([df_var_this_period, df_var_last_period], axis = 1)
         df['VARC'] = df['VAR_Last'] - df['VAR_This']
         df = df.dropna()
         df['VARC_sorted_rank'] = df['VARC'].rank(ascending = asc, method = 'dense')
         del df['VAR_This']
         del df['VAR_Last']
-
+        
         return df
 
 class MtmStockFactor(PriceStockFactor):
     def generate(self, days, asc):
         last_price = self.prices.iloc[-1]
         prev_price = self.prices.iloc[-days]
-
+        
         price_pct_change = (last_price - prev_price) / prev_price
         mtm_name = 'MTM' + str(days)
         df = pd.DataFrame({mtm_name: price_pct_change})
         df = df.dropna()
         df[mtm_name + '_sorted_rank'] = df[mtm_name].rank(ascending = asc, method = 'dense')
-
+        
         return df
-
+    
 class FlucStockFactor(PriceStockFactor):
     def generate(self, days, asc):
         max_price = self.prices.max(skipna = True)
         min_price = self.prices.min(skipna = True)
         start_price = self.prices.iloc[0]
         end_price = self.prices.iloc[-1]
-
+            
         df = pd.DataFrame({'FLUC': (max_price - min_price) / (start_price + end_price)})
         df = df.dropna()
-
+        
         df['FLUC_sorted_rank'] = df['FLUC'].rank(ascending = asc, method = 'dense')
-
+        
         return df
-
+    
 class FundamentalStockFactor(StockFactor):
     def __init__(self, stocks):
         StockFactor.__init__(self, stocks)
-
+        
     def generate(self, fundamentals, asc):
         factor_name = self.factor_name
         factor_sorted_rank_name = factor_name + '_sorted_rank'
-
+        
         df = self.fundamentals_get_func(fundamentals)
         if hasattr(self, 'filter_func'):
             df = df[self.filter_func(df)]
-
+            
         # 删除nan
         df = df.dropna()
         df[factor_name] = self.factor_get_value_func(df)
@@ -582,39 +598,39 @@ class FundamentalStockFactor(StockFactor):
 
         # 改个名字
         df.columns = [self.factor_name, factor_sorted_rank_name]
-
+        
         return df
-
+        
 class VolumeStockFactor(StockFactor):
     def __init__(self, stocks, volumes):
         StockFactor.__init__(self, stocks)
-        self.volumes = volumes
-
+        self.volumes = volumes  
+        
 class VVarStockFactor(VolumeStockFactor):
     def generate(self, days, asc):
         df_var = self.volumes[-(days+1):].pct_change()
 
         # 进行转置
-        df_var = df_var.T
+        df_var = df_var.T 
         # 生成方差
-        df_var['VVAR'] = df_var.var(axis = 1, skipna = True)
+        df_var['VVAR'] = df_var.var(axis = 1, skipna = True) 
         # 生成新的DataFrame
         df_var = pd.DataFrame(df_var['VVAR'])
         # 删除nan
         df_var = df_var.dropna()
         # 排序给出排序打分
         df_var['VVAR_sorted_rank'] = df_var['VVAR'].rank(ascending = asc, method = 'dense')
-
+        
         return df_var
 
 class TrStockFactor(VolumeStockFactor):
     def __init__(self, stocks, volumes):
         VolumeStockFactor.__init__(self, stocks, volumes)
         self.fundamentals = [valuation.code, valuation.circulating_cap]
-
-    def generate(self, fundamentals, asc):
+    
+    def generate(self, fundamentals, asc):     
         total_volumes = self.volumes.sum(skipna = True).T
-
+        
         df = fundamentals[['code', 'circulating_cap']]
         df.index = df.code
         df['TR'] = total_volumes / df['circulating_cap'] * 10000
@@ -622,41 +638,41 @@ class TrStockFactor(VolumeStockFactor):
         df['TR_sorted_rank'] = df['TR'].rank(ascending = asc, method = 'dense')
         del df['code']
         del df['circulating_cap']
-
+        
         return df
 
-class TrChangeStockFactor(TrStockFactor):
+class TrChangeStockFactor(TrStockFactor):    
     def generate(self, fundamentals, days, end_date, asc):
         this_period_tr_factor = TrStockFactor(self.stocks, self.volumes)
         df_tr_this_period = this_period_tr_factor.generate(fundamentals, asc)
         del df_tr_this_period['TR_sorted_rank']
-
+        
         df_tr_this_period.columns = ["TR_This"]
-
+        
         last_period_end_date = shift_trading_day(end_date, -days)
-
-        volumes = get_price(self.stocks,
-           count = days,
-           end_date = last_period_end_date,
-           frequency = 'daily',
+        
+        volumes = get_price(self.stocks, 
+           count = days, 
+           end_date = last_period_end_date, 
+           frequency = 'daily', 
            fields = 'volume')['volume']
-
+        
         last_period_tr_factor = TrStockFactor(self.stocks, volumes)
-
+        
         df_fundamentals = get_fundamentals(query(*last_period_tr_factor.fundamentals
                               ).filter(indicator.code.in_(self.stocks)), last_period_end_date)
-
-        df_tr_last_period = last_period_tr_factor.generate(df_fundamentals, asc)
+       
+        df_tr_last_period = last_period_tr_factor.generate(df_fundamentals, asc)   
         del df_tr_last_period['TR_sorted_rank']
         df_tr_last_period.columns = ["TR_Last"]
-
+        
         df = pd.concat([df_tr_this_period, df_tr_last_period], axis = 1)
         df['TRC'] = df['TR_Last'] - df['TR_This']
         df = df.dropna()
         df['TRC_sorted_rank'] = df['TRC'].rank(ascending = asc, method = 'dense')
         del df['TR_This']
         del df['TR_Last']
-
+        
         return df
 
 class FundamentalChangeStockFactor(StockFactor):
@@ -666,24 +682,24 @@ class FundamentalChangeStockFactor(StockFactor):
         df_this_period = factor.generate(fundamentals, asc)
         del df_this_period[factor_name + '_sorted_rank']
         df_this_period.columns = ['This']
-
+       
         last_period_end_date = shift_trading_day(end_date, -days)
-
+        
         last_fundamentals = get_fundamentals(query(*factor.fundamentals).filter(indicator.code.in_(self.stocks)), last_period_end_date)
-
-        df_last_period = factor.generate(last_fundamentals, asc)
+        
+        df_last_period = factor.generate(last_fundamentals, asc)     
         del df_last_period[factor_name + '_sorted_rank']
         df_last_period.columns = ['Last']
-
+        
         df = pd.concat([df_this_period, df_last_period], axis = 1)
         df[factor_name + 'C'] = df['Last'] - df['This']
         df = df.dropna()
         df[factor_name + 'C_sorted_rank'] = df[ factor_name + 'C'].rank(ascending = asc, method = 'dense')
         del df['This']
         del df['Last']
-
+        
         return df
-
+        
 class FundamentalPercentageChangeStockFactor(StockFactor):
     def generate(self, fundamentals, days, end_date, asc):
         factor_name = self.factor_name
@@ -691,24 +707,24 @@ class FundamentalPercentageChangeStockFactor(StockFactor):
         df_this_period = factor.generate(fundamentals, asc)
         del df_this_period[factor_name + '_sorted_rank']
         df_this_period.columns = ['This']
-
+       
         last_period_end_date = shift_trading_day(end_date, -days)
-
+        
         last_fundamentals = get_fundamentals(query(*factor.fundamentals).filter(indicator.code.in_(self.stocks)), last_period_end_date)
-
-        df_last_period = factor.generate(last_fundamentals, asc)
+        
+        df_last_period = factor.generate(last_fundamentals, asc)     
         del df_last_period[factor_name + '_sorted_rank']
         df_last_period.columns = ['Last']
-
+        
         df = pd.concat([df_this_period, df_last_period], axis = 1)
         df[factor_name + 'C'] = (df['Last'] - df['This']) / df['Last']
         df = df.dropna()
         df[factor_name + 'C_sorted_rank'] = df[ factor_name + 'C'].rank(ascending = asc, method = 'dense')
         del df['This']
         del df['Last']
-
+        
         return df
-
+    
 class RoeStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -716,7 +732,7 @@ class RoeStockFactor(FundamentalStockFactor):
         self.factor_name = "ROE"
         self.fundamentals_get_func = lambda f: f[['code', 'roe']]
         self.factor_get_value_func = lambda f: f['roe']
-
+    
 class RoeChangeStockFactor(FundamentalChangeStockFactor, RoeStockFactor):
     def __init__(self, stocks):
         RoeStockFactor.__init__(self, stocks)
@@ -725,8 +741,8 @@ class RoeChangeStockFactor(FundamentalChangeStockFactor, RoeStockFactor):
 class RoaStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
-        self.fundamentals = [valuation.code,
-                                    # 负债和股东权益合计
+        self.fundamentals = [valuation.code, 
+                                    # 负债和股东权益合计                                
                                     balance.total_sheet_owner_equities,
                                     # 净利润(元)
                                     income.net_profit,
@@ -735,16 +751,16 @@ class RoaStockFactor(FundamentalStockFactor):
                                     # 应付利息(元)
                                     balance.interest_payable]
         self.factor_name = "ROA"
-        self.fundamentals_get_func = lambda f: f[['code',
-                                                  'total_sheet_owner_equities',
-                                                  'net_profit',
+        self.fundamentals_get_func = lambda f: f[['code', 
+                                                  'total_sheet_owner_equities', 
+                                                  'net_profit', 
                                                   'income_tax_expense',
                                                   'interest_payable']]
-        self.factor_get_value_func = lambda f: (f['net_profit']
+        self.factor_get_value_func = lambda f: (f['net_profit'] 
                                                + f['income_tax_expense']
                                                + f['interest_payable']
                                                )/f['total_sheet_owner_equities']
-
+        
 class RoaChangeStockFactor(FundamentalChangeStockFactor, RoaStockFactor):
     def __init__(self, stocks):
         RoaStockFactor.__init__(self, stocks)
@@ -758,7 +774,7 @@ class OptpStockFactor(FundamentalStockFactor):
         self.factor_name = "OPTP"
         self.fundamentals_get_func = lambda f: f[['code', 'operating_profit', 'total_profit']]
         self.factor_get_value_func = lambda f: f['operating_profit'] / f['total_profit']
-
+        
 class NporStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -771,7 +787,7 @@ class NporChangeStockFactor(FundamentalChangeStockFactor, NporStockFactor):
     def __init__(self, stocks):
         NporStockFactor.__init__(self, stocks)
         self.fundamental_stock_factor = NporStockFactor
-
+        
 class BpStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -779,12 +795,12 @@ class BpStockFactor(FundamentalStockFactor):
         self.factor_name = "BP"
         self.fundamentals_get_func = lambda f: f[['code', 'pb_ratio']]
         self.factor_get_value_func = lambda f: f['pb_ratio'].apply(lambda x: 1/x)
-
+        
 class BpChangeStockFactor(FundamentalPercentageChangeStockFactor, BpStockFactor):
     def __init__(self, stocks):
         BpStockFactor.__init__(self, stocks)
         self.fundamental_stock_factor = BpStockFactor
-
+        
 class EpStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -793,12 +809,12 @@ class EpStockFactor(FundamentalStockFactor):
         self.fundamentals_get_func = lambda f: f[['code', 'pe_ratio']]
         self.filter_func = lambda f: (f.pe_ratio >0)
         self.factor_get_value_func = lambda f: f['pe_ratio'].apply(lambda x: 1/x)
-
+        
 class EpChangeStockFactor(FundamentalPercentageChangeStockFactor, EpStockFactor):
     def __init__(self, stocks):
         EpStockFactor.__init__(self, stocks)
         self.fundamental_stock_factor = EpStockFactor
-
+        
 class PegStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -807,7 +823,7 @@ class PegStockFactor(FundamentalStockFactor):
         self.fundamentals_get_func = lambda f: f[['code', 'pe_ratio', 'inc_net_profit_year_on_year']]
         self.filter_func = lambda f: (f.pe_ratio >0) & (f.inc_net_profit_year_on_year >0)
         self.factor_get_value_func = lambda f: f['pe_ratio'] / f['inc_net_profit_year_on_year']
-
+        
 class DpStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -823,7 +839,7 @@ class CfpStockFactor(FundamentalStockFactor):
         self.factor_name = "CFP"
         self.fundamentals_get_func = lambda f: f[['code', 'pcf_ratio']]
         self.factor_get_value_func = lambda f: f['pcf_ratio'].apply(lambda x: 1/x)
-
+       
 class PsStockFactor(FundamentalStockFactor):
     def __init__(self, stocks):
         FundamentalStockFactor.__init__(self, stocks)
@@ -855,24 +871,24 @@ class FacrStockFactor(FundamentalStockFactor):
         self.factor_name = "FACR"
         self.fundamentals_get_func = lambda f: f[['code', 'fixed_assets', 'total_assets']]
         self.factor_get_value_func = lambda f: f['fixed_assets'] / f['total_assets']
-
+        
 def get_turning_point(prices, window = 0):
     if window <= 0:
             raise ValueError("window should be greater than 0")
 
     if len(prices) <= window * 3:
             raise ValueError("prices len should be greater than window * 3")
-
-    prices = prices.reset_index()
+            
+    prices = prices.reset_index()   
     double_window = window * 2
-
-    df = pd.concat([prices,
+    
+    df = pd.concat([prices, 
                 pd.rolling_apply(prices.ix[:,-1:], double_window, lambda x: pd.Series(x).min()),
                 pd.rolling_apply(prices.ix[:,-1:], double_window, lambda x: pd.Series(x).argmin()),
                 pd.rolling_apply(prices.ix[:,-1:], double_window, lambda x: pd.Series(x).max()),
                 pd.rolling_apply(prices.ix[:,-1:], double_window, lambda x: pd.Series(x).argmax())
               ], axis=1)
-
+ 
 
     df.columns = ['date', 'close', 'rolling_min_close', 'rolling_min_index', 'rolling_max_close', 'rolling_max_index']
     df['rolling_min_date'] = df.ix[df.index - (window - 1 - df['rolling_min_index'])]['date'].values
@@ -884,13 +900,13 @@ def get_turning_point(prices, window = 0):
 
     df_min = df[df['date'] == df['rolling_min_date']][['rolling_date']]
     df_max = df[df['date'] == df['rolling_max_date']][['rolling_date']]
-
+    
     df_min = df[df['date'].isin(df_min['rolling_date'])][['close']]
     df_max = df[df['date'].isin(df_max['rolling_date'])][['close']]
-
+    
 
     return df_min['close'], df_max['close']
-
+            
 
 # 设置可行股票池
 # 过滤掉当日停牌的股票,且筛选出前days天未停牌股票
@@ -898,40 +914,40 @@ def get_turning_point(prices, window = 0):
 # 输出：list=g.feasible_stocks
 def set_feasible_stocks(stock_list,days,end_date):
     # 得到是否停牌信息的dataframe，停牌的1，未停牌得0
-    suspened_info_df = get_price(list(stock_list),
+    suspened_info_df = get_price(list(stock_list), 
                        count = days + 1,
-                       end_date= end_date,
-                       frequency='daily',
+                       end_date= end_date, 
+                       frequency='daily', 
                        fields='paused')['paused']
-
+    
     suspend_days = suspened_info_df.sum()
-
+    
     unsuspened_index = suspend_days[suspend_days == 0]
-
+    
     return list(unsuspened_index.index)
 
 def get_trading_day_num_from(start_date, end_date):
     tradingdays = get_trade_days(start_date, end_date)
-
+    
     return len(tradingdays)
 
 def get_trading_week_no_in_month(date):
     first_trading_day = get_first_trading_day_of_month(date)
-
+    
     return (date - first_trading_day).days // 7 + 1
 
 def get_first_trading_day_of_month(date):
     tradingday = get_all_trade_days()
-
+    
     first_day_of_month = date.replace(day=1)
-
+    
     for day in range(1, 20):
          shift_day = (first_day_of_month + relativedelta(days=day))
          if shift_day in tradingday:
             return shift_day
     return None
-
-
+        
+                
 def shift_trading_day(date, shift):
     # 获取所有的交易日，返回一个包含所有交易日的 list,元素值为 datetime.date 类型.
     tradingday = get_all_trade_days()
@@ -944,7 +960,7 @@ def get_linear(prices):
     prices_mean = prices.mean()
     factor = 10000 / prices_mean
     prices = prices * factor
-
+    
     days = np.arange(1, len(prices) + 1)
 
     linear = stats.linregress(days, prices)
@@ -955,40 +971,40 @@ def set_backtest(g):
     set_benchmark(g.indices[0])       # 设置为基准
     set_option('use_real_price', True) # 用真实价格交易
     log.set_level('order', 'error')    # 设置报错等级
-
+    
 def set_slip_fee(date):
     # 根据不同的时间段设置手续费
     if date > dt.datetime(2013,1, 1):
-        set_commission(PerTrade(buy_cost=0.0003,
-                                sell_cost=0.0013,
-                                min_cost=5))
+        set_commission(PerTrade(buy_cost=0.0003, 
+                                sell_cost=0.0013, 
+                                min_cost=5)) 
     elif date > dt.datetime(2011,1, 1):
-        set_commission(PerTrade(buy_cost=0.001,
-                                sell_cost=0.002,
-                                min_cost=5))
+        set_commission(PerTrade(buy_cost=0.001, 
+                                sell_cost=0.002, 
+                                min_cost=5))       
     elif date > dt.datetime(2009,1, 1):
-        set_commission(PerTrade(buy_cost=0.002,
-                                sell_cost=0.003,
+        set_commission(PerTrade(buy_cost=0.002, 
+                                sell_cost=0.003, 
                                 min_cost=5))
     else:
-        set_commission(PerTrade(buy_cost=0.003,
-                                sell_cost=0.004,
+        set_commission(PerTrade(buy_cost=0.003, 
+                                sell_cost=0.004, 
                                 min_cost=5))
-
+        
 def get_indexes_display_name(indexes):
     global all_indexes
-
+    
     if all_indexes is None:
         all_indexes = get_all_securities(['index'])
-
+    
     return all_indexes.loc[indexes]['display_name']
 
 def get_new_stocks_pct(date, shift):
     all_securities = get_all_securities(date=date)
     new_securities = all_securities[(all_securities['start_date'] > shift_trading_day(date, -shift))]
-
+    
     return len(new_securities) / (len(all_securities) + 0.1)
-
+    
 def count_positive(values):
     return sum(x>0 for x in values)
 
@@ -1003,6 +1019,6 @@ def send_163_email(subject,message):
     ## 发送邮件
     sender = 'luke19807346@163.com' #发送的邮箱
     receiver = 'luke19807346@163.com' #要接受的邮箱（注:测试中发送其他邮箱会提示错误）
-    smtpserver = 'smtp.163.com'
+    smtpserver = 'smtp.163.com' 
     username = 'luke19807346@163.com' #你的邮箱账号
     password = 'Ekx5oE8yKo' #你的邮箱密码

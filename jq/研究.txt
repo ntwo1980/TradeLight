@@ -1,0 +1,224 @@
+import math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import talib
+import mytrade as t
+import dateutil
+import datetime as dt
+import jqlib.technical_analysis as ta
+from dateutil.relativedelta import *
+try:
+    from kuanke.user_space_api import *
+except:
+    pass
+from jqdata import *
+
+pd.set_option('display.notebook_repr_html', False)
+pd.set_option('display.max_rows', 9999)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+pd.set_option('precision', 3)
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+today = dt.date(2022, 3, 16)
+
+date = "2022-3-16"
+
+all_securities = get_all_securities(types=['stock'], date=date)
+all_securities = t.set_feasible_stocks(all_securities.index, 21, date)
+total_count = len(all_securities)
+closes = get_price(all_securities, count = 10, end_date = date, fields=['close'])['close']
+down = closes.apply(lambda x: x[-1] < x[0] * 0.9 and x[-1] < x[-5]).dropna(axis=0, how='all')
+down_pct = down.sum() * 100 / total_count
+down_pct
+
+
+date = "2021-5-17"
+
+indexes = [
+    '399001.XSHE',   # 深证成指 0
+    '399006.XSHE',   # 创业板指 1
+    '399550.XSHE',   # 央视50   2
+    '000905.XSHG',   # 中证500  3
+    '399316.XSHE',   # 巨潮小盘 4
+    '000932.XSHG',   # 中证消费 5
+    '000933.XSHG',   # 中证医药 6
+    '399997.XSHE',   # 中证白酒 7
+    '399551.XSHE',   # 科技100  8
+    '000001.XSHG',   # 上证指数 9
+    '000016.XSHG',   # 上证50 10
+    '399976.XSHE',	 # 中证新能源汽车 11
+]
+
+index_prices = get_price(
+   indexes, 
+   count = 240, 
+   end_date = date, 
+   frequency = 'daily', 
+   fields = 'close')['close']
+
+hl_index_price = index_prices.ix[:, 2]
+index_500_price = index_prices.ix[:, 3]
+index_price = index_prices.ix[:, 3]
+xf_index_price = index_prices.ix[:, 5]
+yy_index_price = index_prices.ix[:, 6]
+bj_index_price = index_prices.ix[:, 7]
+xp_index_price = index_prices.ix[:, 4]
+sz_index_price = index_prices.ix[:, 9]
+xny_index_price = index_prices.ix[:,11]
+
+print(("hl index rise: " + str(xf_index_price[-1] / xf_index_price[0]) + " index rise: " + str(index_500_price[-1] / index_500_price[0])))
+print(("hl index rise: " + str(xf_index_price[-1] / xf_index_price[-120]) + " index rise: " + str(index_500_price[-1] / index_500_price[-120])))
+
+stocks = ['600597.XSHG']
+
+fundamentals = get_fundamentals(query(valuation.code, 
+        indicator.inc_operation_profit_year_on_year,
+        indicator.gross_profit_margin,
+        indicator.inc_net_profit_to_shareholders_year_on_year,
+        indicator.inc_revenue_year_on_year,
+        indicator.roe,
+        valuation.pb_ratio,
+        valuation.pe_ratio, 
+        valuation.market_cap,
+        income.investment_income,
+        income.operating_profit,
+        income.net_profit,
+        income.income_tax_expense,
+        income.financial_expense,
+        balance.total_owner_equities,
+        balance.shortterm_loan,
+        balance.longterm_loan,
+        balance.non_current_liability_in_one_year,
+        balance.bonds_payable,
+        balance.longterm_account_payable,
+    ).filter(
+        indicator.code.in_(stocks)
+    ), '2021-2-18')
+
+
+fundamentals
+
+def count_positive_count(values):
+    return sum(x>0 for x in values)
+
+today = dt.date(2021, 5, 27)
+past = (today - dt.timedelta(1100))
+
+stocks = get_all_securities(types=['stock'])
+forever = dt.date( 2200 ,  1 ,  1 )
+stocks = stocks[(stocks['end_date'] > today)&(stocks['start_date']<=past)]
+all_stocks_with_name = get_all_securities(date=today)[['display_name']]
+
+prices = get_price(list(stocks.index), end_date=today, count = 750, fields=['close'])['close']
+prices_M = pd.DataFrame(prices.asfreq('M', method='ffill'))
+stat = prices_M.pct_change().dropna().apply(count_positive_count)
+stat.sort(ascending=False)
+
+df = pd.DataFrame({'positive_count': stat}).head(int(len(stocks) * 1))
+stocks = list(df.index)
+stock_prices = prices[-90:]
+linears = {s: t.get_linear(talib.EMA(np.array(stock_prices[s]), timeperiod=20)[-19:])[0] for s in stocks}
+linears = pd.DataFrame.from_dict(linears, orient='index')
+linears.columns = ['slop']
+prices_ma = pd.rolling_mean(stock_prices, 39)
+above_ma_count = {s:(stock_prices[s] > prices_ma[s][-90:]).sum() for s in stocks}
+above_ma_count = pd.DataFrame.from_dict(above_ma_count, orient='index')
+above_ma_count.columns = ['above_ma_count']
+
+above_ma = {s:(stock_prices[s][-1] / prices_ma[s][-1:]) for s in stocks}
+above_ma = pd.DataFrame.from_dict(above_ma, orient='index')
+above_ma.columns = ['above_ma']
+
+fundamentals_list = []
+for i in range(0, 36):
+    statDate = t.shift_trading_day(today, -21 * i)
+    fundamentals = get_fundamentals(query(valuation.code, 
+        indicator.inc_operation_profit_year_on_year,
+        valuation.pe_ratio, 
+        valuation.pb_ratio,
+        valuation.ps_ratio,
+        valuation.pcf_ratio,
+        balance.statDate
+    ).filter(
+        indicator.code.in_(stocks)
+    ), statDate)
+    fundamentals = fundamentals.set_index(['code'])
+    fundamentals.columns = ['inc', 'pe', 'pb', 'ps', 'pcf', 'statDate']
+    fundamentals['peg'] = fundamentals['pe'] / fundamentals['inc']
+    fundamentals_list.append(fundamentals)
+
+df_stat = pd.DataFrame()
+for factor in ['pe', 'pb', 'ps', 'pcf']:
+    sum = fundamentals_list[0][factor]
+    for j in range(1, len(fundamentals_list)):
+        sum = sum + fundamentals_list[j][factor]
+    df_stat[factor + '_pct'] = fundamentals_list[0][factor] / (sum / len(fundamentals_list))
+
+df = df.join(all_stocks_with_name).join(linears).join(above_ma_count).join(above_ma).join(fundamentals_list[0]).join(df_stat)
+df = df.reindex(columns = ['display_name', 'positive_count', 'slop', 'above_ma_count', 'above_ma', 'statDate', 'inc', 'pe', 'peg', 'pe_pct', 'pb', 'pb_pct', 'ps', 'ps_pct', 'pcf', 'pcf_pct'])
+#print(df)
+
+
+write_file('data_research.csv', df.to_csv(header=True, index_label='code'), append=False)
+print('done')
+
+def count_positive_count(values):
+    return sum(x>0 for x in values)
+
+today = dt.date(2021, 4, 23)
+past = (today - dt.timedelta(1200))
+
+stocks = get_all_securities(types=['stock'])
+forever = dt.date( 2200 ,  1 ,  1 )
+stocks = stocks[(stocks['end_date'] > today)&(stocks['start_date']<=past)]
+all_stocks_with_name = get_all_securities(date=today)[['display_name']]
+
+prices = get_price(list(stocks.index), end_date=today, count = 1200, fields=['close'])['close']
+prices_M = pd.DataFrame(prices.asfreq('M', method='ffill'))
+prices_M['month'] = prices_M.index.month
+
+
+today = dt.date(2021, 1, 1)
+stocks = get_all_securities(types=['stock'])
+stocks = stocks[stocks['start_date']>=today].index
+
+fundamentals = get_fundamentals(query(valuation.code, 
+        indicator.roe,
+        balance.total_liability,
+        balance.total_assets                           
+    ).filter(
+        indicator.code.in_(['600519.XSHG'])
+    ), statDate='2020')
+
+fundamentals['dtar'] = fundamentals['total_liability'] / fundamentals['total_assets']
+
+fundamentals
+
+date = "2021-6-5"
+
+
+closes = get_price(['512170.XSHG'], count = 10, end_date = date, fields=['close'])['close']
+closes
+
+## 指数相关性
+
+indexes = ['000932.XSHG', '399006.XSHE', '000933.XSHG', '000688.XSHG']
+
+prices = get_price(indexes,  end_date=today, fields='close', frequency='daily',count=200)['close'].dropna(axis=1)
+pct_changes = prices.pct_change()
+pct_changes.corr()
+
+date = "2022-3-16"
+
+all_securities = get_all_securities(types=['stock'], date=date)
+all_securities = t.set_feasible_stocks(all_securities.index, 21, date)
+total_count = len(all_securities)
+closes = get_price(all_securities, start_date="2022-3-3", end_date = date, fields=['close'])['close']
+closes
+
+change = closes.pct_change().sum()
+change.sort()
+change

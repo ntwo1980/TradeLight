@@ -38,5 +38,5 @@ def f(C):
 
     passorder(24, 1101, A.acct, A.stock, 14, -1, amount, 2, C)
 
-    print('国债逆回购成功')
+    print(f'国债逆回购成功 {amount}')
 

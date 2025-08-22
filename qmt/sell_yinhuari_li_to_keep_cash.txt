@@ -20,7 +20,6 @@ def init(C):
     A.target_cash = 100000  # 目标最低可用资金
     A.waiting_list = []  # 未确认的委托，防止重复下单
     A.sold_out = False  # 标记是否已卖光（避免重复卖空）
-    A.count = 0
 
     # 订阅行情
     C.set_universe([A.stock])
@@ -100,9 +99,7 @@ def handlebar(C):
 
     # 下单卖出
     msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
-    if A.count == 0:
-        passorder(24, 1101, A.acct, A.stock, 14, 100.841, 100, 'yhrl', 1, msg, C)
-        A.count = 1
+    passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
     print(msg)
     A.waiting_list.append(msg)
 

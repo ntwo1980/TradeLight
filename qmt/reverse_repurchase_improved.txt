@@ -1,0 +1,125 @@
+#encoding:gbk
+'''
+小果国债逆回购策略年化3%
+作者 小果
+网页 https://gitee.com/li-xingguo11111/qmt_trader
+'''
+import pandas as pd
+import math
+from datetime import datetime
+
+def init(c):
+    '''
+    小果国债逆回购
+    网页 https://gitee.com/li-xingguo11111/qmt_trader
+    '''
+    c.account = '77051572'
+    c.account_type = 'STOCK'
+
+    print('等待逆回购执行...')
+    # 设置每日14:57分触发逆回购
+    c.run_time("reverse_repurchase_of_treasury_bonds_1", "1nDay", "2024-07-25 14:57:00")
+    c.run_time("trader_log","60nSecond","2024-07-25 9:30:00")
+
+def trader_log(c):
+    '''
+    程序记录
+    '''
+    print('{}'.format(datetime.now()))
+
+def balance(c):
+    '''
+    获取账户资金信息
+    '''
+    try:
+        accounts = get_trade_detail_data(c.account, c.account_type, 'account')
+        df = pd.DataFrame()
+        for dt in accounts:
+            df['可用金额'] = [dt.m_dAvailable]
+            df['持仓市值'] = [dt.m_dInstrumentValue]
+            df['总资产'] = [dt.m_dBalance]
+        return df
+    except Exception as e:
+        print(f"获取账户信息失败: {e}")
+        return pd.DataFrame()
+
+def sell(c, stock='131810.SZ', amount=1000, price=1.0):
+    '''
+    自定义卖出函数 (用于国债逆回购)
+    '''
+    account = c.account
+    # 调用QMT的下单接口
+    passorder(24, 1101, account, stock, 11, price, amount, 1, c)
+    # 24: 股票卖出，或沪港通、深港通股票卖出
+    # 1101：单股、单账号、普通、股/手方式下单
+    # 11：（指定价）模型价（只对单股情况支持,对组合交易不支持）
+    print(f'已提交逆回购委托: 代码{stock} 数量{amount} 价格{price}')
+
+def reverse_repurchase_of_treasury_bonds_1(c, buy_ratio=1.0):
+    '''
+    国债逆回购核心策略
+    buy_ratio: 使用可用资金的比例 (1.0 表示100%)
+    '''
+    print('开始执行国债逆回购...')
+
+    # 1. 获取账户可用资金
+    account_df = balance(c)
+
+    if account_df.empty or '可用金额' not in account_df:
+        msg = '无法获取账户资金信息'
+        print(msg)
+        return '交易失败', msg
+
+    av_cash = float(account_df['可用金额'].iloc[-1])
+    print(f'账户可用资金: {av_cash:.2f} 元')
+
+    # 2. 计算可投资金
+    invest_cash = av_cash * buy_ratio
+    if invest_cash < 1000:
+        text = f'可用资金 {invest_cash:.2f} 元不足1000元，无法进行逆回购。'
+        print(text)
+        return '交易失败', text
+
+    # 3. 获取逆回购实时价格 (上海和深圳)
+    # 使用知识库中的标准代码
+    sh_code = '204001.SH'  # 上海国债逆回购
+    sz_code = '131810.SZ'  # 深圳国债逆回购
+
+    try:
+        sh_price = c.get_full_tick([sh_code])[sh_code]['lastPrice']
+        sz_price = c.get_full_tick([sz_code])[sz_code]['lastPrice']
+        print(f'上海逆回购价格: {sh_price:.3f}, 深圳逆回购价格: {sz_price:.3f}')
+
+        # 选择价格更高的市场进行交易
+        if sh_price >= sz_price:
+            final_code = sh_code
+            final_price = sh_price
+        else:
+            final_code = sz_code
+            final_price = sz_price
+
+    except Exception as e:
+        text = f'获取实时价格失败: {e}，使用默认价格1.8%'
+        print(text)
+        # 如果获取失败，使用一个默认的保守价格
+        final_code = sz_code
+        final_price = 1.8
+
+    # 4. 计算交易数量 (必须是1000的整数倍)
+    # **修正原代码错误: 原代码 amount = int(av_cash/1000)*10 是错误的**
+    amount = int(invest_cash / 1000)  # 这里得到的是“手”数
+    if amount == 0:
+        text = f'计算出的交易数量为0，资金可能不足。'
+        print(text)
+        return '交易失败', text
+
+    # 5. 执行交易
+    try:
+        sell(c, stock=final_code, amount=amount, price=final_price)
+        text = f'国债逆回购成功: 代码{final_code} 价格{final_price:.3f} 数量{amount}手'
+        print(text)
+        return '交易成功', text
+    except Exception as e:
+        text = f'国债逆回购下单失败: {e}'
+        print(text)
+        return '交易失败', text

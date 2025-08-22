@@ -1,0 +1,143 @@
+#encoding:gbk
+'''
+小果自动卖出银华日利策略
+功能：每分钟检查账户，若可用资金 < 10万，则卖出511880.SH补足
+作者 小果
+网页 https://gitee.com/li-xingguo11111/qmt_trader
+'''
+import pandas as pd
+from datetime import datetime
+
+def init(c):
+    '''
+    初始化函数
+    设置每分钟执行一次检查
+    '''
+    c.account = '77051572'          # 请替换为你的实际账号
+    c.account_type = 'STOCK'
+
+    print('【银华日利自动卖出策略】已启动...')
+    print('每分钟检查一次账户，准备自动卖出511880.SH...')
+
+    # 每分钟触发一次检查（从9:30开始）
+    c.run_time("check_and_sell_yinha_ri_li", "60nSecond", "2024-07-25 9:30:00")
+
+
+def get_account_info(c):
+    '''
+    获取账户资金信息
+    Returns:
+        dict: 包含账户资金信息的字典，如果获取失败则返回空字典。
+              字典的键（key）为英文，值（value）为数值。
+    '''
+    try:
+        accounts = get_trade_detail_data(c.account, c.account_type, 'account')
+        if accounts:
+            dt = accounts[0]
+            account_info = {
+                'available_cash': dt.m_dAvailable,        # 可用金额
+                'market_value': dt.m_dInstrumentValue,    # 持仓市值
+                'total_asset': dt.m_dBalance,             # 总资产
+                'net_asset': dt.m_dAssureAsset,           # 净资产
+                'total_liability': dt.m_dTotalDebit,      # 总负债
+                'profit_loss': dt.m_dPositionProfit       # 盈亏
+            }
+            return account_info
+        else:
+            print("Failed to get account info: returned data is an empty list")
+            return {}
+    except Exception as e:
+        print(f"Failed to get account info: {e}")
+        return {}
+
+def check_and_sell_yinha_ri_li(c):
+    """
+    每分钟执行：检查账户余额，必要时卖出银华日利
+    """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\n {now} 开始检查账户...")
+
+    account = get_account_info(c)
+
+    if account:
+        pass
+    else:
+        print("Failed to retrieve account information.")
+        return
+
+    available_cash = float(account.available_cash)
+    print(f'账户可用资金: {available_cash:.2f} 元')
+
+    # 2. 判断是否需要卖出
+    target_cash = 100000.0  # 目标保留10万元
+    if available_cash >= target_cash:
+        print(" 资金充足，无需卖出。")
+        return
+
+    # 3. 获取银华日利持仓
+    etf_code = '511880.SH'
+    try:
+        df_position = c.trader.position()  # 获取所有持仓
+        if df_position.empty:
+            print(" 没有持仓数据")
+            return
+
+        positions = get_trade_detail_data(c.account, c.account_type, 'position')
+
+        target_position = None
+        for pos in positions:
+            if pos.m_strInstrumentID == '511880.SH':
+                target_position = pos
+                break  # 找到后即可跳出循环，提高效率
+
+        if not target_position:
+            print(" 未持有银华日利(511880.SH)，无法卖出。")
+            return
+
+        av_amount = target_position.m_nVolume         # 可用数量（支持T+0卖出）
+        print(f" 持有银华日利: {int(av_amount)} 份")
+
+        if av_amount <= 0:
+            print(" 可用份额不足，无法卖出。")
+            return
+    except Exception as e:
+        print(f" 获取持仓失败: {e}")
+        return
+
+    # 4. 计算还需卖出多少金额才能达标
+    need_more_cash = target_cash - available_cash
+
+    # 5. 获取当前市价
+    try:
+        tick_data = c.get_full_tick([etf_code])
+        if etf_code not in tick_data:
+            print(f" 无法获取 {etf_code} 行情，跳过本次卖出")
+            return
+        last_price = tick_data[etf_code]['lastPrice']
+        print(f" 银华日利当前价格: {last_price:.3f} 元")
+    except Exception as e:
+        print(f" 获取行情失败，使用默认价格1.000: {e}")
+        last_price = 1.000
+
+    # 6. 计算需要卖出的份数（向上取整）
+    need_sell_shares = int(need_more_cash / last_price) + 1
+    # 实际可卖数量
+    actual_sell_shares = min(need_sell_shares, av_amount)
+
+    # ETF 单笔委托必须是 **100的整数倍**（即“手”），向下取整
+    actual_sell_shares = int(actual_sell_shares // 100) * 100
+
+    if actual_sell_shares <= 0:
+        print(" 计算出的卖出数量不足1手（100份），不执行卖出。")
+        return
+
+    expected_cash = actual_sell_shares * last_price
+    print(f" 计划卖出 {actual_sell_shares} 份（{actual_sell_shares//100} 手），预计回笼 {expected_cash:.2f} 元")
+
+    # 7. 执行卖出
+    try:
+        passorder(24,1101,c.account,etf_code,14,-1,actual_sell_shares,2,c)
+        # 24 卖出
+        print('卖出股票{} 数量{} 价格{}##############'.format(etf_code,actual_sell_shares,last_price))
+    except Exception as e:
+        print(f" 卖出失败: {e}")

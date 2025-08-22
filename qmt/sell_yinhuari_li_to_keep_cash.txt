@@ -23,6 +23,10 @@ def init(C):
 
     # 订阅行情
     C.set_universe([A.stock])
+
+    A.waiting_list = rebuild_waiting_list_from_open_orders()
+    print(A.waiting_list)
+
     print(f'资金管理策略初始化完成，监控 {A.stock}')
 
 def handlebar(C):
@@ -98,3 +102,12 @@ def handlebar(C):
     passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
     print(msg)
     A.waiting_list.append(msg)
+
+def rebuild_waiting_list_from_open_orders():
+    orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
+    open_orders = []
+    for order in orders:
+        # 假设 m_nStatus: 0=未成交, 1=部分成交, 其他为完成或撤单
+        if order.m_nStatus in [0, 1] and 'yhrl' in order.m_strRemark:
+            open_orders.append(order.m_strRemark)
+    return open_orders

@@ -1,143 +1,103 @@
+
 #encoding:gbk
-'''
-小果自动卖出银华日利策略
-功能：每分钟检查账户，若可用资金 < 10万，则卖出511880.SH补足
-作者 小果
-网页 https://gitee.com/li-xingguo11111/qmt_trader
-'''
 import pandas as pd
-from datetime import datetime
+import numpy as np
+import datetime
 
-def init(c):
-    '''
-    初始化函数
-    设置每分钟执行一次检查
-    '''
-    c.account = '77051572'          # 请替换为你的实际账号
-    c.account_type = 'STOCK'
+"""
+策略说明：资金管理策略
+当可用资金小于100,000时，卖出511880.SH以补足资金
+"""
 
-    print('【银华日利自动卖出策略】已启动...')
-    print('每分钟检查一次账户，准备自动卖出511880.SH...')
+class a():
+    pass
 
-    # 每分钟触发一次检查（从9:30开始）
-    c.run_time("check_and_sell_yinha_ri_li", "60nSecond", "2024-07-25 9:30:00")
+A = a()  # 创建空类实例，用于保存状态
 
+def init(C):
+	A.stock = '511880.SH'
+	A.acct = account  # 账号（需在模型交易界面选择）
+	A.acct_type = accountType  # 账号类型
+	A.target_cash = 100000  # 目标最低可用资金
+	A.waiting_list = []  # 未确认的委托，防止重复下单
+	A.sold_out = False  # 标记是否已卖光（避免重复卖空）
 
-def get_account_info(c):
-    '''
-    获取账户资金信息
-    Returns:
-        dict: 包含账户资金信息的字典，如果获取失败则返回空字典。
-              字典的键（key）为英文，值（value）为数值。
-    '''
-    try:
-        accounts = get_trade_detail_data(c.account, c.account_type, 'account')
-        if accounts:
-            dt = accounts[0]
-            account_info = {
-                'available_cash': dt.m_dAvailable,        # 可用金额
-                'market_value': dt.m_dInstrumentValue,    # 持仓市值
-                'total_asset': dt.m_dBalance,             # 总资产
-                'net_asset': dt.m_dAssureAsset,           # 净资产
-                'total_liability': dt.m_dTotalDebit,      # 总负债
-                'profit_loss': dt.m_dPositionProfit       # 盈亏
-            }
-            return account_info
-        else:
-            print("Failed to get account info: returned data is an empty list")
-            return {}
-    except Exception as e:
-        print(f"Failed to get account info: {e}")
-        return {}
+	# 订阅行情
+	C.set_universe([A.stock])
+	print(f'资金管理策略初始化完成，监控 {A.stock}')
 
-def check_and_sell_yinha_ri_li(c):
-    """
-    每分钟执行：检查账户余额，必要时卖出银华日利
-    """
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"\n {now} 开始检查账户...")
+def handlebar(C):
+	if not C.is_last_bar():
+		return
+	now = datetime.datetime.now()
+	now_time = now.strftime('%H%M%S')
+	#跳过非交易时间
+	if now_time < '093000' or now_time > "150000":
+		return
+	account = get_trade_detail_data(A.acct, A.acct_type, 'account')
+	if len(account)==0:
+		print(f'账号{A.acct} 未登录 请检查')
+		return
+	account = account[0]
+	available_cash = int(account.m_dAvailable)
+	#如果有未查到委托 查询委托
+	if A.waiting_list:
+		found_list = []
+		orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
+		for order in orders:
+			if order.m_strRemark in A.waiting_list:
+				found_list.append(order.m_strRemark)
+		A.waiting_list = [i for i in A.waiting_list if i not in found_list]
+	if A.waiting_list:
+		print(f"当前有未查到委托 {A.waiting_list} 暂停后续报单")
+		return
+		
+		
+    # 获取持仓
+	positions = get_trade_detail_data(A.acct, A.acct_type, 'position')
+	holdings = {}
+	for pos in positions:
+		key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
+		holdings[key] = pos.m_nCanUseVolume  # 可卖数量
 
-    account = get_account_info(c)
+	current_holding = holdings.get(A.stock, 0)
 
-    if account:
-        pass
-    else:
-        print("Failed to retrieve account information.")
-        return
+	# === 核心逻辑：资金不足时卖出511880.SH ===
+	if available_cash < A.target_cash:
+		if current_holding <= 0:
+			print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
+			return
 
-    available_cash = float(account.available_cash)
-    print(f'账户可用资金: {available_cash:.2f} 元')
+		# 获取当前市价（使用最新收盘价）
+		data = C.get_full_tick([A.stock])
+		if A.stock not in data:
+			print(f"无法获取 {A.stock} 的实时价格，跳过卖出")
+			return
+		current_price = data[A.stock]['lastPrice']
 
-    # 2. 判断是否需要卖出
-    target_cash = 100000.0  # 目标保留10万元
-    if available_cash >= target_cash:
-        print(" 资金充足，无需卖出。")
-        return
+		# 计算每100股价值（511880.SH通常100股起卖）
+		value_per_100 = current_price * 100
+		if value_per_100 <= 0:
+			print(f"价格异常 {current_price}，跳过卖出")
+			return
 
-    # 3. 获取银华日利持仓
-    etf_code = '511880.SH'
-    try:
-        df_position = c.trader.position()  # 获取所有持仓
-        if df_position.empty:
-            print(" 没有持仓数据")
-            return
+		# 计算需要卖出多少“100股”单位才能使资金 ≥ 100,000
+		needed_cash = A.target_cash - available_cash
+		units_needed = int((needed_cash + value_per_100 - 1) / value_per_100)  # 向上取整
+		sell_units = min(units_needed, current_holding // 100)
+		sell_volume = sell_units * 100
 
-        positions = get_trade_detail_data(c.account, c.account_type, 'position')
+		if sell_volume <= 0:
+			print(f"资金缺口小，不足卖出100股，暂不操作")
+			return
 
-        target_position = None
-        for pos in positions:
-            if pos.m_strInstrumentID == '511880.SH':
-                target_position = pos
-                break  # 找到后即可跳出循环，提高效率
+		# 下单卖出
+		msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
+		passorder(24,1101,A.acct,A.stock,14,-1,sell_volume,'yhrl',1, msg,C) 
+		print(msg)
+		A.waiting_list.append(msg)
 
-        if not target_position:
-            print(" 未持有银华日利(511880.SH)，无法卖出。")
-            return
-
-        av_amount = target_position.m_nVolume         # 可用数量（支持T+0卖出）
-        print(f" 持有银华日利: {int(av_amount)} 份")
-
-        if av_amount <= 0:
-            print(" 可用份额不足，无法卖出。")
-            return
-    except Exception as e:
-        print(f" 获取持仓失败: {e}")
-        return
-
-    # 4. 计算还需卖出多少金额才能达标
-    need_more_cash = target_cash - available_cash
-
-    # 5. 获取当前市价
-    try:
-        tick_data = c.get_full_tick([etf_code])
-        if etf_code not in tick_data:
-            print(f" 无法获取 {etf_code} 行情，跳过本次卖出")
-            return
-        last_price = tick_data[etf_code]['lastPrice']
-        print(f" 银华日利当前价格: {last_price:.3f} 元")
-    except Exception as e:
-        print(f" 获取行情失败，使用默认价格1.000: {e}")
-        last_price = 1.000
-
-    # 6. 计算需要卖出的份数（向上取整）
-    need_sell_shares = int(need_more_cash / last_price) + 1
-    # 实际可卖数量
-    actual_sell_shares = min(need_sell_shares, av_amount)
-
-    # ETF 单笔委托必须是 **100的整数倍**（即“手”），向下取整
-    actual_sell_shares = int(actual_sell_shares // 100) * 100
-
-    if actual_sell_shares <= 0:
-        print(" 计算出的卖出数量不足1手（100份），不执行卖出。")
-        return
-
-    expected_cash = actual_sell_shares * last_price
-    print(f" 计划卖出 {actual_sell_shares} 份（{actual_sell_shares//100} 手），预计回笼 {expected_cash:.2f} 元")
-
-    # 7. 执行卖出
-    try:
-        passorder(24,1101,c.account,etf_code,14,-1,actual_sell_shares,2,c)
-        # 24 卖出
-        print('卖出股票{} 数量{} 价格{}##############'.format(etf_code,actual_sell_shares,last_price))
-    except Exception as e:
-        print(f" 卖出失败: {e}")
+	else:
+		# 资金充足，重置 sold_out 标志（可选）
+		# A.sold_out = False
+		print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")

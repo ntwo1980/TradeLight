@@ -31,7 +31,7 @@ def f(C):
     account = account[0]
     available_cash = int(account.m_dAvailable)
 
-    amount = int(available_cash / 100)
+    amount = int((available_cash  / 1000) * 10
     if amount == 0:
         text = f'计算出的交易数量为0，资金可能不足。'
         print(text)

@@ -39,6 +39,11 @@ def handlebar(C):
         return
     account = account[0]
     available_cash = int(account.m_dAvailable)
+
+    if available_cash >= A.target_cash:
+        print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
+        return
+
     # 如果有未查到委托 查询委托
     if A.waiting_list:
         found_list = []
@@ -61,41 +66,35 @@ def handlebar(C):
     current_holding = holdings.get(A.stock, 0)
 
     # === 核心逻辑：资金不足时卖出511880.SH ===
-    if available_cash < A.target_cash:
-        if current_holding <= 0:
-            print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
-            return
+    if current_holding <= 0:
+        print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
+        return
 
-        # 获取当前市价（使用最新收盘价）
-        data = C.get_full_tick([A.stock])
-        if A.stock not in data:
-            print(f"无法获取 {A.stock} 的实时价格，跳过卖出")
-            return
-        current_price = data[A.stock]['lastPrice']
+    # 获取当前市价（使用最新收盘价）
+    data = C.get_full_tick([A.stock])
+    if A.stock not in data:
+        print(f"无法获取 {A.stock} 的实时价格，跳过卖出")
+        return
+    current_price = data[A.stock]['lastPrice']
 
-        # 计算每100股价值（511880.SH通常100股起卖）
-        value_per_100 = current_price * 100
-        if value_per_100 <= 0:
-            print(f"价格异常 {current_price}，跳过卖出")
-            return
+    # 计算每100股价值（511880.SH通常100股起卖）
+    value_per_100 = current_price * 100
+    if value_per_100 <= 0:
+        print(f"价格异常 {current_price}，跳过卖出")
+        return
 
-        # 计算需要卖出多少“100股”单位才能使资金 ≥ 100,000
-        needed_cash = A.target_cash - available_cash
-        units_needed = int((needed_cash + value_per_100 - 1) / value_per_100)  # 向上取整
-        sell_units = min(units_needed, current_holding // 100)
-        sell_volume = sell_units * 100
+    # 计算需要卖出多少“100股”单位才能使资金 ≥ 100,000
+    needed_cash = A.target_cash - available_cash
+    units_needed = int((needed_cash + value_per_100 - 1) / value_per_100)  # 向上取整
+    sell_units = min(units_needed, current_holding // 100)
+    sell_volume = sell_units * 100
 
-        if sell_volume <= 0:
-            print(f"资金缺口小，不足卖出100股，暂不操作")
-            return
+    if sell_volume <= 0:
+        print(f"资金缺口小，不足卖出100股，暂不操作")
+        return
 
-        # 下单卖出
-        msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
-        passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
-        print(msg)
-        A.waiting_list.append(msg)
-
-    else:
-        # 资金充足，重置 sold_out 标志（可选）
-        # A.sold_out = False
-        print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
+    # 下单卖出
+    msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
+    passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
+    print(msg)
+    A.waiting_list.append(msg)

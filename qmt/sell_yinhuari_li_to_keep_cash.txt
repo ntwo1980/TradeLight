@@ -20,12 +20,12 @@ def init(C):
     A.target_cash = 100000  # 目标最低可用资金
     A.waiting_list = []  # 未确认的委托，防止重复下单
     A.sold_out = False  # 标记是否已卖光（避免重复卖空）
+    A.count = 0
 
     # 订阅行情
     C.set_universe([A.stock])
 
     A.waiting_list = rebuild_waiting_list_from_open_orders()
-    print(A.waiting_list)
 
     print(f'资金管理策略初始化完成，监控 {A.stock}')
 
@@ -37,6 +37,7 @@ def handlebar(C):
     # 跳过非交易时间
     if now_time < '093000' or now_time > "150000":
         return
+
     account = get_trade_detail_data(A.acct, A.acct_type, 'account')
     if len(account) == 0:
         print(f'账号{A.acct} 未登录 请检查')
@@ -93,13 +94,15 @@ def handlebar(C):
     sell_units = min(units_needed, current_holding // 100)
     sell_volume = sell_units * 100
 
-    if sell_volume <= 0:
+    if sell_volume <=0 :
         print(f"资金缺口小，不足卖出100股，暂不操作")
         return
 
     # 下单卖出
     msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
-    passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
+    if A.count == 0:
+        passorder(24, 1101, A.acct, A.stock, 14, 100.841, 100, 'yhrl', 1, msg, C)
+        A.count = 1
     print(msg)
     A.waiting_list.append(msg)
 
@@ -108,6 +111,6 @@ def rebuild_waiting_list_from_open_orders():
     open_orders = []
     for order in orders:
         # 假设 m_nStatus: 0=未成交, 1=部分成交, 其他为完成或撤单
-        if order.m_nStatus in [0, 1] and 'yhrl' in order.m_strRemark:
+        if order.m_nOrderStatus in [49, 50, 55] and 'yhrl' in order.m_strRemark:
             open_orders.append(order.m_strRemark)
     return open_orders

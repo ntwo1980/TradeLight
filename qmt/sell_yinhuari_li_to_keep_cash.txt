@@ -1,4 +1,3 @@
-
 #encoding:gbk
 import pandas as pd
 import numpy as np
@@ -15,89 +14,88 @@ class a():
 A = a()  # 创建空类实例，用于保存状态
 
 def init(C):
-	A.stock = '511880.SH'
-	A.acct = account  # 账号（需在模型交易界面选择）
-	A.acct_type = accountType  # 账号类型
-	A.target_cash = 100000  # 目标最低可用资金
-	A.waiting_list = []  # 未确认的委托，防止重复下单
-	A.sold_out = False  # 标记是否已卖光（避免重复卖空）
+    A.stock = '511880.SH'
+    A.acct = account  # 账号（需在模型交易界面选择）
+    A.acct_type = accountType  # 账号类型
+    A.target_cash = 100000  # 目标最低可用资金
+    A.waiting_list = []  # 未确认的委托，防止重复下单
+    A.sold_out = False  # 标记是否已卖光（避免重复卖空）
 
-	# 订阅行情
-	C.set_universe([A.stock])
-	print(f'资金管理策略初始化完成，监控 {A.stock}')
+    # 订阅行情
+    C.set_universe([A.stock])
+    print(f'资金管理策略初始化完成，监控 {A.stock}')
 
 def handlebar(C):
-	if not C.is_last_bar():
-		return
-	now = datetime.datetime.now()
-	now_time = now.strftime('%H%M%S')
-	#跳过非交易时间
-	if now_time < '093000' or now_time > "150000":
-		return
-	account = get_trade_detail_data(A.acct, A.acct_type, 'account')
-	if len(account)==0:
-		print(f'账号{A.acct} 未登录 请检查')
-		return
-	account = account[0]
-	available_cash = int(account.m_dAvailable)
-	#如果有未查到委托 查询委托
-	if A.waiting_list:
-		found_list = []
-		orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
-		for order in orders:
-			if order.m_strRemark in A.waiting_list:
-				found_list.append(order.m_strRemark)
-		A.waiting_list = [i for i in A.waiting_list if i not in found_list]
-	if A.waiting_list:
-		print(f"当前有未查到委托 {A.waiting_list} 暂停后续报单")
-		return
-		
-		
+    if not C.is_last_bar():
+        return
+    now = datetime.datetime.now()
+    now_time = now.strftime('%H%M%S')
+    # 跳过非交易时间
+    if now_time < '093000' or now_time > "150000":
+        return
+    account = get_trade_detail_data(A.acct, A.acct_type, 'account')
+    if len(account) == 0:
+        print(f'账号{A.acct} 未登录 请检查')
+        return
+    account = account[0]
+    available_cash = int(account.m_dAvailable)
+    # 如果有未查到委托 查询委托
+    if A.waiting_list:
+        found_list = []
+        orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
+        for order in orders:
+            if order.m_strRemark in A.waiting_list:
+                found_list.append(order.m_strRemark)
+        A.waiting_list = [i for i in A.waiting_list if i not in found_list]
+    if A.waiting_list:
+        print(f"当前有未查到委托 {A.waiting_list} 暂停后续报单")
+        return
+
     # 获取持仓
-	positions = get_trade_detail_data(A.acct, A.acct_type, 'position')
-	holdings = {}
-	for pos in positions:
-		key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
-		holdings[key] = pos.m_nCanUseVolume  # 可卖数量
+    positions = get_trade_detail_data(A.acct, A.acct_type, 'position')
+    holdings = {}
+    for pos in positions:
+        key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
+        holdings[key] = pos.m_nCanUseVolume  # 可卖数量
 
-	current_holding = holdings.get(A.stock, 0)
+    current_holding = holdings.get(A.stock, 0)
 
-	# === 核心逻辑：资金不足时卖出511880.SH ===
-	if available_cash < A.target_cash:
-		if current_holding <= 0:
-			print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
-			return
+    # === 核心逻辑：资金不足时卖出511880.SH ===
+    if available_cash < A.target_cash:
+        if current_holding <= 0:
+            print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
+            return
 
-		# 获取当前市价（使用最新收盘价）
-		data = C.get_full_tick([A.stock])
-		if A.stock not in data:
-			print(f"无法获取 {A.stock} 的实时价格，跳过卖出")
-			return
-		current_price = data[A.stock]['lastPrice']
+        # 获取当前市价（使用最新收盘价）
+        data = C.get_full_tick([A.stock])
+        if A.stock not in data:
+            print(f"无法获取 {A.stock} 的实时价格，跳过卖出")
+            return
+        current_price = data[A.stock]['lastPrice']
 
-		# 计算每100股价值（511880.SH通常100股起卖）
-		value_per_100 = current_price * 100
-		if value_per_100 <= 0:
-			print(f"价格异常 {current_price}，跳过卖出")
-			return
+        # 计算每100股价值（511880.SH通常100股起卖）
+        value_per_100 = current_price * 100
+        if value_per_100 <= 0:
+            print(f"价格异常 {current_price}，跳过卖出")
+            return
 
-		# 计算需要卖出多少“100股”单位才能使资金 ≥ 100,000
-		needed_cash = A.target_cash - available_cash
-		units_needed = int((needed_cash + value_per_100 - 1) / value_per_100)  # 向上取整
-		sell_units = min(units_needed, current_holding // 100)
-		sell_volume = sell_units * 100
+        # 计算需要卖出多少“100股”单位才能使资金 ≥ 100,000
+        needed_cash = A.target_cash - available_cash
+        units_needed = int((needed_cash + value_per_100 - 1) / value_per_100)  # 向上取整
+        sell_units = min(units_needed, current_holding // 100)
+        sell_volume = sell_units * 100
 
-		if sell_volume <= 0:
-			print(f"资金缺口小，不足卖出100股，暂不操作")
-			return
+        if sell_volume <= 0:
+            print(f"资金缺口小，不足卖出100股，暂不操作")
+            return
 
-		# 下单卖出
-		msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
-		passorder(24,1101,A.acct,A.stock,14,-1,sell_volume,'yhrl',1, msg,C) 
-		print(msg)
-		A.waiting_list.append(msg)
+        # 下单卖出
+        msg = f"资金管理 {A.stock} 卖出 {sell_volume}股 补足资金"
+        passorder(24, 1101, A.acct, A.stock, 14, -1, sell_volume, 'yhrl', 1, msg, C)
+        print(msg)
+        A.waiting_list.append(msg)
 
-	else:
-		# 资金充足，重置 sold_out 标志（可选）
-		# A.sold_out = False
-		print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
+    else:
+        # 资金充足，重置 sold_out 标志（可选）
+        # A.sold_out = False
+        print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")

@@ -1,0 +1,214 @@
+#coding:gbk
+
+#导入常用库
+import pandas as pd
+import numpy as np
+import talib
+import json
+import os
+
+STATE_FILE = 'grid_strategy_state.json'
+
+def init(C):
+    #init handlebar函数的入参是ContextInfo对象 可以缩写为C
+    #设置测试标的为主图品种
+    C.stradegy_name = 'grid'
+    #C.stocks= ["159985.SZ"]   # 豆粕
+    #C.stocks= ["501018.SH"]   # 南方原油
+    #C.stocks= ["516160.SH"]   # 新能源
+    #C.stocks= ["159980.SZ"]   # 有色
+    C.stocks= ["510880.SH"]   # 红利
+    #C.stocks= ["518880.SH"]   # 黄金
+    #C.stocks= ["512690.SH"]   # 酒
+    #C.stocks= ["512200.SH"]   # 房地产
+    C.account_id = 'testS' 
+    C.unit_amount = 30000  # 每次交易的基准金额 (元)
+    C.logical_holding = 0
+    C.base_price = None
+
+
+def handlebar(C):
+    executed = False
+    stock = C.stocks[0]
+    
+    '''
+    state = load_strategy_state(stock)
+    if state and state['base_price'] is not None:
+        C.base_price = state['base_price']
+        C.logical_holding = state['logical_holding']
+        #print(f"? 从文件加载状态: base_price={C.base_price}, 持仓={C.logical_holding}")
+    else:
+        print("未找到历史状态，将使用首次均线初始化 base_price")
+    '''
+    
+    bar_date = timetag_to_datetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d%H%M%S')
+    print(bar_date)
+    # 获取市场行情，具体参数释义见文档
+    prices = C.get_market_data_ex(['high','low','close'],C.stocks, period = "1d",count=30,end_time = bar_date)
+    prices = prices[stock]
+    
+    current_price = prices['close'][-1]
+    avg_price = prices['close'][-10:].mean()
+    max_price = prices['close'][-10:].max()
+    
+    high = prices['high']
+    low = prices['low']
+    close = prices['close']
+
+    rsi = talib.RSI(close, timeperiod=6)[-1]
+
+    atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
+    grid_unit = get_grid_unit(C.stocks[0], current_price, atr)
+
+    #print({"base_price:": C.base_price})
+    if C.base_price is None:  # copy a local base_price
+        base_price = max_price
+    else:
+        base_price = C.base_price
+
+    account = get_trade_detail_data(C.account_id, '', 'account')
+    if len(account) == 0:
+        print(f'账号{C.account_id} 未登录 请检查')
+        return
+    account = account[0]
+    available_cash = int(account.m_dAvailable)
+
+    positions = get_trade_detail_data(C.account_id, '', 'position')
+    holdings = {}
+    for pos in positions:
+        key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
+        holdings[key] = pos.m_nCanUseVolume  # 可卖数量
+
+    current_holding = holdings.get(stock, 0)
+    
+    # 向上突破：卖出一个单位 (基于金额)
+    
+    print({'today': timetag_to_datetime(C.get_bar_timetag(C.barpos), "%Y-%m-%d"), 
+            'current_price': current_price, 
+            'base_price': base_price, 
+            'atr': atr,
+            'grid_unit': grid_unit})
+    
+    if current_price >= base_price + grid_unit:
+        sell_amount = C.unit_amount  # 基准卖出金额
+        if rsi > 80:
+            pass
+        else:
+            sell_amount *= 0.9  # 九折金额
+        
+        # 根据当前价格计算应卖出的股数
+        unit_to_sell = int(sell_amount / current_price)
+        
+        # 调整为100的整数倍
+        unit_to_sell = (unit_to_sell // 100) * 100
+        
+        # 确保卖出数量不超过当前持仓
+        unit_to_sell = min(unit_to_sell, current_holding)
+        
+        
+        if unit_to_sell > 0:  # 确保至少卖出100股
+            passorder(24, 1101, C.account_id, stock, 14, -1, unit_to_sell, C.stradegy_name, 1, '', C)
+            C.logical_holding -= unit_to_sell
+            #print({'sell_logical_holding': C.logical_holding})
+            print("卖出 %d 股，价格: %.3f, 总金额: %.2f" % (unit_to_sell, current_price, unit_to_sell * current_price))
+            if C.logical_holding > 0:
+                C.base_price = current_price
+            else:
+                C.base_price = None
+            executed = True
+            if C.base_price is not None:
+                print("更新基准价为: %.3f" % C.base_price)
+            else:
+                print("更新基准价为: None")
+        # 更新基准价为当前成交价（即使没有实际交易）
+        
+    
+    # 向下突破：买入一个单位 (基于金额)
+    else:
+        if current_price <= base_price - grid_unit:
+            buy_amount = C.unit_amount  # 基准买入金额
+            if rsi < 20:
+                buy_amount *= 1.1  # 加码10%
+                
+            # 计算可以买入多少股
+            unit_to_buy = int(buy_amount / current_price)
+            
+            # 调整为100的整数倍
+            unit_to_buy = (unit_to_buy // 100) * 100
+            
+            if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
+                passorder(23, 1101, C.account_id, stock, 14, -1, unit_to_buy, C.stradegy_name, 1, '', C)
+                print("买入 %d 股，价格: %.3f, 总金额: %.2f" % (unit_to_buy, current_price, unit_to_buy * current_price))
+                # 更新基准价为当前成交价
+                C.base_price = current_price
+                C.logical_holding += unit_to_buy
+                executed = True
+                print("更新基准价为: %.3f" % C.base_price)
+            else:
+                # C.base_price = current_price      # 如果跌幅较大，可能提高收益
+                # executed = True
+                print("现金不足或计算股数为0，无法买入")
+
+    if executed:
+        save_strategy_state(stock, C.base_price, C.logical_holding)
+        if C.base_price is not None:
+            print(f"状态已保存: base_price={C.base_price:.3f}, 持仓={C.logical_holding}")
+        else:
+            print(f"状态已保存: base_price=None, 持仓={C.logical_holding}")
+    else:
+        if C.base_price is not None and (C.base_price / current_price > 1.05 or current_price / C.base_price > 1.02):
+            original_base_price = C.base_price
+            beta = 0.1  # 追踪速度：0.1~0.3（越大越快）
+            C.base_price = C.base_price + beta * (current_price - C.base_price)
+                
+            save_strategy_state(stock, C.base_price, C.logical_holding)
+            if C.base_price is not None:
+                print(f"动态调整base_price： 原来base_price={original_base_price:.3f}，现在={C.base_price:.3f},价格={current_price:.3f}")  
+
+def load_strategy_state(stock):
+    """从文件加载策略状态"""
+    if not os.path.exists(STATE_FILE):
+        return None
+    try:
+        with open(STATE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # 检查是否包含当前股票的状态
+            if stock in data:
+                state = data[stock]
+                return {
+                    'base_price': state.get('base_price'),
+                    'logical_holding': state.get('logical_holding', 0)
+                }
+    except Exception as e:
+        print(f"加载策略状态失败: {e}")
+    return None
+
+def save_strategy_state(stock, base_price, logical_holding):
+    """保存策略状态到文件"""
+    data = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"读取状态文件异常，将新建: {e}")
+
+    # 更新当前股票状态
+    data[stock] = {
+        'base_price': base_price,
+        'logical_holding': logical_holding
+    }
+
+    try:
+        with open(STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"保存策略状态失败: {e}")
+        
+def get_grid_unit(stock, current_price, atr):
+    if stock == "159985.SZ":
+        return max(atr, current_price * 0.01)
+    
+    return atr
+
+

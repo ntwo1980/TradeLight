@@ -1,0 +1,239 @@
+#coding:gbk
+
+import pandas as pd
+import numpy as np
+import talib
+import json
+import os
+
+# 状态文件路径
+STATE_FILE = 'grid_strategy_state.json'
+
+# 所有ETF列表
+STOCKS_LIST = [
+    "159985.SZ",  # 豆粕
+    "501018.SH",  # 原油
+    "159980.SZ",  # 有色
+    "510880.SH",  # 红利
+    "512690.SH"
+]
+
+def init(C):
+    C.strategy_name = 'multi_etf_grid'
+    C.stocks = STOCKS_LIST  # 多个ETF
+    C.account_id = 'testS'
+    C.unit_amount = 30000  # 每次交易金额（元）
+    
+    # 初始化每个ETF的状态字典
+    C.etf_states = {}
+    for stock in C.stocks:
+        # state = load_strategy_state(stock)
+        state = None
+        if state:
+            C.etf_states[stock] = {
+                'base_price': state.get('base_price'),
+                'logical_holding': state.get('logical_holding', 0)
+            }
+        else:
+            C.etf_states[stock] = {
+                'base_price': None,
+                'logical_holding': 0
+            }
+            print(f"[{stock}] 未找到历史状态，等待首次初始化")
+
+
+def handlebar(C):
+    # 获取当前时间
+    bar_date = timetag_to_datetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d%H%M%S')
+    
+    # 获取所有ETF的行情数据（一次性获取）
+    prices_dict = C.get_market_data_ex(
+        ['high', 'low', 'close'],
+        C.stocks,
+        period="1d",
+        count=30,
+        end_time=bar_date
+    )
+
+    # 获取账户信息
+    account = get_trade_detail_data(C.account_id, '', 'account')
+    if len(account) == 0:
+        print(f'账号 {C.account_id} 未登录，请检查')
+        return
+    available_cash = int(account[0].m_dAvailable)
+
+    # 获取持仓
+    positions = get_trade_detail_data(C.account_id, '', 'position')
+    holdings = {}
+    for pos in positions:
+        key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
+        holdings[key] = pos.m_nCanUseVolume  # 可卖数量
+
+    executed_any = False  # 是否有任何交易执行
+    print(bar_date)
+    # 遍历每个ETF
+    for stock in C.stocks:
+        if stock not in prices_dict:
+            print(f"[{stock}] 行情数据获取失败，跳过")
+            continue
+
+        prices = prices_dict[stock]
+        if len(prices) < 10:
+            continue
+
+        close = prices['close']
+        high = prices['high']
+        low = prices['low']
+
+        current_price = close[-1]
+        avg_price = close[-10:].mean()
+        max_price = close[-10:].max()
+        rsi = talib.RSI(close, timeperiod=6)[-1]
+        atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
+        grid_unit = get_grid_unit(stock, current_price, atr)
+
+        # 获取该ETF的状态
+        state = C.etf_states[stock]
+        base_price = state['base_price']
+        logical_holding = state['logical_holding']
+        current_holding = holdings.get(stock, 0)
+
+        # 初始化 base_price
+        #print({"base_price:": base_price})
+        if base_price is None:
+            base_price = max_price
+            '''
+            C.etf_states[stock]['base_price'] = base_price
+            print(f"[{stock}] 初始化 base_price = {base_price:.3f}")
+            save_strategy_state(stock, base_price, logical_holding)
+            continue
+            '''
+
+        executed = False
+        
+        print({'today': timetag_to_datetime(C.get_bar_timetag(C.barpos), "%Y-%m-%d"), 
+        'current_price': current_price, 
+        'base_price': base_price, 
+        'atr': atr,
+        'grid_unit': grid_unit})
+
+        # ---- 卖出条件：价格上涨超过 grid_unit ----
+        if current_price >= base_price + grid_unit:
+            sell_amount = C.unit_amount
+            if rsi > 80:
+                pass  # 不打折
+            else:
+                sell_amount *= 0.9  # 九折
+
+            unit_to_sell = int(sell_amount / current_price)
+            unit_to_sell = (unit_to_sell // 100) * 100
+            unit_to_sell = min(unit_to_sell, current_holding)
+
+            if unit_to_sell > 0:
+                passorder(
+                    24, 1101, C.account_id, stock, 14, -1, unit_to_sell,
+                    C.strategy_name, 1, '', C
+                )
+                print({'before_sell_logical_holding': C.etf_states[stock]['logical_holding']})
+                C.etf_states[stock]['logical_holding'] -= unit_to_sell
+
+                # 更新 base_price：若还有持仓，更新为当前价；否则清空
+                print({'after_sell_logical_holding': C.etf_states[stock]['logical_holding']})
+                if C.etf_states[stock]['logical_holding'] > 0:
+                    C.etf_states[stock]['base_price'] = current_price
+                else:
+                    C.etf_states[stock]['base_price'] = None
+
+                executed = True
+
+        # ---- 买入条件：价格下跌超过 grid_unit ----
+        elif current_price <= base_price - grid_unit:
+            buy_amount = C.unit_amount
+            if rsi < 20:
+                buy_amount *= 1.1  # 加码10%
+
+            unit_to_buy = int(buy_amount / current_price)
+            unit_to_buy = (unit_to_buy // 100) * 100
+
+            cost = current_price * unit_to_buy
+            if available_cash >= cost and unit_to_buy > 0:
+                passorder(
+                    23, 1101, C.account_id, stock, 14, -1, unit_to_buy,
+                    C.strategy_name, 1, '', C
+                )
+                C.etf_states[stock]['logical_holding'] += unit_to_buy
+                C.etf_states[stock]['base_price'] = current_price
+                print(f"[{stock}] 买入 {unit_to_buy} 股，价格: {current_price:.3f}, 金额: {cost:.2f}")
+                executed = True
+            else:
+                print(f"[{stock}] 现金不足或买入股数为0，无法买入")
+
+        # ---- 动态追踪 base_price（未触发交易时）----
+        if not executed:
+            # 若价格偏离过大，缓慢向当前价靠拢
+            if base_price is not None:
+                if (base_price / current_price > 1.05) or (current_price / base_price > 1.02):
+                    beta = 0.1  # 追踪速度
+                    new_base = base_price + beta * (current_price - base_price)
+                    C.etf_states[stock]['base_price'] = new_base
+                    print(f"[{stock}] 动态调整 base_price: {base_price:.3f} → {new_base:.3f}")
+
+        # 保存状态
+        if executed or (not executed and C.etf_states[stock]['base_price'] != base_price):
+            save_strategy_state(
+                stock,
+                C.etf_states[stock]['base_price'],
+                C.etf_states[stock]['logical_holding']
+            )
+            executed_any = True
+
+
+# ---------------- 辅助函数 ----------------
+
+def load_strategy_state(stock):
+    if not os.path.exists(STATE_FILE):
+        return None
+    try:
+        with open(STATE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if stock in data:
+                s = data[stock]
+                return {
+                    'base_price': s.get('base_price'),
+                    'logical_holding': s.get('logical_holding', 0)
+                }
+    except Exception as e:
+        print(f"加载状态失败 {stock}: {e}")
+    return None
+
+
+def save_strategy_state(stock, base_price, logical_holding):
+    data = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except:
+            pass
+
+    data[stock] = {
+        'base_price': base_price,
+        'logical_holding': logical_holding
+    }
+
+    try:
+        with open(STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"保存状态失败 {stock}: {e}")
+
+
+def get_grid_unit(stock, current_price, atr):
+    """根据ETF设定最小波动单位"""
+    if stock == "159985.SZ":  # 豆粕
+        return max(atr, current_price * 0.01)
+    return atr  # 其他使用ATR作为网格单位
+
+
+# ---------------- 工具函数（QMT平台提供，此处仅为示意）----------------
+# 注意：timetag_to_datetime 是 QMT 内置函数，无需重写

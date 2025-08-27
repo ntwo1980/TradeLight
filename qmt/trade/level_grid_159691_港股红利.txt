@@ -31,7 +31,7 @@ def init(C):
     A.prices_date = None
     A.base_price = None
     A.logical_holding = 0
-    A.levels [2, 4, 8, 12, 22]
+    A.levels = [2, 4, 8, 12, 22]
     A.buy_index = 0
     A.sell_index = 0
     A.atr = 0
@@ -48,7 +48,7 @@ def init(C):
         A.logical_holding = state['logical_holding']
         A.buy_index = state['buy_index']
         A.sell_index = state['sell_index']
-        print(f"Loaded state from file: base_price={A.base_price}, position={A.logical_holding}, buy_index={A.buy_index}, buy_index={A.sell_index}")
+        print(f"Loaded state from file: base_price={A.base_price}, position={A.logical_holding}, buy_index={A.buy_index}, sell_index={A.sell_index}")
     else:
         print("No historical state found, will initialize base_price using first average")
 

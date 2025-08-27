@@ -8,7 +8,7 @@ import json
 import os
 
 """
-Strategy Description: 豆粕网格
+Strategy Description: 有色网格
 """
 
 class a():
@@ -31,6 +31,11 @@ def init(C):
     A.prices_date = None
     A.base_price = None
     A.logical_holding = 0
+    A.atr = 0
+    A.rsi = 50
+    A.grid_unit = 0
+    A.max_price = 0
+    A.yesterday_price = 0
 
     C.set_universe([A.stock])
 
@@ -98,48 +103,43 @@ def f(C):
 
     current_price = data[stock]['lastPrice']
 
-    atr = 0
-    rsi = 50
-    grid_unit = 0
-    max_price = 0
-    yesterday_price = 0
     
     if A.prices_date is None or A.prices_date != yesterday:
         prices = C.get_market_data_ex(['high','low','close'],[stock], period = "1d",count=30,end_time = yesterday)
         A.prices_date = yesterday
         prices = prices[stock]
-        yesterday_price = prices['close'][-1]
+        A.yesterday_price = prices['close'][-1]
 
         avg_price = prices['close'][-10:].mean()
-        max_price = prices['close'][-10:].max()
+        A.max_price = prices['close'][-10:].max()
         
         high = prices['high']
         low = prices['low']
         close = prices['close']
-        rsi = talib.RSI(close, timeperiod=6)[-1]
+        A.rsi = talib.RSI(close, timeperiod=6)[-1]
 
-        atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
-        grid_unit = get_grid_unit(stock, yesterday_price, atr)
+        A.atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
+        A.grid_unit = get_grid_unit(stock, A.yesterday_price, A.atr)
     
-    if grid_unit == 0 or max_price == 0:
-        print("grid_unit or max_price is 0")
+    if A.grid_unit == 0 or A.max_price == 0:
+        print("grid_unit or A.max_price is 0")
         return
 
     base_price = A.base_price  # copy a local base_price
 
     if base_price is None:
-        base_price = max_price
+        base_price = A.max_price
 
     print({
-        'yesterday_price': yesterday_price,
+        'yesterday_price': A.yesterday_price,
         'current_price': current_price,
         'base_price': base_price,
-        'atr': atr,
-        'grid_unit': grid_unit})
+        'atr': A.atr,
+        'grid_unit': A.grid_unit})
 
-    if current_price >= base_price + grid_unit:
+    if current_price >= base_price + A.grid_unit:
         sell_amount = A.unit_amount  # Base selling amount
-        if rsi > 80:
+        if A.rsi > 80:
             pass
         else:
             sell_amount *= 0.9  # 90% of the amount
@@ -164,7 +164,7 @@ def f(C):
                 A.base_price = current_price
             else:
                 A.base_price = None
-
+            
             executed = True
             if A.base_price is not None:
                 print("Updated base price to: %.3f" % A.base_price)
@@ -172,9 +172,9 @@ def f(C):
                 print("Updated base price to: None")
     # Price drops below grid: buy one unit (based on amount)
     else:
-        if current_price <= base_price - grid_unit:
+        if current_price <= base_price - A.grid_unit:
             buy_amount = A.unit_amount  # Base buying amount
-            if rsi < 20:
+            if A.rsi < 20:
                 buy_amount *= 1.1  # Increase by 10%
                 
             # Calculate number of shares to buy
@@ -223,7 +223,7 @@ def g(C):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             A.base_price = A.base_price + beta * (current_price - A.base_price)
                 
-            save_strategy_state(A.state_file, A. Stock, A.base_price, A.logical_holding)
+            save_strategy_state(A.state_file, A.stock, A.base_price, A.logical_holding)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={A.base_price:.3f}, current price={current_price:.3f}")  
 
 def rebuild_waiting_list_from_open_orders():

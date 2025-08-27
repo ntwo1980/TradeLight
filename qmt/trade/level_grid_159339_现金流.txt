@@ -34,6 +34,9 @@ def init(C):
     A.levels [2, 4, 8, 12, 22]
     A.buy_index = 0
     A.sell_index = 0
+    A.atr = 0
+    A.max_price = 0
+    A.yesterday_price = 0
 
     C.set_universe([A.stock])
 
@@ -103,46 +106,41 @@ def f(C):
 
     current_price = data[stock]['lastPrice']
 
-    atr = 0
-    grid_unit = 0
-    max_price = 0
-    yesterday_price = 0
-    
     if A.prices_date is None or A.prices_date != yesterday:
         prices = C.get_market_data_ex(['high','low','close'],[stock], period = "1d",count=30,end_time = yesterday)
         A.prices_date = yesterday
         prices = prices[stock]
-        yesterday_price = prices['close'][-1]
+        A.yesterday_price = prices['close'][-1]
 
         avg_price = prices['close'][-10:].mean()
-        max_price = prices['close'][-10:].max()
+        A.max_price = prices['close'][-10:].max()
         
         high = prices['high']
         low = prices['low']
         close = prices['close']
 
-        atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
+        A.atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
     
-    if grid_unit == 0 or max_price == 0:
-        print("grid_unit or max_price is 0")
+    if A.max_price == 0:
+        print("max_price is 0")
         return
 
     base_price = A.base_price  # copy a local base_price
 
     if base_price is None:
-        base_price = max_price
+        base_price = A.max_price
 
     print({
-        'yesterday_price': yesterday_price,
+        'yesterday_price': A.yesterday_price,
         'current_price': current_price,
         'base_price': base_price,
-        'atr': atr,
+        'atr': A.atr,
         'buy_index': A.buy_index,
         'sell_index': A.sell_index
         })
 
     if A.sell_index < len(A.levels):
-        sell_threshold = base_price + A.levels[A.buy_index] * atr
+        sell_threshold = base_price + A.levels[A.buy_index] * A.atr
         if current_price >= sell_threshold:
             sell_amount = A.unit_amount  # Base selling amount
 
@@ -179,7 +177,7 @@ def f(C):
         # Price drops below grid: buy one unit (based on amount)
     else:
         if A.buy_index < len(A.levels):
-            buy_threshold = base_price - A.levels[C.buy_index] * atr
+            buy_threshold = base_price - A.levels[C.buy_index] * A.atr
             if current_price <= buy_threshold:
                 buy_amount = A.unit_amount  # Base buying amount
                     

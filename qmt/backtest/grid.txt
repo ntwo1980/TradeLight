@@ -156,7 +156,7 @@ def handlebar(C):
         else:
             print(f"状态已保存: base_price=None, 持仓={C.logical_holding}")
     else:
-        if C.base_price is not None and (C.base_price / current_price > 1.05 or current_price / C.base_price > 1.02):
+        if C.base_price is not None and abs(C.base_price / current_price - 1) > 0.05:
             original_base_price = C.base_price
             beta = 0.1  # 追踪速度：0.1~0.3（越大越快）
             C.base_price = C.base_price + beta * (current_price - C.base_price)

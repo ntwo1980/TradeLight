@@ -8,13 +8,13 @@ import json
 import os
 
 """
-策略说明：豆粕网格
+Strategy Description: Soybean Meal Grid
 """
 
 class a():
     pass
 
-A = a()  # 创建空类实例，用于保存状态
+A = a()  # Create an empty class instance to store state
 
 def init(C):
     A.stock = '159985.SZ'
@@ -23,7 +23,7 @@ def init(C):
     A.acct_type = accountType
     A.unit_amount = 30000
     A.state_file =  A.strategy_name + '.json'
-    A.waiting_list = []  # 未确认的委托，防止重复下单
+    A.waiting_list = []  # Pending orders, to prevent duplicate submission
     A.prices_date = None
     A.base_price = None
     A.logical_holding = 0
@@ -36,9 +36,9 @@ def init(C):
     if state and state['base_price'] is not None:
         A.base_price = state['base_price']
         A.logical_holding = state['logical_holding']
-        print(f"从文件加载状态: base_price={A.base_price}, 持仓={A.logical_holding}")
+        print(f"Loaded state from file: base_price={A.base_price}, position={A.logical_holding}")
     else:
-        print("未找到历史状态，将使用首次均线初始化 base_price")
+        print("No historical state found, will initialize base_price using first average")
 
     C.run_time("f","60nSecond","2025-1-1 09:31:00")
     C.run_time("g","1nDay","2025-1-1 14:59:30")
@@ -47,13 +47,13 @@ def f(C):
     now = datetime.datetime.now()
     now_time = now.strftime('%H%M%S')
     today = now.strftime('%Y%m%d')
-    # 跳过非交易时间
+    # Skip non-trading time
     if not ('093000' <= now_time <= '113000' or '130000' <= now_time <= '150000'):
         return
 
     account = get_trade_detail_data(A.acct, A.acct_type, 'account')
     if len(account) == 0:
-        print(f'账号{A.acct} 未登录 请检查')
+        print(f'Account {A.acct} is not logged in, please check')
         return
     account = account[0]
     available_cash = int(account.m_dAvailable)
@@ -67,27 +67,27 @@ def f(C):
                     found_list.append(order.m_strRemark)
         A.waiting_list = [i for i in A.waiting_list if i not in found_list]
     if A.waiting_list:
-        print(f"当前有未查到委托 {A.waiting_list} 暂停后续报单")
+        print(f"There are pending orders not confirmed: {A.waiting_list},暂停后续报单")
         return
 
-    # 获取持仓
+    # Get position
     positions = get_trade_detail_data(A.acct, A.acct_type, 'position')
     holdings = {}
     for pos in positions:
         key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
-        holdings[key] = pos.m_nCanUseVolume  # 可卖数量
+        holdings[key] = pos.m_nCanUseVolume  # Available quantity for selling
 
     current_holding = holdings.get(A.stock, 0)
 
-    # === 核心逻辑 ===
+    # === Core logic ===
     executed = False
 
-    # 获取当前市价
+    # Get current market price
     stock = A.stock
     data = C.get_full_tick([stock])
     
     if A.stock not in data:
-        print(f"无法获取 {stock} 的实时价格")
+        print(f"Failed to get real-time price for {stock}")
         return
 
     current_price = data[stock]['lastPrice']
@@ -132,28 +132,27 @@ def f(C):
         'grid_unit': grid_unit})
 
     if current_price >= base_price + grid_unit:
-        sell_amount = A.unit_amount  # 基准卖出金额
+        sell_amount = A.unit_amount  # Base selling amount
         if rsi > 80:
             pass
         else:
-            sell_amount *= 0.9  # 九折金额
+            sell_amount *= 0.9  # 90% of the amount
 
-        # 根据当前价格计算应卖出的股数
+        # Calculate number of units to sell based on current price
         unit_to_sell = int(sell_amount / current_price)
         
-        # 调整为100的整数倍
+        # Round down to nearest multiple of 100
         unit_to_sell = (unit_to_sell // 100) * 100
         
-        # 确保卖出数量不超过当前持仓
+        # Ensure sell quantity does not exceed current holding
         unit_to_sell = min(unit_to_sell, current_holding)
         
-        
-        if unit_to_sell > 0:  # 确保至少卖出100股
+        if unit_to_sell > 0:  # Ensure at least 100 shares
             timestamp = int(time.time())
             msg = f"{A.strategy_name}_sell_{unit_to_sell}_{timestamp}"
             passorder(24, 1101, A.acct, stock, 14, -1, unit_to_sell, A.strategy_name, 1, msg, C)
             A.waiting_list.append(msg)
-            print("卖出 %d 股，价格: %.3f, 总金额: %.2f" % (unit_to_sell, current_price, unit_to_sell * current_price))
+            print("Sell %d shares, price: %.3f, total amount: %.2f" % (unit_to_sell, current_price, unit_to_sell * current_price))
             if A.logical_holding > 0:
                 A.base_price = current_price
             else:
@@ -162,20 +161,20 @@ def f(C):
             A.logical_holding -= unit_to_sell
             executed = True
             if A.base_price is not None:
-                print("更新基准价为: %.3f" % A.base_price)
+                print("Updated base price to: %.3f" % A.base_price)
             else:
-                print("更新基准价为: None")
-    # 向下突破：买入一个单位 (基于金额)
+                print("Updated base price to: None")
+    # Price drops below grid: buy one unit (based on amount)
     else:
         if current_price <= base_price - grid_unit:
-            buy_amount = A.unit_amount  # 基准买入金额
+            buy_amount = A.unit_amount  # Base buying amount
             if rsi < 20:
-                buy_amount *= 1.1  # 加码10%
+                buy_amount *= 1.1  # Increase by 10%
                 
-            # 计算可以买入多少股
+            # Calculate number of shares to buy
             unit_to_buy = int(buy_amount / current_price)
             
-            # 调整为100的整数倍
+            # Round down to nearest multiple of 100
             unit_to_buy = (unit_to_buy // 100) * 100
             
             if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
@@ -183,23 +182,21 @@ def f(C):
                 msg = f"{A.strategy_name}_buy_{unit_to_buy}_{timestamp}"
                 passorder(23, 1101, A.acct, stock, 14, -1, unit_to_buy, A.strategy_name, 1, msg, C)
                 A.waiting_list.append(msg)
-                print("买入 %d 股，价格: %.3f, 总金额: %.2f" % (unit_to_buy, current_price, unit_to_buy * current_price))
-                # 更新基准价为当前成交价
+                print("Buy %d shares, price: %.3f, total amount: %.2f" % (unit_to_buy, current_price, unit_to_buy * current_price))
+                # Update base price to current price
                 A.base_price = current_price
                 A.logical_holding += unit_to_buy
                 executed = True
-                print("更新基准价为: %.3f" % A.base_price)
+                print("Updated base price to: %.3f" % A.base_price)
             else:
-                # A.base_price = current_price      # 如果跌幅较大，可能提高收益
-                # executed = True
-                print("现金不足或计算股数为0，无法买入")
+                print("Insufficient cash or calculated shares is zero, cannot buy")
 
     if executed:
         save_strategy_state(A.state_file, stock, A.base_price, A.logical_holding)
         if A.base_price is not None:
-            print(f"状态已保存: base_price={A.base_price:.3f}, 持仓={A.logical_holding}")
+            print(f"State saved: base_price={A.base_price:.3f}, position={A.logical_holding}")
         else:
-            print(f"状态已保存: base_price=None, 持仓={A.logical_holding}")
+            print(f"State saved: base_price=None, position={A.logical_holding}")
 
 def g(C):
     state = load_strategy_state(A.state_file, A.stock)
@@ -210,18 +207,18 @@ def g(C):
         data = C.get_full_tick([A.stock])
         
         if A.stock not in data:
-            print(f"无法获取 {A.stock} 的实时价格")
+            print(f"Failed to get real-time price for {A.stock}")
             return
 
         current_price = data[A.stock]['lastPrice']
 
         if abs(A.base_price / current_price - 1) > 0.05:
             original_base_price = A.base_price
-            beta = 0.1  # 追踪速度：0.1~0.3（越大越快）
+            beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             A.base_price = A.base_price + beta * (current_price - A.base_price)
                 
             save_strategy_state(A.state_file, A.stock, A.base_price, A.logical_holding)
-            print(f"动态调整base_price： 原来base_price={original_base_price:.3f}，现在={A.base_price:.3f},价格={current_price:.3f}")  
+            print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={A.base_price:.3f}, current price={current_price:.3f}")  
 
 def rebuild_waiting_list_from_open_orders():
     orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
@@ -233,13 +230,13 @@ def rebuild_waiting_list_from_open_orders():
     return open_orders
 
 def load_strategy_state(file, stock):
-    """从文件加载策略状态"""
+    """Load strategy state from file"""
     if not os.path.exists(file):
         return None
     try:
         with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # 检查是否包含当前股票的状态
+            # Check if state for current stock exists
             if stock in data:
                 state = data[stock]
                 return {
@@ -247,20 +244,20 @@ def load_strategy_state(file, stock):
                     'logical_holding': state.get('logical_holding', 0)
                 }
     except Exception as e:
-        print(f"加载策略状态失败: {e}")
+        print(f"Failed to load strategy state: {e}")
     return None
 
 def save_strategy_state(file, stock, base_price, logical_holding):
-    """保存策略状态到文件"""
+    """Save strategy state to file"""
     data = {}
     if os.path.exists(file):
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except Exception as e:
-            print(f"读取状态文件异常，将新建: {e}")
+            print(f"Error reading state file, will create new: {e}")
 
-    # 更新当前股票状态
+    # Update state for current stock
     data[stock] = {
         'base_price': base_price,
         'logical_holding': logical_holding
@@ -270,7 +267,7 @@ def save_strategy_state(file, stock, base_price, logical_holding):
         with open(file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
     except Exception as e:
-        print(f"保存策略状态失败: {e}")
+        print(f"Failed to save strategy state: {e}")
         
 def get_grid_unit(stock, price, atr):
     if stock == "159985.SZ":

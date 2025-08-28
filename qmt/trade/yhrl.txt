@@ -14,7 +14,7 @@ class a():
 A = a()  # 创建空类实例，用于保存状态
 
 def init(C):
-    A.stradegy_name = 'yhrl_ohwabatlfl'
+    A.stradegy_name = 'yhrl'
     A.stock = '511880.SH'
     A.acct = account  # 账号（需在模型交易界面选择）
     A.acct_type = accountType  # 账号类型

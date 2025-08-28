@@ -20,7 +20,6 @@ def init(C):
     A.acct_type = accountType  # 账号类型
     A.target_cash = 100000  # 目标最低可用资金
     A.waiting_list = []  # 未确认的委托，防止重复下单
-    A.sold_out = False  # 标记是否已卖光（避免重复卖空）
 
     # 订阅行情
     C.set_universe([A.stock])

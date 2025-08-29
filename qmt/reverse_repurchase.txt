@@ -17,26 +17,34 @@ def init(C):
     A.stock = '204001.SH'
     A.acct = account  # 账号（需在模型交易界面选择）
     A.acct_type = accountType  # 账号类型
+    #A.count = 0
 
     C.set_universe([A.stock])
-    C.run_time("f","1nDay","2019-10-14 14:55:00")
+    C.run_time("f","1nDay","2019-10-14 14:56:00")
+    #C.run_time("f","20nSecond","2019-10-14 14:56:00")
     
     print(f'逆回购初始化完成')
 
 def f(C):
+    #if A.count > 0:
+    #    return
+
     account = get_trade_detail_data(A.acct, A.acct_type, 'account')
     if len(account) == 0:
         print(f'账号{A.acct} 未登录 请检查')
         return
     account = account[0]
-    available_cash = int(account.m_dAvailable)
+    available_cash = int(account.m_dAvailable) - 20000
+    if available_cash < 0:
+        available_cash = 0
 
-    amount = int((available_cash  / 1000) * 10
+    amount = int((available_cash*(1-0.0001))//1000*10)
     if amount == 0:
         text = f'计算出的交易数量为0，资金可能不足。'
         print(text)
-
+    print({'name': '逆回购', 'value': amount})
     passorder(24, 1101, A.acct, A.stock, 14, -1, amount, 2, C)
+    #A.count += 1
 
-    print(f'国债逆回购成功 {amount}')
+    print('国债逆回购成功')
 

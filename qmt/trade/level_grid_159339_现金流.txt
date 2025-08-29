@@ -17,16 +17,14 @@ class a():
 A = a()  # Create an empty class instance to store state
 
 def init(C):
-    now = datetime.datetime.now()
-    now_time = now.strftime('%H%M%S')
-    yesterday = (now - datetime.timedelta(days=1)).strftime('%Y%m%d')
-
     A.stock = '159399.SZ'
-    A.strategy_name = 'grid_' + A.stock.replace(".", "") + '_kpkcwupwxl'
+    A.stock_name = '现金流'
+    A.strategy_name = 'grid_' + A.stock.replace(".", "") + '_a'
+
     A.acct = account
     A.acct_type = accountType
-    A.unit_amount = 20000
-    A.state_file =  A.strategy_name + '.json'
+    A.unit_amount = 1000
+    A.state_file =  A.strategy_name + "_" + A.stock_name +'.json'
     A.waiting_list = []  # Pending orders, to prevent duplicate submission
     A.prices_date = None
     A.base_price = None
@@ -99,7 +97,7 @@ def f(C):
     # Get current market price
     stock = A.stock
     data = C.get_full_tick([stock])
-    
+
     if A.stock not in data:
         print(f"Failed to get real-time price for {stock}")
         return
@@ -109,18 +107,19 @@ def f(C):
     if A.prices_date is None or A.prices_date != yesterday:
         prices = C.get_market_data_ex(['high','low','close'],[stock], period = "1d",count=30,end_time = yesterday)
         A.prices_date = yesterday
-        prices = prices[stock]
+        A.prices = prices[stock]
+        prices = A.prices
         A.yesterday_price = prices['close'][-1]
 
         avg_price = prices['close'][-10:].mean()
         A.max_price = prices['close'][-10:].max()
-        
+
         high = prices['high']
         low = prices['low']
         close = prices['close']
 
         A.atr = talib.ATR(high.values, low.values, close.values, timeperiod=4)[-1]
-    
+
     if A.max_price == 0:
         print("max_price is 0")
         return
@@ -131,6 +130,9 @@ def f(C):
         base_price = A.max_price
 
     print({
+        'stock': A.stock,
+        'stock_name': A.stock_name,
+        'yesterday': A.prices['close'].index[-1],
         'yesterday_price': A.yesterday_price,
         'current_price': current_price,
         'base_price': base_price,
@@ -140,23 +142,23 @@ def f(C):
         })
 
     if A.sell_index < len(A.levels):
-        sell_threshold = base_price + A.levels[A.buy_index] * A.atr
+        sell_threshold = base_price + A.levels[A.sell_index] * A.atr
         if current_price >= sell_threshold:
             sell_amount = A.unit_amount  # Base selling amount
 
             # Calculate number of units to sell based on current price
             unit_to_sell = int(sell_amount / current_price)
-            
+
             # Round down to nearest multiple of 100
             unit_to_sell = (unit_to_sell // 100) * 100
-            
+
             # Ensure sell quantity does not exceed current holding
             unit_to_sell = min(unit_to_sell, current_holding)
-            
+
             if unit_to_sell > 0:  # Ensure at least 100 shares
                 timestamp = int(time.time())
                 msg = f"{A.strategy_name}_sell_{unit_to_sell}_{timestamp}"
-                passorder(24, 1101, A.acct, stock, 14, -1, unit_to_sell, A.strategy_name, 1, msg, C)
+                passorder(24, 1101, A.acct, stock, 14, -1, unit_to_sell, A.strategy_name, 2, msg, C)
                 A.waiting_list.append(msg)
                 print("Sell %d shares, price: %.3f, total amount: %.2f" % (unit_to_sell, current_price, unit_to_sell * current_price))
                 A.logical_holding -= unit_to_sell
@@ -175,33 +177,33 @@ def f(C):
                 else:
                     print("Updated base price to: None")
         # Price drops below grid: buy one unit (based on amount)
-    else:
-        if A.buy_index < len(A.levels):
-            buy_threshold = base_price - A.levels[C.buy_index] * A.atr
-            if current_price <= buy_threshold:
-                buy_amount = A.unit_amount  # Base buying amount
-                    
-                # Calculate number of shares to buy
-                unit_to_buy = int(buy_amount / current_price)
-                
-                # Round down to nearest multiple of 100
-                unit_to_buy = (unit_to_buy // 100) * 100
-                
-                if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
-                    timestamp = int(time.time())
-                    msg = f"{A.strategy_name}_buy_{unit_to_buy}_{timestamp}"
-                    passorder(23, 1101, A.acct, stock, 14, -1, unit_to_buy, A.strategy_name, 1, msg, C)
-                    A.waiting_list.append(msg)
-                    print("Buy %d shares, price: %.3f, total amount: %.2f" % (unit_to_buy, current_price, unit_to_buy * current_price))
-                    # Update base price to current price
-                    A.base_price = current_price
-                    A.logical_holding += unit_to_buy
-                    A.buy_index += 1
-                    A.sell_index = 0
-                    executed = True
-                    print("Updated base price to: %.3f" % A.base_price)
-                else:
-                    print("Insufficient cash or calculated shares is zero, cannot buy")
+    if A.buy_index < len(A.levels):
+        buy_threshold = base_price - A.levels[A.buy_index] * A.atr
+        print({'buy_threshold': buy_threshold, 'atr': A.atr, 'test': current_price <= buy_threshold})
+        if current_price <= buy_threshold:
+            buy_amount = A.unit_amount  # Base buying amount
+
+            # Calculate number of shares to buy
+            unit_to_buy = int(buy_amount / current_price)
+
+            # Round down to nearest multiple of 100
+            unit_to_buy = (unit_to_buy // 100) * 100
+
+            if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
+                timestamp = int(time.time())
+                msg = f"{A.strategy_name}_buy_{unit_to_buy}_{timestamp}"
+                passorder(23, 1101, A.acct, stock, 14, -1, unit_to_buy, A.strategy_name, 2, msg, C)
+                A.waiting_list.append(msg)
+                print("Buy %d shares, price: %.3f, total amount: %.2f" % (unit_to_buy, current_price, unit_to_buy * current_price))
+                # Update base price to current price
+                A.base_price = current_price
+                A.logical_holding += unit_to_buy
+                A.buy_index += 1
+                A.sell_index = 0
+                executed = True
+                print("Updated base price to: %.3f" % A.base_price)
+            else:
+                print("Insufficient cash or calculated shares is zero, cannot buy")
 
     if executed:
         save_strategy_state(A.state_file, stock, A.base_price, A.logical_holding, A.buy_index, A.sell_index)
@@ -219,7 +221,7 @@ def g(C):
         A.sell_index = state['sell_index']
 
         data = C.get_full_tick([A.stock])
-        
+
         if A.stock not in data:
             print(f"Failed to get real-time price for {A.stock}")
             return
@@ -230,9 +232,9 @@ def g(C):
             original_base_price = A.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             A.base_price = A.base_price + beta * (current_price - A.base_price)
-                
+
             save_strategy_state(A.state_file, A.stock, A.base_price, A.logical_holding, A.buy_index, A.sell_index)
-            print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={A.base_price:.3f}, current price={current_price:.3f}")  
+            print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={A.base_price:.3f}, current price={current_price:.3f}")
 
 def rebuild_waiting_list_from_open_orders():
     orders = get_trade_detail_data(A.acct, A.acct_type, 'order')
@@ -286,9 +288,9 @@ def save_strategy_state(file, stock, base_price, logical_holding, buy_index, sel
             json.dump(data, f, ensure_ascii=False, indent=4)
     except Exception as e:
         print(f"Failed to save strategy state: {e}")
-        
+
 def get_grid_unit(stock, price, atr):
     if stock == "159985.SZ":
         return max(atr, price * 0.01)
-    
+
     return atr

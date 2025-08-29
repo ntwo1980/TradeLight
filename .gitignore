@@ -5,3 +5,4 @@ data/*
 data_backup/*
 nohup.out
 *.pyc
+/qmt/trade/.vs

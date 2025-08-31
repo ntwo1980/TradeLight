@@ -35,7 +35,7 @@ def handlebar(C):
     now = datetime.datetime.now()
     now_time = now.strftime('%H%M%S')
     # 跳过非交易时间
-    if now_time < '093000' or now_time > "150000":
+    if now_time < '093000' or now_time > "14550000":
         return
 
     account = get_trade_detail_data(A.acct, A.acct_type, 'account')

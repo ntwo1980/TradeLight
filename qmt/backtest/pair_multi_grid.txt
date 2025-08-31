@@ -1,0 +1,293 @@
+#coding:gbk
+import pandas as pd
+import numpy as np
+import talib
+import json
+import os
+from datetime import datetime
+
+STATE_FILE = 'pair_grid_strategy_state.json'
+
+# 全局常量（更新）
+THRESHOLD_RATIO = 0.01      # 比值偏离阈值：±1% 触发切换
+WINDOW = 20                 # 滚动窗口天数
+GRID_MULTIPLIER = 1.0       # 网格放大系数
+
+# 定义ATR倍数层级（递增，最大到22）
+BUY_LEVELS = [2, 4, 8, 14, 22]   # 下跌买入层级
+SELL_LEVELS = [2, 4, 8, 14, 22]  # 上涨卖出层级
+
+def init(C):
+    C.strategy_name = 'pair_grid'
+    C.stock_A = '159518.SZ'  # 华宝油气
+    C.stock_B = '513350.SH'  # 标普油气ETF
+    C.stocks = [C.stock_A, C.stock_B]
+    C.account_id = 'testS'
+    C.unit_amount = 30000    # 每次交易金额（元）
+    
+    # 当前持有标的
+    C.current_held = None
+    
+    # 每个标的独立的网格状态（扩展 buy_index / sell_index）
+    C.grid_state = {
+        C.stock_A: {
+            'base_price': None,
+            'logical_holding': 0,
+            'buy_index': 0,
+            'sell_index': 0
+        },
+        C.stock_B: {
+            'base_price': None,
+            'logical_holding': 0,
+            'buy_index': 0,
+            'sell_index': 0
+        }
+    }
+
+    # 用于价值锚定的配对均值
+    C.last_ratio_mean = None
+
+    # 加载历史状态
+    load_all_states(C)
+
+    # 设置标的池
+    C.set_universe(C.stocks)
+
+def handlebar(C):
+    bar_date = timetag_to_datetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d%H%M%S')
+    print(f"\n=== 回测日期: {bar_date} ===")
+
+    # 获取两只ETF的行情
+    prices = C.get_market_data_ex(['high','low','close'], C.stocks, period="1d", count=WINDOW+1, end_time=bar_date)
+    
+    if len(prices) < 2:
+        print("数据不足，跳过")
+        return
+
+    price_A = prices[C.stock_A]['close'][-1]
+    price_B = prices[C.stock_B]['close'][-1]
+
+    # --- 1. 配对逻辑：直接使用比值偏离 ---
+    close_A = np.array(prices[C.stock_A]['close'][-WINDOW:])
+    close_B = np.array(prices[C.stock_B]['close'][-WINDOW:])
+    ratio_series = close_A / close_B
+    mean_ratio = np.mean(ratio_series)
+    
+    current_ratio = price_A / price_B
+
+    print(f"配对分析: A/B={current_ratio:.4f}, 历史均值={mean_ratio:.4f}, 阈值=[{mean_ratio*(1-THRESHOLD_RATIO):.4f}, {mean_ratio*(1+THRESHOLD_RATIO):.4f}]")
+
+    target_stock = None
+    if current_ratio > mean_ratio * (1 + THRESHOLD_RATIO):
+        print('switch to A')
+        target_stock = C.stock_A  # A相对贵，持有A
+    elif current_ratio < mean_ratio * (1 - THRESHOLD_RATIO):
+        target_stock = C.stock_B  # B相对贵，持有B
+        print('switch to B')
+    else:
+        target_stock = C.current_held  # 维持现状
+
+    # 默认持有A
+    if target_stock is None:
+        target_stock = C.stock_A
+
+    # --- 2. 换仓逻辑 + 基准价继承 ---
+    if C.current_held and C.current_held != target_stock:
+        print(f"切换持仓: {C.current_held} → {target_stock}")
+        
+        old_stock = C.current_held
+        new_stock = target_stock
+        old_base = C.grid_state[old_stock]['base_price']
+        price_old = prices[old_stock]['close'][-1]
+        price_new = prices[new_stock]['close'][-1]
+
+        # 平仓
+        _close_position(C, old_stock, bar_date)
+        C.current_held = None
+
+        # === 继承新持仓的 base_price（价值等价）===
+        if old_base is not None:
+            if new_stock == C.stock_A:
+                conversion_ratio = mean_ratio  # A/B 均值
+            else:
+                conversion_ratio = 1.0 / mean_ratio  # B/A
+
+            new_base_price = old_base * conversion_ratio * (price_new / price_old)
+            C.grid_state[new_stock]['base_price'] = new_base_price
+            C.grid_state[new_stock]['buy_index'] = 0
+            C.grid_state[new_stock]['sell_index'] = 0
+            print(f"继承基准价: {old_stock}@{old_base:.4f} → {new_stock}@{new_base_price:.4f} "
+                  f"(转换比率={conversion_ratio:.4f})")
+        else:
+            # 初始化新 base_price
+            C.grid_state[new_stock]['base_price'] = price_new * 1.05
+            C.grid_state[new_stock]['buy_index'] = 0
+            C.grid_state[new_stock]['sell_index'] = 0
+
+        C.last_ratio_mean = mean_ratio
+
+    # 设置新持仓
+    if C.current_held != target_stock:
+        C.current_held = target_stock
+        print(f"新持仓目标: {C.current_held}")
+        save_strategy_state(C)
+
+    # --- 3. 多级网格交易 ---
+    if C.current_held:
+        _run_grid_trading(C, C.current_held, bar_date)
+
+def _run_grid_trading(C, stock, bar_date):
+    """对指定股票执行多级网格交易"""
+    prices = C.get_market_data_ex(['high','low','close'], [stock], period="1d", count=30, end_time=bar_date)
+    if stock not in prices:
+        print("行情获取失败")
+        return
+    prices = prices[stock]
+    
+    current_price = prices['close'][-1]
+    high = prices['high'].values
+    low = prices['low'].values
+    close = prices['close'].values
+
+    atr = talib.ATR(high, low, close, timeperiod=4)[-1]
+    base_price = C.grid_state[stock]['base_price']
+    logical_holding = C.grid_state[stock]['logical_holding']
+    buy_index = C.grid_state[stock]['buy_index']
+    sell_index = C.grid_state[stock]['sell_index']
+
+    # 初始化 base_price
+    if base_price is None:
+        base_price = prices['close'][-10:].max()
+        C.grid_state[stock]['base_price'] = base_price
+        C.grid_state[stock]['buy_index'] = 0
+        C.grid_state[stock]['sell_index'] = 0
+        print(f"首次初始化 base_price = {base_price:.3f}，重置层级")
+        save_strategy_state(C)
+
+    account = get_trade_detail_data(C.account_id, '', 'account')[0]
+    available_cash = int(account.m_dAvailable)
+
+    positions = get_trade_detail_data(C.account_id, '', 'position')
+    holdings = {p.m_strInstrumentID + '.' + p.m_strExchangeID: p.m_nCanUseVolume for p in positions}
+    current_holding = holdings.get(stock, 0)
+
+    executed = False
+    print({
+        'date': bar_date,
+        'current_price': round(current_price, 4),
+        'base_price': round(base_price, 4),
+        'ATR': round(atr, 4),
+        'buy_level': BUY_LEVELS[buy_index] if buy_index < len(BUY_LEVELS) else 'MAX',
+        'sell_level': SELL_LEVELS[sell_index] if sell_index < len(SELL_LEVELS) else 'MAX'
+    })
+
+    # === 买入逻辑：价格显著低于 base_price ===
+    if buy_index < len(BUY_LEVELS):
+        buy_threshold = base_price - BUY_LEVELS[buy_index] * atr
+        if current_price <= buy_threshold:
+            buy_amount = C.unit_amount
+
+            unit_to_buy = int(buy_amount / current_price)
+            unit_to_buy = (unit_to_buy // 100) * 100  # 100股整数倍
+
+            if unit_to_buy > 0 and available_cash >= unit_to_buy * current_price:
+                passorder(23, 1101, C.account_id, stock, 14, -1, unit_to_buy, C.strategy_name, 1, '', C)
+                print(f"买入 {unit_to_buy} 股，价格: {current_price:.3f}, 金额: {unit_to_buy * current_price:.2f}")
+                
+                C.grid_state[stock]['base_price'] = current_price
+                C.grid_state[stock]['logical_holding'] += unit_to_buy
+                C.grid_state[stock]['buy_index'] += 1
+                C.grid_state[stock]['sell_index'] = 0  # 重置卖出层级
+                executed = True
+                print(f"买入成功，升级 buy_index={C.grid_state[stock]['buy_index']}，重置 sell_index=0")
+            else:
+                print("买入条件满足但资金不足或股数为0")
+
+    # === 卖出逻辑：价格显著高于 base_price ===
+    if sell_index < len(SELL_LEVELS):
+        sell_threshold = base_price + SELL_LEVELS[sell_index] * atr
+        if current_price >= sell_threshold:
+            sell_amount = C.unit_amount
+
+            unit_to_sell = int(sell_amount / current_price)
+            unit_to_sell = (unit_to_sell // 100) * 100
+            unit_to_sell = min(unit_to_sell, current_holding)
+
+            if unit_to_sell > 0:
+                passorder(24, 1101, C.account_id, stock, 14, -1, unit_to_sell, C.strategy_name, 1, '', C)
+                print(f"卖出 {unit_to_sell} 股，价格: {current_price:.3f}, 金额: {unit_to_sell * current_price:.2f}")
+
+                C.grid_state[stock]['base_price'] = current_price
+                C.grid_state[stock]['logical_holding'] -= unit_to_sell
+                C.grid_state[stock]['sell_index'] += 1
+                C.grid_state[stock]['buy_index'] = 0  # 重置买入层级
+                executed = True
+                print(f"卖出成功，升级 sell_index={C.grid_state[stock]['sell_index']}，重置 buy_index=0")
+            else:
+                print("卖出条件满足但无可卖持仓")
+
+    # === 动态调整 base_price（防止长期偏离）===
+    if not executed and C.grid_state[stock]['logical_holding'] > 0 and C.grid_state[stock]['base_price'] is not None:
+        if abs(C.grid_state[stock]['base_price'] / current_price - 1) > 0.06:  # 偏离6%以上
+            beta = 0.1
+            old_base = C.grid_state[stock]['base_price']
+            new_base = old_base + beta * (current_price - old_base)
+            C.grid_state[stock]['base_price'] = new_base
+            print(f"动态调整 base_price: {old_base:.3f} → {new_base:.3f}")
+
+    # 保存状态
+    if executed:
+        save_strategy_state(C)
+
+def _close_position(C, stock, bar_date):
+    """平掉指定股票的持仓"""
+    positions = get_trade_detail_data(C.account_id, '', 'position')
+    holdings = {p.m_strInstrumentID + '.' + p.m_strExchangeID: p.m_nCanUseVolume for p in positions}
+    holding = holdings.get(stock, 0)
+    if holding > 0:
+        passorder(24, 1101, C.account_id, stock, 14, -1, holding, C.strategy_name, 1, '', C)
+        print(f"平仓 {holding} 股 {stock}")
+        C.grid_state[stock]['logical_holding'] = 0
+        C.grid_state[stock]['base_price'] = None
+        C.grid_state[stock]['buy_index'] = 0
+        C.grid_state[stock]['sell_index'] = 0
+    else:
+        print(f"无持仓可平: {stock}")
+
+def load_all_states(C):
+    return
+    """加载所有状态"""
+    if not os.path.exists(STATE_FILE):
+        print("无历史状态文件，使用初始状态")
+        return
+
+    try:
+        with open(STATE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            C.current_held = data.get('current_held')
+            C.last_ratio_mean = data.get('last_ratio_mean')
+            grid_data = data.get('grid_state', {})
+            for stock in C.stocks:
+                if stock in grid_data:
+                    # 确保所有字段都加载
+                    state = grid_data[stock]
+                    C.grid_state[stock]['base_price'] = state.get('base_price')
+                    C.grid_state[stock]['logical_holding'] = state.get('logical_holding', 0)
+                    C.grid_state[stock]['buy_index'] = state.get('buy_index', 0)
+                    C.grid_state[stock]['sell_index'] = state.get('sell_index', 0)
+            print(f"已加载历史状态: current_held={C.current_held}")
+    except Exception as e:
+        print(f"加载状态失败: {e}")
+
+def save_strategy_state(C):
+    """保存状态"""
+    data = {
+        'current_held': C.current_held,
+        'last_ratio_mean': C.last_ratio_mean,
+        'grid_state': C.grid_state
+    }
+    try:
+        with open(STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"保存状态失败: {e}")

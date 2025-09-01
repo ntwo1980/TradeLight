@@ -1,0 +1,44 @@
+#encoding:gbk
+import datetime
+import time
+import pandas as pd
+import numpy as np
+import talib
+import json
+import os
+
+"""
+Strategy Description: 现金流
+"""
+
+  
+namespace = {}
+with open('Strategy.py', "r", encoding="utf-8") as f:
+    exec(f.read(), globals())  # 注入全局
+    
+a = LevelGridStrategy(
+    stocks=["159399.SZ"], 
+    stockNames=['现金流'],
+    get_trade_detail_data_func = get_trade_detail_data,
+    pass_order_func = passorder,
+    timetag_to_datetime_func = timetag_to_datetime)
+
+def init(C): 
+    if not a.IsBacktest:
+        a.SetAccount(account, accountType)
+
+    a.init(C)
+
+    if not a.IsBacktest:
+        C.run_time("f","60nSecond","2019-10-14 09:30:00")
+        C.run_time("g","1nDay","2019-10-14 14:59:30")
+
+def handlebar(C):
+    if a.IsBacktest:
+        a.f(C)
+
+def f(C):
+    a.f(C)
+
+def g(C):
+    a.g(C)

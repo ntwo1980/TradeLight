@@ -12,9 +12,10 @@ class BaseStrategy():
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
         self.StrategyId = strategyId
+        self.IsBacktest = True
         self.Account = "testS"
         self.AccountType = "STOCK"
-        self.TradingAmount = 1000
+        self.TradingAmount = 30000
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -95,7 +96,7 @@ class BaseStrategy():
 
     def GetYesterday(self, C):
         if self.IsBacktest:
-            yesterday = self.TimetagToDatetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d%H%M%S').strftime('%Y%m%d')
+            yesterday = self.TimetagToDatetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d')
         else:
             now = datetime.datetime.now()
             yesterday = (now - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -103,7 +104,7 @@ class BaseStrategy():
         return yesterday
 
     def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
-        yesterday = self.GetYesterday()
+        yesterday = self.GetYesterday(C)
 
         prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=yesterday)
 
@@ -389,7 +390,7 @@ class SimpleGridStrategy(BaseStrategy):
 
 class LevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
-        super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
+        super().__init__(strategyPrefix='levelgrid', strategyId='a', **kwargs)
 
     def init(self, C):
         super().init(C)
@@ -585,7 +586,7 @@ class LevelGridStrategy(BaseStrategy):
 
                     self.State = {
                         'base_price': state.get('base_price'),
-                        'logical_holding': state.get('logical_holding', 0)
+                        'logical_holding': state.get('logical_holding', 0),
                         'buy_index': state.get('buy_index', 0),
                         'sell_index': state.get('sell_index', 0)
                     }
@@ -614,7 +615,7 @@ class LevelGridStrategy(BaseStrategy):
         # Update state for current stock
         data[stock] = {
             'base_price': base_price,
-            'logical_holding': logical_holding
+            'logical_holding': logical_holding,
             'buy_index': buy_index,
             'sell_index': sell_index
         }

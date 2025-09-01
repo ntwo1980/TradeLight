@@ -57,7 +57,7 @@ class BaseStrategy():
 
         self.WaitingList = []
         orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
-        strategyName = a.GetUniqueStrategyName(a.Stocks[0])
+        strategyName = self.GetUniqueStrategyName(self.Stocks[0])
         for order in orders:
             if order.m_nOrderStatus in [49, 50, 51, 52, 55] and strategyName in order.m_strRemark:  # 待报, 已报, 已报待撤, 部成待撤, 部成
                 self.WaitingList.append(order.m_strRemark)
@@ -71,13 +71,6 @@ class BaseStrategy():
 
         return prices
 
-
-    def GetDailyPrices(self, stocks, count, endDate, C):
-        if self.PriceDate is None or self.PriceDate != endDate:
-            self.Prices = C.get_market_data_ex(['high','low','close'],stocks, period = "1d",count=count,end_time = endDate)
-            self.PriceDate = endDate
-
-        return self.Prices
 
     def RefreshWaitingList(self):
         if self.WaitingList:
@@ -114,7 +107,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         self.RebuildWaitingListFromOpenOrders()
 
-        self.LoadStrategyState(a.Stocks, a.StockNames)
+        self.LoadStrategyState(self.Stocks, self.StockNames)
 
         state = self.State
         if state and state['base_price'] is not None:
@@ -146,7 +139,7 @@ class SimpleGridStrategy(BaseStrategy):
                 if stock in data:
                     state = data[stock]
 
-                    State = {
+                    self.State = {
                         'base_price': state.get('base_price'),
                         'logical_holding': state.get('logical_holding', 0)
                     }
@@ -154,12 +147,14 @@ class SimpleGridStrategy(BaseStrategy):
             print(f"Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, stock, stockName, basePrice, logicalHolding):
+    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding):
         """Load strategy state from file"""
 
         if self.IsBacktest:
             return
 
+        stock = stocks[0]
+        stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         if os.path.exists(file):

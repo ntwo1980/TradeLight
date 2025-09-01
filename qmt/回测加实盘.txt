@@ -171,7 +171,7 @@ def f(C):
                 print("Insufficient cash or calculated shares is zero, cannot buy")
 
     if executed:
-        a.SaveStrategyState(a.Stocks[0], a.StockNames[0], a.base_price, a.logical_holding)
+        a.SaveStrategyState(a.Stocks, a.StockNames, a.base_price, a.logical_holding)
 
         if a.base_price is not None:
             print(f"State saved: base_price={a.base_price:.3f}, position={a.logical_holding}")
@@ -195,7 +195,7 @@ def g(C):
         beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
         a.base_price = a.base_price + beta * (a.current_price - a.base_price)
 
-        a.SaveStrategyState(stock, a.StockNames[0], a.base_price, a.logical_holding)
+        a.SaveStrategyState(a.Stocks, a.StockNames, a.base_price, a.logical_holding)
         print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={a.base_price:.3f}, current price={a.current_price:.3f}")
         
 

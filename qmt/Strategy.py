@@ -125,13 +125,15 @@ class SimpleGridStrategy(BaseStrategy):
             print("No historical state found, will initialize base_price using first average")
 
 
-    def LoadStrategyState(self, stock, stockName):
+    def LoadStrategyState(self, stocks, stockNames):
         """Load strategy state from file"""
 
         if self.IsBacktest:
             self.State = None
             return
 
+        stock = stocks[0]
+        stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         if not os.path.exists(file):

@@ -7,7 +7,7 @@ import json
 import os
 
 class BaseStrategy():
-    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func):
+    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func):
         self.Stocks = stocks
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
@@ -17,9 +17,16 @@ class BaseStrategy():
         self.TradingAmount = 1000
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
+        self.PassOrder = pass_order_func
+        self.TimetagToDatetime = timetag_to_datetime_func
         self.State = None
         self.PriceDate = None
         self.Prices = None
+
+    def init(self, C):
+        self.IsBacktest = C.do_back_test
+
+        self.RebuildWaitingListFromOpenOrders()
 
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_a"
@@ -31,6 +38,12 @@ class BaseStrategy():
     def SetAccount(self, account, accountType):
         self.Account = account
         self.AccountType = accountType
+
+    def IsTradingTime(self):
+        now = datetime.datetime.now()
+        now_time = now.strftime('%H%M%S')
+
+        return '093000' <= now_time <= '113000' or '130000' <= now_time <= '150000'
 
     def GetAvailableCash(self):
         account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')
@@ -62,6 +75,15 @@ class BaseStrategy():
             if order.m_nOrderStatus in [49, 50, 51, 52, 55] and strategyName in order.m_strRemark:  # 待报, 已报, 已报待撤, 部成待撤, 部成
                 self.WaitingList.append(order.m_strRemark)
 
+    def CheckWaitingList(self):
+        if not self.IsBacktest:
+            self.RefreshWaitingList()
+            if self.WaitingList:
+                print(f"There are pending orders not confirmed: {self.WaitingList},暂停后续报单")
+                return False
+
+        return True
+
     def GetTicketPrices(self, stocks, C):
         prices = C.get_full_tick(stocks)
 
@@ -71,11 +93,46 @@ class BaseStrategy():
 
         return prices
 
+    def GetYesterday(self, C):
+        if self.IsBacktest:
+            yesterday = self.TimetagToDatetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d%H%M%S').strftime('%Y%m%d')
+        else:
+            now = datetime.datetime.now()
+            yesterday = (now - datetime.timedelta(days=1)).strftime('%Y%m%d')
+
+        return yesterday
+
+    def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
+        yesterday = self.GetYesterday()
+
+        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=yesterday)
+
+        for stock in stocks:
+            if stock not in prices:
+                print(f"Failed to get historical prices for {stock}")
+                return None
+
+        return prices
+
+    def GetCurrentPrice(self, stocks, C):
+        prices_dict = {}
+
+        if self.IsBacktest:
+            prices = self.GetHistoricalPrices(C, stocks=stocks, fields=['close'], period='1d', count=1)
+
+            for stock in stocks:
+                prices_dict[stock] = prices[stock]['close'][-1]
+        else:
+            prices = self.GetTicketPrices(stocks, C)
+            for stock in stocks:
+                prices_dict[stock] = prices[stock]['lastPrice']
+
+        return prices_dict
 
     def RefreshWaitingList(self):
         if self.WaitingList:
             foundList = []
-            orders = get_trade_detail_data(self.Account, self.AccountType, 'order')
+            orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
             for order in orders:
                 if order.m_strRemark in self.WaitingList:
                     if order.m_nOrderStatus in {54, 56, 57}:  # 已撤, 已成, 废单
@@ -83,17 +140,29 @@ class BaseStrategy():
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
 
+    def Buy(self, C, stock, quantity, price, strategy_name, order_type=2):
+        timestamp = int(time.time())
+        msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
+        self.PassOrder(23, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
+        self.WaitingList.append(msg)
+        print(f"Buy {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+        return msg
+
+    def Sell(self, C, stock, quantity, price, strategy_name, order_type=2):
+        timestamp = int(time.time())
+        msg = f"{strategy_name}_sell_{quantity}_{timestamp}"
+        self.PassOrder(24, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
+        self.WaitingList.append(msg)
+        print(f"Sell {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+        return msg
+
 class SimpleGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
 
     def init(self, C):
-        self.IsBacktest = C.do_back_test
+        super().init(C)
 
-        if not self.IsBacktest:
-            self.SetAccount(account, accountType)
-
-        self.TradingAmount = 30000
         self.prices = None
         self.prices_date = None
         self.base_price = None
@@ -105,8 +174,6 @@ class SimpleGridStrategy(BaseStrategy):
         self.yesterday_price = 0
 
 
-        self.RebuildWaitingListFromOpenOrders()
-
         self.LoadStrategyState(self.Stocks, self.StockNames)
 
         state = self.State
@@ -117,6 +184,147 @@ class SimpleGridStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
 
+    def UpdateMarketData(self, C, stocks):
+        yesterday = self.GetYesterday(C)
+        if self.prices_date is None or self.prices_date != yesterday:
+            stock = stocks[0]
+            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            self.prices_date = yesterday
+            self.prices = prices[stock]
+            prices = self.prices
+            self.yesterday_price = prices['close'][-1]
+            self.current_price = self.yesterday_price
+            self.max_price = prices['close'][-10:].max()
+
+            self.rsi = talib.RSI(prices['close'], timeperiod=6)[-1]
+            self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
+            self.grid_unit = self.GetGridUnit(stock, self.yesterday_price, self.atr)
+
+    def f(self, C):
+        if not self.IsBacktest and not self.IsTradingTime():
+            return
+
+        yesterday = self.GetYesterday(C)
+        available_cash = self.GetAvailableCash()
+
+        if not self.CheckWaitingList():
+            return
+
+        # Get position
+        holdings = self.GetPositions()
+
+        current_holding = holdings.get(self.Stocks[0], 0)
+
+        # === Core logic ===
+        executed = False
+
+        # Get current market price
+        self.UpdateMarketData(C, self.Stocks)
+
+        if self.grid_unit == 0 or self.max_price == 0:
+            print("grid_unit or self.max_price is 0")
+            return
+
+        if not self.IsBacktest:
+            current_prices = self.GetCurrentPrice(self.Stocks, C)
+            self.current_price = current_prices[self.Stocks[0]]
+
+        base_price = self.base_price  # copy a local base_price
+
+        if base_price is None:
+            base_price = self.max_price
+
+        print({
+            'stock': self.Stocks[0],
+            'stock_name': self.StockNames[0],
+            'yesterday': self.prices['close'].index[-1],
+            'yesterday_price': self.yesterday_price,
+            'current_price': self.current_price,
+            'base_price': base_price,
+            'atr': self.atr,
+            'grid_unit': self.grid_unit})
+
+
+        if self.current_price >= base_price + self.grid_unit:
+            executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+        # Price drops below grid: buy one unit (based on amount)
+        elif self.current_price <= base_price - self.grid_unit:
+            executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
+
+        if executed:
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding)
+
+            if self.base_price is not None:
+                print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
+            else:
+                print(f"State saved: base_price=None, position={self.logical_holding}")
+        elif self.IsBacktest:
+            g(C)
+
+    def ExecuteBuy(self, C, stock, current_price, available_cash):
+        buy_amount = self.TradingAmount
+        if self.rsi < 20:
+            buy_amount *= 1.1  # RSI低时增加10%买入量
+
+        unit_to_buy = int(buy_amount / current_price)
+        unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
+            strategy_name = self.GetUniqueStrategyName(stock)
+            self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            self.logical_holding += unit_to_buy
+            self.base_price = current_price
+            print(f"Updated base price to: {self.base_price:.3f}")
+            return True
+        else:
+            print("Insufficient cash or calculated shares is zero, cannot buy")
+            return False
+
+    def ExecuteSell(self, C, stock, current_price, current_holding):
+        sell_amount = self.TradingAmount
+        if self.rsi <= 80:
+            sell_amount *= 0.9
+
+        unit_to_sell = int(sell_amount / current_price)
+        unit_to_sell = (unit_to_sell // 100) * 100
+        unit_to_sell = min(unit_to_sell, current_holding)
+
+        if unit_to_sell > 0:    # Ensure at least 100 shares
+            strategy_name = self.GetUniqueStrategyName(stock)
+            self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            self.logical_holding -= unit_to_sell
+            if self.logical_holding > 0:
+                self.base_price = current_price
+            else:
+                self.base_price = None
+            print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
+            return True
+        return False
+
+    def g(self, C):
+        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = self.State
+
+        if not self.IsBacktest and state and state['base_price'] is not None:
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+
+        stock = self.Stocks[0]
+
+        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price / self.current_price - 1) > 0.04:
+            original_base_price = self.base_price
+            beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
+            self.base_price = self.base_price + beta * (self.current_price - self.base_price)
+
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding)
+            print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+
+
+    def GetGridUnit(self, stock, price, atr):
+        if stock == "159985.SZ":
+            return max(atr, price * 0.01)
+
+        return atr
 
     def LoadStrategyState(self, stocks, stockNames):
         """Load strategy state from file"""

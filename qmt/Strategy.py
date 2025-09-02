@@ -266,7 +266,7 @@ class SimpleGridStrategy(BaseStrategy):
             else:
                 print(f"State saved: base_price=None, position={self.logical_holding}")
         elif self.IsBacktest:
-            g(C)
+            self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
         buy_amount = self.TradingAmount
@@ -514,7 +514,7 @@ class LevelGridStrategy(BaseStrategy):
             else:
                 print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
         elif self.IsBacktest:
-            g(C)
+            self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
         buy_amount = self.TradingAmount
@@ -750,7 +750,7 @@ class PairGridStrategy(BaseStrategy):
             else:
                 print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
         elif self.IsBacktest:
-            g(C)
+            self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
         buy_amount = self.TradingAmount

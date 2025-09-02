@@ -23,7 +23,7 @@ def init(C):
 
     A.acct = account
     A.acct_type = accountType
-    A.unit_amount = 1000
+    A.unit_amount = 20000
     A.state_file =  A.strategy_name + "_" + A.stock_name +'.json'
     A.waiting_list = []  # Pending orders, to prevent duplicate submission
     A.prices = None

@@ -289,8 +289,8 @@ class SimpleGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, C, stock, current_price, current_holding):
         sell_amount = self.TradingAmount
-        if self.rsi <= 80:
-            sell_amount *= 0.9
+        if self.rsi > 80:
+            sell_amount *= 1.1
 
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100

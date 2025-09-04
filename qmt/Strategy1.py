@@ -204,7 +204,6 @@ class PairGridStrategy(BaseStrategy):
                 conversion_ratio = 1.0 / mean_ratio  # B/A
 
             new_base_price = price_new * conversion_ratio
-            print({'old_base_price': old_base_price, 'conversion_ratio': conversion_ratio, 'new_base_price': new_base_price, 'current_target_price': price_new, 'current_old_price': price_old})
             self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
 
         elif self.current_held:

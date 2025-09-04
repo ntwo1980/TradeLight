@@ -107,6 +107,7 @@ class PairGridStrategy(BaseStrategy):
             'yesterday_price': current_price,
             'current_price': current_price,
             'base_price': base_price,
+            'rsi': rsi,
             'atr': atr,
         })
 

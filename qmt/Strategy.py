@@ -248,6 +248,7 @@ class SimpleGridStrategy(BaseStrategy):
             'yesterday_price': self.yesterday_price,
             'current_price': self.current_price,
             'base_price': base_price,
+            'rsi': self.rsi,
             'atr': self.atr,
             'grid_unit': self.grid_unit})
 
@@ -270,8 +271,6 @@ class SimpleGridStrategy(BaseStrategy):
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
         buy_amount = self.TradingAmount
-        if self.rsi < 20:
-            buy_amount *= 1.1  # RSI低时增加10%买入量
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
@@ -289,8 +288,6 @@ class SimpleGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, C, stock, current_price, current_holding):
         sell_amount = self.TradingAmount
-        if self.rsi > 80:
-            sell_amount *= 1.1
 
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100

@@ -7,9 +7,9 @@ import json
 import os
 
 
-class PairGridStrategy(BaseStrategy):
+class PairLevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
-        super().__init__(strategyPrefix='pairgrid', strategyId='a', **kwargs)
+        super().__init__(strategyPrefix='pairlevelgrid', strategyId='a', **kwargs)
         self.stock_A = self.Stocks[0]
         self.stock_B = self.Stocks[1]
 
@@ -20,11 +20,10 @@ class PairGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [2, 4, 8, 12, 22]
+        self.levels = [1, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
-        self.atr = 0
-        self.grid_unit = 0
+        self.min_trade = 0.02
         self.max_price = 0
         self.yesterday_price = 0
         self.current_held = None
@@ -39,16 +38,19 @@ class PairGridStrategy(BaseStrategy):
             self.current_held = state['current_held']
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
+            self.buy_index = state['buy_index']
+            self.sell_index = state['sell_index']
+            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}")
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
+        else:
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         yesterday = self.GetYesterday(C)
         if self.prices_date is None or self.prices_date != yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = yesterday
-
 
     def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -76,8 +78,7 @@ class PairGridStrategy(BaseStrategy):
 
         if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
             self.base_price = new_base_price
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
-
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
 
     def RunGridTrading(self, C, stock):
         prices = self.prices[stock]
@@ -88,7 +89,6 @@ class PairGridStrategy(BaseStrategy):
 
         rsi = talib.RSI(close, timeperiod=6)[-1]
         atr = talib.ATR(high, low, close, timeperiod=4)[-1]
-        grid_unit = atr
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -105,7 +105,7 @@ class PairGridStrategy(BaseStrategy):
             'stock': stock,
             'yesterday': prices['close'].index[-1],
             'yesterday_price': current_price,
-            'current_price': current_price,
+            'current_price': self.current_price,
             'base_price': base_price,
             'rsi': rsi,
             'atr': atr,
@@ -116,19 +116,33 @@ class PairGridStrategy(BaseStrategy):
         current_holding = holdings.get(stock, 0)
 
         executed = False
-        if self.current_price >= base_price + grid_unit:
-            executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
-        # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - grid_unit:
-            executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
+
+        min_trade = base_price * self.min_trade
+        if self.sell_index < len(self.levels):
+            diff = self.levels[self.sell_index] * atr
+            if diff < min_trade:
+                diff = min_trade
+
+            sell_threshold = base_price + diff
+            if self.current_price >= sell_threshold:
+                executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+
+        if self.buy_index < len(self.levels):
+            diff = self.levels[self.buy_index] * atr
+            if diff < min_trade:
+                diff = min_trade
+
+            buy_threshold = base_price - diff
+            if self.current_price <= buy_threshold:
+                executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding)
+            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
 
             if self.base_price is not None:
-                print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
+                print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
             else:
-                print(f"State saved: base_price=None, position={self.logical_holding}")
+                print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
         elif self.IsBacktest:
             self.g(C)
 
@@ -157,8 +171,9 @@ class PairGridStrategy(BaseStrategy):
             print("数据不足，跳过")
             return
 
-        price_A = self.prices[self.stock_A]['close'][-1]
-        price_B = self.prices[self.stock_B]['close'][-1]
+        current_prices = self.GetCurrentPrice(self.Stocks, C)
+        price_A =  current_prices[self.stock_A]
+        price_B =  current_prices[self.stock_B]
 
             # --- 1. 配对逻辑：选择被低估的资产（便宜的那个）---
         close_A = np.array(self.prices[self.stock_A]['close'][-20:])
@@ -189,8 +204,6 @@ class PairGridStrategy(BaseStrategy):
         # --- 2. 换仓逻辑：等值转移 ---
         if self.current_held and self.current_held != target_stock:
             print(f"执行换仓: {self.current_held} → {target_stock}")
-
-            current_prices = self.GetCurrentPrice([self.current_held, target_stock], C)
 
             old_stock = self.current_held
             new_stock = target_stock
@@ -228,6 +241,8 @@ class PairGridStrategy(BaseStrategy):
             self.current_held = stock
             self.logical_holding += unit_to_buy
             self.base_price = current_price
+            self.buy_index += 1
+            self.sell_index = 0
             print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
@@ -266,6 +281,8 @@ class PairGridStrategy(BaseStrategy):
             self.current_held = state['current_held']
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
+            self.buy_index = state['buy_index']
+            self.sell_index = state['sell_index']
 
         stock = self.Stocks[0]
 
@@ -274,7 +291,7 @@ class PairGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def LoadStrategyState(self, stocks, stockNames):
@@ -299,12 +316,14 @@ class PairGridStrategy(BaseStrategy):
                     'current_held': state.get('current_held'),
                     'base_price': state.get('base_price'),
                     'logical_holding': state.get('logical_holding', 0),
+                    'buy_index': state.get('buy_index', 0),
+                    'sell_index': state.get('sell_index', 0)
                 }
         except Exception as e:
             print(f"Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding):
+    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex):
         """Load strategy state from file"""
 
         if self.IsBacktest:
@@ -314,18 +333,13 @@ class PairGridStrategy(BaseStrategy):
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        if os.path.exists(file):
-            try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception as e:
-                print(f"Error reading state file, will create new: {e}")
-
         # Update state for current stock
         data = {
             'current_held': currentHeld,
             'base_price': basePrice,
             'logical_holding': logicalHolding,
+            'buy_index': buyIndex,
+            'sell_index': sellIndex
         }
 
         try:

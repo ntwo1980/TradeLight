@@ -368,13 +368,6 @@ class SimpleGridStrategy(BaseStrategy):
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        if os.path.exists(file):
-            try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception as e:
-                print(f"Error reading state file, will create new: {e}")
-
         # Update state for current stock
         data = {
             'base_price': basePrice,
@@ -422,7 +415,7 @@ class LevelGridStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, 0, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         yesterday = self.GetYesterday(C)
@@ -615,13 +608,6 @@ class LevelGridStrategy(BaseStrategy):
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        if os.path.exists(file):
-            try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception as e:
-                print(f"Error reading state file, will create new: {e}")
-
         # Update state for current stock
         data = {
             'base_price': basePrice,
@@ -649,7 +635,6 @@ class PairGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -671,6 +656,8 @@ class PairGridStrategy(BaseStrategy):
             print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
+        else:
+            self.SaveStrategyState(self.Stocks, self.StockNames, 0, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         yesterday = self.GetYesterday(C)
@@ -678,21 +665,19 @@ class PairGridStrategy(BaseStrategy):
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = yesterday
 
-
-    def SwitchPosition(self, C, old_stock, current_holding, new_stock):
+   def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        prices = self.GetCurrentPrice([old_stock, new_stock], C)
-        price_old = prices[old_stock]
+        price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)
         self.logical_holding = 0
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
         cash_from_sale = current_holding * price_old
 
-        price_new = prices[new_stock]
+        price_new = current_prices[new_stock]
 
         unit_to_buy = int(cash_from_sale / price_new)
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
@@ -705,8 +690,8 @@ class PairGridStrategy(BaseStrategy):
         available_cash = self.GetAvailableCash()
 
         if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
+            self.base_price = new_base_price
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
-
 
     def RunGridTrading(self, C, stock):
         prices = self.prices[stock]
@@ -725,7 +710,6 @@ class PairGridStrategy(BaseStrategy):
         else:
             self.current_price = current_price
 
-
         base_price = self.base_price
         if base_price is None:
             base_price = prices['close'][-10:].max()
@@ -734,8 +718,9 @@ class PairGridStrategy(BaseStrategy):
             'stock': stock,
             'yesterday': prices['close'].index[-1],
             'yesterday_price': current_price,
-            'current_price': current_price,
+            'current_price': self.current_price,
             'base_price': base_price,
+            'rsi': rsi,
             'atr': atr,
         })
 
@@ -785,8 +770,9 @@ class PairGridStrategy(BaseStrategy):
             print("数据不足，跳过")
             return
 
-        price_A = self.prices[self.stock_A]['close'][-1]
-        price_B = self.prices[self.stock_B]['close'][-1]
+        current_prices = self.GetCurrentPrice(self.Stocks, C)
+        price_A =  current_prices[self.stock_A]
+        price_B =  current_prices[self.stock_B]
 
             # --- 1. 配对逻辑：选择被低估的资产（便宜的那个）---
         close_A = np.array(self.prices[self.stock_A]['close'][-20:])
@@ -817,7 +803,23 @@ class PairGridStrategy(BaseStrategy):
         # --- 2. 换仓逻辑：等值转移 ---
         if self.current_held and self.current_held != target_stock:
             print(f"执行换仓: {self.current_held} → {target_stock}")
-            self.SwitchPosition(C, self.current_held, current_holding, target_stock)
+
+            current_prices = self.GetCurrentPrice([self.current_held, target_stock], C)
+
+            old_stock = self.current_held
+            new_stock = target_stock
+            price_old = current_prices[old_stock]
+            price_new = current_prices[target_stock]
+            old_base_price = self.base_price
+
+            if target_stock == self.stock_A:
+                conversion_ratio = mean_ratio  # A/B 均值
+            else:
+                conversion_ratio = 1.0 / mean_ratio  # B/A
+
+            new_base_price = price_new * conversion_ratio
+            self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:
@@ -926,13 +928,6 @@ class PairGridStrategy(BaseStrategy):
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        if os.path.exists(file):
-            try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception as e:
-                print(f"Error reading state file, will create new: {e}")
-
         # Update state for current stock
         data = {
             'current_held': currentHeld,
@@ -945,5 +940,3 @@ class PairGridStrategy(BaseStrategy):
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
             print(f"Failed to save strategy state: {e}")
-
-

@@ -50,20 +50,19 @@ class PairGridStrategy(BaseStrategy):
             self.prices_date = yesterday
 
 
-    def SwitchPosition(self, C, old_stock, current_holding, new_stock):
+    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        prices = self.GetCurrentPrice([old_stock, new_stock], C)
-        price_old = prices[old_stock]
+        price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)
         self.logical_holding = 0
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
         cash_from_sale = current_holding * price_old
 
-        price_new = prices[new_stock]
+        price_new = current_prices[new_stock]
 
         unit_to_buy = int(cash_from_sale / price_new)
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
@@ -76,6 +75,7 @@ class PairGridStrategy(BaseStrategy):
         available_cash = self.GetAvailableCash()
 
         if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
+            self.base_price = new_base_price
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
 
 
@@ -189,7 +189,24 @@ class PairGridStrategy(BaseStrategy):
         # --- 2. 换仓逻辑：等值转移 ---
         if self.current_held and self.current_held != target_stock:
             print(f"执行换仓: {self.current_held} → {target_stock}")
-            self.SwitchPosition(C, self.current_held, current_holding, target_stock)
+
+            current_prices = self.GetCurrentPrice([self.current_held, target_stock], C)
+
+            old_stock = self.current_held
+            new_stock = target_stock
+            price_old = current_prices[old_stock]
+            price_new = current_prices[target_stock]
+            old_base_price = self.base_price
+
+            if target_stock == self.stock_A:
+                conversion_ratio = mean_ratio  # A/B 均值
+            else:
+                conversion_ratio = 1.0 / mean_ratio  # B/A
+
+            new_base_price = price_new * conversion_ratio
+            print({'old_base_price': old_base_price, 'conversion_ratio': conversion_ratio, 'new_base_price': new_base_price, 'current_target_price': price_new, 'current_old_price': price_old})
+            self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:

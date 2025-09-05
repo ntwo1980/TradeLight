@@ -475,7 +475,7 @@ class LevelGridStrategy(BaseStrategy):
 
         min_trade = base_price * self.min_trade
         if self.sell_index < len(self.levels):
-            diff = self.levels[self.sell_index] * self.atr
+            diff = self.levels[self.sell_index] * self.atr * 0.8
             if diff < min_trade:
                 diff = min_trade
 
@@ -484,7 +484,7 @@ class LevelGridStrategy(BaseStrategy):
                 executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
         if self.buy_index < len(self.levels):
-            diff = self.levels[self.buy_index] * self.atr
+            diff = self.levels[self.buy_index] * self.atr  * 0.8
             if diff < min_trade:
                 diff = min_trade
 

@@ -393,6 +393,7 @@ class LevelGridStrategy(BaseStrategy):
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
+        self.slop = 0
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
@@ -426,6 +427,9 @@ class LevelGridStrategy(BaseStrategy):
             self.max_price = prices['close'][-10:].max()
 
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
+            x = np.arange(len(prices['close'].values))
+            log_prices = np.log(np.array(prices['close'].values))
+            self.slope, _ = np.polyfit(x, log_prices, 1)
 
     def f(self, C):
         if not self.IsBacktest and not self.IsTradingTime():
@@ -469,6 +473,7 @@ class LevelGridStrategy(BaseStrategy):
             'current_price': self.current_price,
             'base_price': base_price,
             'atr': self.atr,
+            'slope': self.slope,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index
         })
@@ -483,7 +488,7 @@ class LevelGridStrategy(BaseStrategy):
             if self.current_price >= sell_threshold:
                 executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-        if self.buy_index < len(self.levels):
+        if self.buy_index < len(self.levels) and self.slope > 0:
             diff = self.levels[self.buy_index] * self.atr  * 0.8
             if diff < min_trade:
                 diff = min_trade

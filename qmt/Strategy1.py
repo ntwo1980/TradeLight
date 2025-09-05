@@ -89,6 +89,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
         rsi = talib.RSI(close, timeperiod=6)[-1]
         atr = talib.ATR(high, low, close, timeperiod=4)[-1]
+        x = np.arange(len(prices['close'].values))
+        log_prices = np.log(np.array(prices['close'].values))
+        slope, _ = np.polyfit(x, log_prices, 1)
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -109,6 +112,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'base_price': base_price,
             'rsi': rsi,
             'atr': atr,
+            'slope': slope
         })
 
         available_cash = self.GetAvailableCash()
@@ -127,7 +131,7 @@ class PairLevelGridStrategy(BaseStrategy):
             if self.current_price >= sell_threshold:
                 executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-        if self.buy_index < len(self.levels):
+        if self.buy_index < len(self.levels) and slope > 0:
             diff = self.levels[self.buy_index] * atr
             if diff < min_trade:
                 diff = min_trade

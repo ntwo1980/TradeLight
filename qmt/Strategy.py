@@ -655,7 +655,7 @@ class PairGridStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, 0, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         yesterday = self.GetYesterday(C)

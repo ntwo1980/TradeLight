@@ -122,7 +122,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         min_trade = base_price * self.min_trade
         if self.sell_index < len(self.levels):
-            diff = self.levels[self.sell_index] * self.atr
+            diff = self.levels[self.sell_index] * self.atr * 0.8
             if diff < min_trade:
                 diff = min_trade
 
@@ -131,7 +131,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
         if self.buy_index < len(self.levels) and slope > 0:
-            diff = self.levels[self.buy_index] * self.atr
+            diff = self.levels[self.buy_index] * self.atr * 0.8
             if diff < min_trade:
                 diff = min_trade
 

@@ -818,6 +818,9 @@ class PairGridStrategy(BaseStrategy):
         else:
             self.RunGridTrading(C, self.stock_A)
 
+            if self.logical_holding <= 0:
+                self.RunGridTrading(C, self.stock_B)
+
         return
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):

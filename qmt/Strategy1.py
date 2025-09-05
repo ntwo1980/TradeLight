@@ -88,7 +88,7 @@ class PairLevelGridStrategy(BaseStrategy):
         close = prices['close'].values
 
         rsi = talib.RSI(close, timeperiod=6)[-1]
-        atr = talib.ATR(high, low, close, timeperiod=4)[-1]
+        self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
         slope, _ = np.polyfit(x, log_prices, 1)
@@ -98,7 +98,6 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_price = current_prices[stock]
         else:
             self.current_price = current_price
-
 
         base_price = self.base_price
         if base_price is None:
@@ -111,7 +110,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'current_price': self.current_price,
             'base_price': base_price,
             'rsi': rsi,
-            'atr': atr,
+            'atr': self.atr,
             'slope': slope
         })
 
@@ -123,7 +122,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         min_trade = base_price * self.min_trade
         if self.sell_index < len(self.levels):
-            diff = self.levels[self.sell_index] * atr
+            diff = self.levels[self.sell_index] * self.atr
             if diff < min_trade:
                 diff = min_trade
 
@@ -132,7 +131,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
         if self.buy_index < len(self.levels) and slope > 0:
-            diff = self.levels[self.buy_index] * atr
+            diff = self.levels[self.buy_index] * self.atr
             if diff < min_trade:
                 diff = min_trade
 
@@ -215,16 +214,15 @@ class PairLevelGridStrategy(BaseStrategy):
             price_new = current_prices[target_stock]
             old_base_price = self.base_price
 
-            # new_base_price = price_new * conversion_ratio
             new_base_price = old_base_price * price_new / price_old
             self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
-
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:
             self.RunGridTrading(C, self.stock_A)
 
-        return
+            if self.logical_holding <= 0:
+                self.RunGridTrading(C, self.stock_B)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):
         if trading_amount is None:
@@ -287,7 +285,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         stock = self.Stocks[0]
 
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price / self.current_price - 1) > 0.06:
+        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)

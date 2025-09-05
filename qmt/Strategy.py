@@ -315,7 +315,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         stock = self.Stocks[0]
 
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price / self.current_price - 1) > 0.06:
+        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
@@ -561,7 +561,7 @@ class LevelGridStrategy(BaseStrategy):
 
         stock = self.Stocks[0]
 
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price / self.current_price - 1) > 0.06:
+        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
@@ -665,7 +665,7 @@ class PairGridStrategy(BaseStrategy):
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = yesterday
 
-   def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
+    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
@@ -701,8 +701,8 @@ class PairGridStrategy(BaseStrategy):
         close = prices['close'].values
 
         rsi = talib.RSI(close, timeperiod=6)[-1]
-        atr = talib.ATR(high, low, close, timeperiod=4)[-1]
-        grid_unit = atr
+        self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
+        grid_unit = self.atr
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -721,7 +721,7 @@ class PairGridStrategy(BaseStrategy):
             'current_price': self.current_price,
             'base_price': base_price,
             'rsi': rsi,
-            'atr': atr,
+            'atr': self.atr,
         })
 
         available_cash = self.GetAvailableCash()
@@ -883,7 +883,7 @@ class PairGridStrategy(BaseStrategy):
 
         stock = self.Stocks[0]
 
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price / self.current_price - 1) > 0.06:
+        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)

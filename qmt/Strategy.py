@@ -359,27 +359,23 @@ class SimpleGridStrategy(BaseStrategy):
 
 
     def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            return
-
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        # Update state for current stock
         data = {
             'base_price': basePrice,
             'logical_holding': logicalHolding
         }
 
-        try:
-            with open(file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Failed to save strategy state: {e}")
-
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")
 
 class LevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -599,16 +595,10 @@ class LevelGridStrategy(BaseStrategy):
 
 
     def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            return
-
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        # Update state for current stock
         data = {
             'base_price': basePrice,
             'logical_holding': logicalHolding,
@@ -616,11 +606,14 @@ class LevelGridStrategy(BaseStrategy):
             'sell_index': sellIndex
         }
 
-        try:
-            with open(file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Failed to save strategy state: {e}")
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")
 
 class PairGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -812,12 +805,7 @@ class PairGridStrategy(BaseStrategy):
             price_new = current_prices[target_stock]
             old_base_price = self.base_price
 
-            if target_stock == self.stock_A:
-                conversion_ratio = mean_ratio  # A/B 均值
-            else:
-                conversion_ratio = 1.0 / mean_ratio  # B/A
-
-            new_base_price = price_new * conversion_ratio
+            new_base_price = old_base_price * price_new / price_old
             self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
 
         elif self.current_held:
@@ -861,12 +849,8 @@ class PairGridStrategy(BaseStrategy):
             self.logical_holding -= unit_to_sell
             if self.logical_holding > 0:
                 self.base_price = current_price
-                self.sell_index += 1
-                self.buy_index = 0
             else:
                 self.base_price = None
-                self.sell_index = 0
-                self.buy_index = 0
             print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
             return True
 
@@ -919,24 +903,21 @@ class PairGridStrategy(BaseStrategy):
 
 
     def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            return
-
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
-        # Update state for current stock
         data = {
             'current_held': currentHeld,
             'base_price': basePrice,
             'logical_holding': logicalHolding,
         }
 
-        try:
-            with open(file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Failed to save strategy state: {e}")
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")

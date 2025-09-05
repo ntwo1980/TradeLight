@@ -816,9 +816,10 @@ class PairGridStrategy(BaseStrategy):
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:
+            old_holding = self.logical_holding
             self.RunGridTrading(C, self.stock_A)
 
-            if self.logical_holding <= 0:
+            if old_holding <=0 and self.logical_holding <= 0:
                 self.RunGridTrading(C, self.stock_B)
 
         return

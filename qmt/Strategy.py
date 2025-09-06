@@ -1377,9 +1377,11 @@ class MomentumRotationStrategy(BaseStrategy):
         self.UpdateMarketData(C, self.Stocks)
 
         ranks = self.GetRank()
-        print(ranks)
         if not self.IsBacktest:
             print(self.prices)
+            print(ranks)
+        else:
+            print(yesterday)
 
         current_prices = self.GetCurrentPrice(self.Stocks, C)
 

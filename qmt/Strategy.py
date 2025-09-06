@@ -5,6 +5,7 @@ import numpy as np
 import talib
 import json
 import os
+import math
 
 class BaseStrategy():
     def __init__(self, stocks, stockNames, strategyPrefix, strategyId,  get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 1000, MaxAmount = 100000):
@@ -1274,3 +1275,211 @@ class PairLevelGridStrategy(BaseStrategy):
             except Exception as e:
                 print(f"Failed to save strategy state: {e}")
 
+class MomentumRotationStrategy(BaseStrategy):
+    def __init__(self, **kwargs):
+        super().__init__(strategyPrefix='momrot', strategyId='a', **kwargs)
+
+    def init(self, C):
+        super().init(C)
+
+        self.prices = None
+        self.days = 25
+        self.base_price = None
+        self.logical_holding = 0
+        self.current_held = None
+
+        C.set_universe(self.Stocks)
+
+        self.LoadStrategyState(self.Stocks, self.StockNames)
+
+        state = self.State
+        if state and state['base_price'] is not None:
+            self.current_held = state['current_held']
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
+        elif self.IsBacktest:
+            print("No historical state found, will initialize base_price using first average")
+        else:
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
+
+    def UpdateMarketData(self, C, stocks):
+        yesterday = self.GetYesterday(C)
+        self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
+
+    def GetRank(self):
+        rank_list = []
+
+        for stock in self.Stocks:
+            df = self.prices[stock]
+            y = df['log'] = np.log(df.close)
+            x = df['num'] = np.arange(df.log.size)
+            slope, intercept = np.polyfit(x, y, 1)
+            annualized_returns = math.pow(math.exp(slope), 250) - 1
+            r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
+            score = annualized_returns * r_squared
+            score=round(score, 2)
+            rank_list.append((stock, score))
+
+        rank_list = sorted(rank_list, key=lambda x: x[1], reverse=True)
+
+        return rank_list
+
+
+    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices):
+        print(f'SwitchPosition holding is {current_holding}')
+
+        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        price_old = current_prices[old_stock]
+        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
+        self.logical_holding = 0
+        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
+
+        cash_from_sale = current_holding * price_old
+
+        price_new = current_prices[new_stock]
+
+        unit_to_buy = int(cash_from_sale / price_new)
+        unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
+
+        if unit_to_buy == 0:
+            print(f"换仓金额不足100股，跳过")
+            return
+
+        # 检查可用资金
+        available_cash = self.GetAvailableCash()
+
+        if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
+            self.base_price = price_new
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
+
+    def f(self, C):
+        if not self.IsBacktest and not self.IsTradingTime():
+            return
+
+        yesterday = self.GetYesterday(C)
+        available_cash = self.GetAvailableCash()
+
+        if not self.CheckWaitingList():
+            return
+
+        # Get position
+        holdings = self.GetPositions()
+
+        current_holding = holdings.get(self.current_held, 0)
+
+        # === Core logic ===
+
+        executed = False
+
+        # Get current market price
+        self.UpdateMarketData(C, self.Stocks)
+
+        ranks = self.GetRank()
+        print(ranks)
+        if not self.IsBacktest:
+            print(self.prices)
+
+        current_prices = self.GetCurrentPrice(self.Stocks, C)
+
+        target = ranks[0][0]
+        # target = self.current_held if self.current_held is not None else self.Stocks[0]
+
+        # print(ranks[0][1] - ranks[1][1] )
+        # if ranks[0][1] - ranks[1][1] > 1:
+        #     target = ranks[0][0]
+
+        if self.current_held is None:
+            self.ExecuteBuy(C, target, current_prices[target], available_cash)
+        elif self.current_held != target:
+            self.SwitchPosition(C, self.current_held, current_holding, target, current_prices)
+
+
+    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):
+        if trading_amount is None:
+            buy_amount = self.TradingAmount
+        else:
+            buy_amount = trading_amount
+
+        unit_to_buy = int(buy_amount / current_price)
+        unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.MaxAmount:
+            strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+            self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            self.current_held = stock
+            self.logical_holding += unit_to_buy
+            self.base_price = current_price
+            print(f"Updated base price to: {self.base_price:.3f}")
+            return True
+        else:
+            print("Insufficient cash or calculated shares is zero, cannot buy")
+            return False
+
+    def ExecuteSell(self, C, stock, current_price, current_holding):
+        sell_amount = self.TradingAmount
+
+        unit_to_sell = int(sell_amount / current_price)
+        unit_to_sell = (unit_to_sell // 100) * 100
+        unit_to_sell = min(unit_to_sell, current_holding)
+
+        if unit_to_sell > 0:    # Ensure at least 100 shares
+            strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+            self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            self.logical_holding -= unit_to_sell
+            if self.logical_holding > 0:
+                self.base_price = current_price
+            else:
+                self.base_price = None
+            print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
+            return True
+
+        return False
+
+    def LoadStrategyState(self, stocks, stockNames):
+        """Load strategy state from file"""
+
+        if self.IsBacktest:
+            self.State = None
+            return
+
+        stock = stocks[0]
+        stockName = stockNames[0]
+        file = self.GetStateFileName(stock, stockName)
+
+        if not os.path.exists(file):
+            self.State = None
+            return
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+                # Check if state for current stock exists
+                self.State = {
+                    'current_held': state.get('current_held'),
+                    'base_price': state.get('base_price'),
+                    'logical_holding': state.get('logical_holding', 0),
+                }
+        except Exception as e:
+            print(f"Failed to load strategy state: {e}")
+
+
+    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding):
+        stock = stocks[0]
+        stockName = stockNames[0]
+        file = self.GetStateFileName(stock, stockName)
+
+        data = {
+            'current_held': currentHeld,
+            'base_price': basePrice,
+            'logical_holding': logicalHolding,
+        }
+
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")

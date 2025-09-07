@@ -148,7 +148,11 @@ class BaseStrategy():
         msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         self.PassOrder(23, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
         self.WaitingList.append(msg)
-        print(f"Buy {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+
+        if price > 0:
+            print(f"Buy {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+        else:
+            print(f"Buy {quantity} shares")
         return msg
 
     def Sell(self, C, stock, quantity, price, strategy_name, order_type=2):
@@ -156,7 +160,10 @@ class BaseStrategy():
         msg = f"{strategy_name}_sell_{quantity}_{timestamp}"
         self.PassOrder(24, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
         self.WaitingList.append(msg)
-        print(f"Sell {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+        if price > 0:
+            print(f"Sell {quantity} shares, price: {price:.3f}, total amount: {quantity * price:.2f}")
+        else:
+            print(f"Sell {quantity} shares")
         return msg
 
 class SimpleGridStrategy(BaseStrategy):

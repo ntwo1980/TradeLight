@@ -396,8 +396,7 @@ class LevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [2, 4, 8, 12, 22]
-        # self.levels = [1, 2, 4, 8, 12, 22]
+        self.levels = [1, 2, 4, 8, 12, 22]
         self.min_trade = 0.02
         self.buy_index = 0
         self.sell_index = 0
@@ -870,6 +869,7 @@ class PairGridStrategy(BaseStrategy):
             if self.logical_holding > 0:
                 self.base_price = current_price
             else:
+                self.current_held = None
                 self.base_price = None
             print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
             return True
@@ -956,8 +956,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [2, 4, 8, 12, 22]
-        # self.levels = [1, 2, 4, 8, 12, 22]
+        self.levels = [1, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.min_trade = 0.02
@@ -1203,6 +1202,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.sell_index += 1
                 self.buy_index = 0
             else:
+                self.current_held = None
                 self.base_price = None
                 self.sell_index = 0
                 self.buy_index = 0
@@ -1497,3 +1497,177 @@ class MomentumRotationStrategy(BaseStrategy):
                     json.dump(data, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 print(f"Failed to save strategy state: {e}")
+
+class JointquantEmailStrategy(BaseStrategy):
+    def __init__(self, **kwargs):
+        super().__init__(strategyPrefix='jointquantemail', strategyId='a', **kwargs)
+        # self.JointquantStrategyId = jointquantStrategyId
+        # self.JointquantStrategyName = jointquantStrategyName
+
+    def init(self, C):
+        super().init(C)
+
+        self.last_time = None
+        self.held = []
+        self.logical_holding = 0
+        self.LoadStrategyState()
+
+        state = self.State
+        if state and state['last_time'] is not None:
+            self.last_time = state['last_time']
+            self.held = state['held']
+            # print(f"Loaded state from file: last_time={self.last_time}, position={self.logical_holding}, current_held={self.current_held}")
+            print(f"Loaded state from file: last_time={self.last_time}")
+        elif self.IsBacktest:
+            print("No historical state found")
+        else:
+            self.SaveStrategyState(self, None, [])
+
+    def f(self, C):
+        if not self.IsBacktest and not self.IsTradingTime():
+            return
+
+        yesterday = self.GetYesterday(C)
+        available_cash = self.GetAvailableCash()
+
+        if not self.CheckWaitingList():
+            return
+
+        # Get position
+        holdings = self.GetPositions()
+
+        file = f'D:/software/君弘君智交易系统/bin.x64/joinquant_{self.Stocks[0]}.json'
+        if not os.path.exists(file):
+            return
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+
+                self.last_time = state['current_time']
+                held_stocks = state['held_stocks']
+        except Exception as e:
+            print(f"Failed to load strategy state: {e}")
+
+        held_stocks = [s.replace('XSHE', 'SZ') for s in held_stocks]
+        held_stocks = [s.replace('XSHG', 'SH') for s in held_stocks]
+
+        executed = False
+        to_hold = []
+        for hold in self.held:
+            stock = hold['stock']
+            logical_holding = hold['logical_holding']
+            if stock not in held_stocks:
+                if self.ExecuteSell(C, stock, int(logical_holding)):
+                    executed = True
+            else:
+                to_hold.append(hold)
+
+        to_buy = [s for s in held_stocks if s not in self.held]
+        if to_buy:
+            if not self.IsBacktest:
+                self.SellYHRL(C, self.TradingAmount * len(to_buy), holdings)
+            current_prices = self.GetCurrentPrice(to_buy, C)
+            for to_hold in to_buy:
+                if self.ExecuteBuy(C, to_hold, current_prices[to_hold]):
+                    executed = True
+                    to_hold.append({'stock': to_hold, 'logical_holding': self.logical_holding})
+
+        self.held = held
+
+        if executed:
+            self.SaveStrategyState(self.last_time, self.held)
+
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None):
+        if trading_amount is None:
+            buy_amount = self.TradingAmount
+        else:
+            buy_amount = trading_amount
+
+        unit_to_buy = int(buy_amount / current_price)
+        unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+
+        if  unit_to_buy > 0:
+            strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+            # self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            # print({'stock': stock, 'unit_to_buy': unit_to_buy, 'current_price': current_price, 'strategy_name': strategy_name})
+            self.logical_holding += unit_to_buy
+            return True
+
+    def SellYHRL(self, C, target_cash, holdings):
+        stock = '511880.SH'
+        current_holding = holdings.get(stock, 0)
+
+        if current_holding <= 0:
+            print(f"无511880.SH持仓")
+            return
+
+        current_price = 100
+
+        # 计算每100股价值（511880.SH通常100股起卖）
+        value_per_100 = current_price * 100
+
+        units_needed = int((target_cash + value_per_100 - 1) / value_per_100)  # 向上取整
+        sell_units = min(units_needed, current_holding // 100)
+        sell_volume = sell_units * 100
+
+        if sell_volume <=0 :
+            print(f"资金缺口小，不足卖出100股，暂不操作")
+            return
+
+        if sell_volume > 0:
+            self.PassOrder(24, 1101, self.Account, stock, 14, -1, sell_volume, '', 2, '', C)
+
+    def ExecuteSell(self, C, stock, current_holding):
+        sell_amount = self.TradingAmount
+
+        unit_to_sell = current_holding
+
+        if unit_to_sell > 0:    # Ensure at least 100 shares
+            strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+            # self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+
+            return True
+
+        return False
+
+    def LoadStrategyState(self):
+        """Load strategy state from file"""
+
+        if self.IsBacktest:
+            self.State = None
+            return
+
+        stock = self.Stocks[0]
+        file = self.GetStateFileName(stock, stock)
+
+        if not os.path.exists(file):
+            self.State = None
+            return
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+                # Check if state for current stock exists
+                self.State = {
+                    'last_time': state.get('last_time'),
+                }
+        except Exception as e:
+            print(f"Failed to load strategy state: {e}")
+
+
+    def SaveStrategyState(self, last_time, held):
+        file = self.GetStateFileName(self.Stocks[0], self.StockNames[0])
+
+        data = {
+            'last_time': last_time,
+            'held': held
+        }
+
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")
+

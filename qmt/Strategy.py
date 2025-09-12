@@ -401,7 +401,10 @@ class LevelGridStrategy(BaseStrategy):
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
-        self.slop = 0
+        self.slope = 0
+        self.sma10 = 0
+        self.above_sma10_count = 0
+        self.below_sma10_count = 0
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
@@ -439,6 +442,12 @@ class LevelGridStrategy(BaseStrategy):
             log_prices = np.log(np.array(prices['close'].values))
             self.slope, _ = np.polyfit(x, log_prices, 1)
 
+            self.sma10 = talib.SMA(prices['close'].values, timeperiod=10)[-1]
+            close_prices = prices['close'].values[-10:]
+            sma10_series = talib.MA(prices['close'].values, timeperiod=10)[-10:]
+            self.above_sma10_count = sum(1 for c, s in zip(close_prices, sma10_series) if c > s)
+            self.below_sma10_count = sum(1 for c, s in zip(close_prices, sma10_series) if c < s)
+
     def f(self, C):
         if not self.IsBacktest and not self.IsTradingTime():
             return
@@ -473,6 +482,17 @@ class LevelGridStrategy(BaseStrategy):
         if base_price is None:
             base_price = self.max_price
 
+        '''
+        if base_price is not None and not np.isnan(self.sma10):
+            if (self.above_sma10_count >= 7 and self.slope > 0 and self.current_price > base_price) or \
+               (self.below_sma10_count >= 7 and self.slope < 0 and self.current_price < base_price):
+                print(f"Detected strong trend: above_sma10_count={self.above_sma10_count}, "
+                      f"below_sma10_count={self.below_sma10_count}, sma10={self.sma10:.2f}, "
+                      f"slope={self.slope:.4f}, current_price={self.current_price:.2f}, "
+                      f"base_price={base_price:.2f}. Skipping trade.")
+                return
+        '''
+
         print({
             'stock': self.Stocks[0],
             'stock_name': self.StockNames[0],
@@ -482,6 +502,9 @@ class LevelGridStrategy(BaseStrategy):
             'base_price': base_price,
             'atr': self.atr,
             'slope': self.slope,
+            'sma10': self.sma10,
+            'above_sma10_count': self.above_sma10_count,
+            'below_sma10_count': self.below_sma10_count,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index
         })
@@ -551,6 +574,7 @@ class LevelGridStrategy(BaseStrategy):
                 self.base_price = current_price
                 self.sell_index += 1
                 self.buy_index = 0
+
             else:
                 self.base_price = None
                 self.sell_index = 0

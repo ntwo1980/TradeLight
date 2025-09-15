@@ -8,7 +8,7 @@ import os
 import math
 
 class BaseStrategy():
-    def __init__(self, stocks, stockNames, strategyPrefix, strategyId,  get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 1000, MaxAmount = 100000):
+    def __init__(self, stocks, stockNames, strategyPrefix, strategyId,  get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 30000, MaxAmount = None):
         self.Stocks = stocks
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
@@ -17,7 +17,10 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
-        self.MaxAmount = MaxAmount
+        if MaxAmount is None:
+            self.MaxAmount = self.TradingAmount * 3.5
+        else:
+            self.MaxAmount = MaxAmount
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func

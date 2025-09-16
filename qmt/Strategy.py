@@ -8,7 +8,7 @@ import os
 import math
 
 class BaseStrategy():
-    def __init__(self, stocks, stockNames, strategyPrefix, strategyId,  get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 30000, MaxAmount = None):
+    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 30000, MaxAmount = None, closePosition = False):
         self.Stocks = stocks
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
@@ -21,6 +21,7 @@ class BaseStrategy():
             self.MaxAmount = self.TradingAmount * 3.5
         else:
             self.MaxAmount = MaxAmount
+        self.ClosePosition = closePosition
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -513,25 +514,30 @@ class LevelGridStrategy(BaseStrategy):
         })
 
         min_trade = base_price * self.min_trade
-        if self.sell_index < len(self.levels):
-            # diff = self.levels[self.sell_index] * self.atr * 0.8
-            diff = self.current_price * self.levels[self.sell_index] / 100
-            if diff < min_trade:
-                diff = min_trade
 
-            sell_threshold = base_price + diff
-            if self.current_price >= sell_threshold:
-                executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
+        if self.ClosePosition and self.slope < 0 and current_holding > 0:
+            print('清仓')
+            executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+        else:
+            if self.sell_index < len(self.levels) and current_holding > 0:
+                # diff = self.levels[self.sell_index] * self.atr * 0.8
+                diff = self.current_price * self.levels[self.sell_index] / 100
+                if diff < min_trade:
+                    diff = min_trade
 
-        if self.buy_index < len(self.levels) and self.slope > 0:
-            # diff = self.levels[self.buy_index] * self.atr  * 0.8
-            diff = self.current_price * self.levels[self.buy_index] / 100
-            if diff < min_trade:
-                diff = min_trade
+                sell_threshold = base_price + diff
+                if self.current_price >= sell_threshold:
+                    executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            buy_threshold = base_price - diff
-            if self.current_price <= buy_threshold:
-                executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
+            if self.buy_index < len(self.levels) and self.slope > 0:
+                # diff = self.levels[self.buy_index] * self.atr  * 0.8
+                diff = self.current_price * self.levels[self.buy_index] / 100
+                if diff < min_trade:
+                    diff = min_trade
+
+                buy_threshold = base_price - diff
+                if self.current_price <= buy_threshold:
+                    executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
             self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
@@ -562,12 +568,15 @@ class LevelGridStrategy(BaseStrategy):
             print("Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):
-        sell_amount = self.TradingAmount
+    def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):
+        if close_position:
+            unit_to_sell = current_holding
+        else:
+            sell_amount = self.TradingAmount
 
-        unit_to_sell = int(sell_amount / current_price)
-        unit_to_sell = (unit_to_sell // 100) * 100
-        unit_to_sell = min(unit_to_sell, current_holding)
+            unit_to_sell = int(sell_amount / current_price)
+            unit_to_sell = (unit_to_sell // 100) * 100
+            unit_to_sell = min(unit_to_sell, current_holding)
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
@@ -1083,25 +1092,29 @@ class PairLevelGridStrategy(BaseStrategy):
         executed = False
 
         min_trade = base_price * self.min_trade
-        if self.sell_index < len(self.levels):
-            diff = self.current_price * self.levels[self.sell_index] / 100
-            # diff = self.levels[self.sell_index] * self.atr * 0.8
-            if diff < min_trade:
-                diff = min_trade
+        if self.ClosePosition and slope < 0 and current_holding > 0:
+            print('清仓')
+            executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+        else:
+            if self.sell_index < len(self.levels):
+                diff = self.current_price * self.levels[self.sell_index] / 100
+                # diff = self.levels[self.sell_index] * self.atr * 0.8
+                if diff < min_trade:
+                    diff = min_trade
 
-            sell_threshold = base_price + diff
-            if self.current_price >= sell_threshold:
-                executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+                sell_threshold = base_price + diff
+                if self.current_price >= sell_threshold:
+                    executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-        if self.buy_index < len(self.levels) and slope > 0:
-            diff = self.current_price * self.levels[self.buy_index] / 100
-            # diff = self.levels[self.buy_index] * self.atr * 0.8
-            if diff < min_trade:
-                diff = min_trade
+            if self.buy_index < len(self.levels) and slope > 0:
+                diff = self.current_price * self.levels[self.buy_index] / 100
+                # diff = self.levels[self.buy_index] * self.atr * 0.8
+                if diff < min_trade:
+                    diff = min_trade
 
-            buy_threshold = base_price - diff
-            if self.current_price <= buy_threshold:
-                executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
+                buy_threshold = base_price - diff
+                if self.current_price <= buy_threshold:
+                    executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
             self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
@@ -1213,12 +1226,17 @@ class PairLevelGridStrategy(BaseStrategy):
             print("Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):
-        sell_amount = self.TradingAmount
 
-        unit_to_sell = int(sell_amount / current_price)
-        unit_to_sell = (unit_to_sell // 100) * 100
-        unit_to_sell = min(unit_to_sell, current_holding)
+
+    def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):
+        if close_position:
+            unit_to_sell = current_holding
+        else:
+            sell_amount = self.TradingAmount
+
+            unit_to_sell = int(sell_amount / current_price)
+            unit_to_sell = (unit_to_sell // 100) * 100
+            unit_to_sell = min(unit_to_sell, current_holding)
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1315,14 +1333,14 @@ class PairLevelGridStrategy(BaseStrategy):
                 print(f"Failed to save strategy state: {e}")
 
 class MomentumRotationStrategy(BaseStrategy):
-    def __init__(self, **kwargs):
-        super().__init__(strategyPrefix='momrot', strategyId='a', **kwargs)
+    def __init__(self, strategyId='a', days=25, **kwargs):
+        super().__init__(strategyPrefix='momrot', strategyId=strategyId, **kwargs)
+        self.days = days
 
     def init(self, C):
         super().init(C)
 
         self.prices = None
-        self.days = 25
         self.base_price = None
         self.logical_holding = 0
         self.current_held = None

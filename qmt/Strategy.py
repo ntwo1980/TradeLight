@@ -100,6 +100,20 @@ class BaseStrategy():
 
         return prices
 
+    def GetWeekday(self, day):
+        dt = datetime.datetime.strptime(day, '%Y%m%d')
+
+        return dt.weekday()
+
+    def GetToday(self, C):
+        if self.IsBacktest:
+            today = self.TimetagToDatetime(C.get_bar_timetag(C.barpos), '%Y%m%d')
+        else:
+            now = datetime.datetime.now()
+            today = now.strftime('%Y%m%d')
+
+        return today
+
     def GetYesterday(self, C):
         if self.IsBacktest:
             yesterday = self.TimetagToDatetime(C.get_bar_timetag(C.barpos - 1), '%Y%m%d')

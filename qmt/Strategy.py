@@ -319,6 +319,9 @@ class SimpleGridStrategy(BaseStrategy):
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
 
+        if 0 < (current_holding - unit_to_sell) * current_price < 3000:
+            unit_to_sell = current_holding
+
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
@@ -591,6 +594,9 @@ class LevelGridStrategy(BaseStrategy):
             unit_to_sell = int(sell_amount / current_price)
             unit_to_sell = (unit_to_sell // 100) * 100
             unit_to_sell = min(unit_to_sell, current_holding)
+
+        if 0 < (current_holding - unit_to_sell) * current_price < 3000:
+            unit_to_sell = current_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
@@ -911,6 +917,9 @@ class PairGridStrategy(BaseStrategy):
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
+
+        if 0 < (current_holding - unit_to_sell) * current_price < 3000:
+            unit_to_sell = current_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1252,6 +1261,9 @@ class PairLevelGridStrategy(BaseStrategy):
             unit_to_sell = (unit_to_sell // 100) * 100
             unit_to_sell = min(unit_to_sell, current_holding)
 
+            if 0 < (current_holding - unit_to_sell) * current_price < 3000:
+                unit_to_sell = current_holding
+
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
@@ -1347,9 +1359,10 @@ class PairLevelGridStrategy(BaseStrategy):
                 print(f"Failed to save strategy state: {e}")
 
 class MomentumRotationStrategy(BaseStrategy):
-    def __init__(self, strategyId='a', days=25, **kwargs):
+    def __init__(self, strategyId='a', days=25, rank=1, **kwargs):
         super().__init__(strategyPrefix='momrot', strategyId=strategyId, **kwargs)
         self.days = days
+        self.rank = 1
 
     def init(self, C):
         super().init(C)
@@ -1378,7 +1391,8 @@ class MomentumRotationStrategy(BaseStrategy):
         yesterday = self.GetYesterday(C)
         self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
 
-    def GetRank(self):
+
+    def GetRank1(self):
         rank_list = []
 
         for stock in self.Stocks:
@@ -1396,6 +1410,27 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return rank_list
 
+    def GetRank2(self):
+        rank_list = []
+
+        for stock in self.Stocks:
+            df = self.prices[stock]
+            y = np.log(df['close'].values)
+            n = len(y)
+            x = np.arange(n)
+            weights = np.linspace(1, 2, n)  # 线性增加权重
+            slope, intercept = np.polyfit(x, y, 1, w=weights)
+            annualized_returns = math.pow(math.exp(slope), 250) - 1
+            residuals = y - (slope * x + intercept)
+            weighted_residuals = weights * residuals**2
+            r_squared = 1 - (np.sum(weighted_residuals) / np.sum(weights * (y - np.mean(y))**2))
+            score = annualized_returns * r_squared
+
+            rank_list.append((stock, score))
+
+        rank_list = sorted(rank_list, key=lambda x: x[1], reverse=True)
+
+        return rank_list
 
     def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices):
         print(f'SwitchPosition holding is {current_holding}')
@@ -1447,7 +1482,11 @@ class MomentumRotationStrategy(BaseStrategy):
         # Get current market price
         self.UpdateMarketData(C, self.Stocks)
 
-        ranks = self.GetRank()
+        if self.rank == 1:
+            ranks = self.GetRank1()
+        else:
+            ranks = self.GetRank2()
+
         if not self.IsBacktest:
             print(self.prices)
             print(ranks)
@@ -1496,6 +1535,9 @@ class MomentumRotationStrategy(BaseStrategy):
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
+
+        if 0 < (current_holding - unit_to_sell) * current_price < 3000:
+            unit_to_sell = current_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1560,8 +1602,6 @@ class MomentumRotationStrategy(BaseStrategy):
 class JointquantEmailStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(strategyPrefix='jointquantemail', strategyId='a', **kwargs)
-        # self.JointquantStrategyId = jointquantStrategyId
-        # self.JointquantStrategyName = jointquantStrategyName
 
     def init(self, C):
         super().init(C)
@@ -1580,7 +1620,7 @@ class JointquantEmailStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found")
         else:
-            self.SaveStrategyState(self, None, [])
+            self.SaveStrategyState(None, [])
 
     def f(self, C):
         if not self.IsBacktest and not self.IsTradingTime():
@@ -1621,17 +1661,18 @@ class JointquantEmailStrategy(BaseStrategy):
             else:
                 to_hold.append(hold)
 
-        to_buy = [s for s in held_stocks if s not in self.held]
+        hold_stocks = {item["stock"] for item in self.held}
+        to_buy = [s for s in held_stocks if s not in hold_stocks]
         if to_buy:
             if not self.IsBacktest:
                 self.SellYHRL(C, self.TradingAmount * len(to_buy), holdings)
             current_prices = self.GetCurrentPrice(to_buy, C)
-            for to_hold in to_buy:
-                if self.ExecuteBuy(C, to_hold, current_prices[to_hold]):
+            for h in to_buy:
+                if self.ExecuteBuy(C, h, current_prices[h]):
                     executed = True
-                    to_hold.append({'stock': to_hold, 'logical_holding': self.logical_holding})
+                    to_hold.append({'stock': h, 'logical_holding': self.logical_holding})
 
-        self.held = held
+        self.held = to_hold
 
         if executed:
             self.SaveStrategyState(self.last_time, self.held)
@@ -1705,9 +1746,9 @@ class JointquantEmailStrategy(BaseStrategy):
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-                # Check if state for current stock exists
                 self.State = {
                     'last_time': state.get('last_time'),
+                    'held': state.get('held'),
                 }
         except Exception as e:
             print(f"Failed to load strategy state: {e}")

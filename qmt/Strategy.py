@@ -29,11 +29,27 @@ class BaseStrategy():
         self.State = None
         self.PriceDate = None
         self.Prices = None
+        self.NotClosePositionStocks = {
+            '159985.SZ'    # 豆粕
+            '159687.SZ'    # 亚太精选
+            '513080.SH'    # 法国CAC40
+            '159691.SZ'    # 港股红利
+            '159518.SZ'    # 标普油气
+            '513350.SH'    # 标普油气
+            '159509.SZ'    # 纳指科技
+        }
 
     def init(self, C):
         self.IsBacktest = C.do_back_test
 
         self.RebuildWaitingListFromOpenOrders()
+
+    def f(self, C):
+        today = self.GetToday(C)
+        month = self.GetMonth(today)
+
+        if month == 4:
+            self.ClosePosition = True
 
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"
@@ -100,6 +116,11 @@ class BaseStrategy():
 
         return prices
 
+    def GetMonth(self, day):
+        dt = datetime.datetime.strptime(day, '%Y%m%d')
+
+        return dt.month
+
     def GetWeekday(self, day):
         dt = datetime.datetime.strptime(day, '%Y%m%d')
 
@@ -126,7 +147,7 @@ class BaseStrategy():
     def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
         yesterday = self.GetYesterday(C)
 
-        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=yesterday)
+        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=yesterday, dividend_type='front')
 
         for stock in stocks:
             if stock not in prices:
@@ -234,6 +255,8 @@ class SimpleGridStrategy(BaseStrategy):
             self.grid_unit = self.GetGridUnit(stock, self.yesterday_price, self.atr)
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
@@ -470,6 +493,8 @@ class LevelGridStrategy(BaseStrategy):
             self.below_sma10_count = sum(1 for c, s in zip(close_prices, sma10_series) if c < s)
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
@@ -532,7 +557,7 @@ class LevelGridStrategy(BaseStrategy):
 
         min_trade = base_price * self.min_trade
 
-        if self.ClosePosition and self.slope < 0 and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and self.slope < 0 and current_holding > 0:
             print('清仓')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
         else:
@@ -810,6 +835,8 @@ class PairGridStrategy(BaseStrategy):
             self.g(C)
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
@@ -1115,7 +1142,7 @@ class PairLevelGridStrategy(BaseStrategy):
         executed = False
 
         min_trade = base_price * self.min_trade
-        if self.ClosePosition and slope < 0 and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and self.slope < 0 and current_holding > 0:
             print('清仓')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
         else:
@@ -1150,6 +1177,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.g(C)
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
@@ -1461,6 +1490,8 @@ class MomentumRotationStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 

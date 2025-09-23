@@ -17,6 +17,7 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
+        self.SellCount = 0
         if MaxAmount is None:
             self.MaxAmount = self.TradingAmount * 3.5
         else:
@@ -38,6 +39,15 @@ class BaseStrategy():
             '513350.SH'    # 标普油气
             '159509.SZ'    # 纳指科技
         }
+
+    def GetTradingAmount(self):
+        return self.TradingAmount * (self.SellCount / 100 + 1)
+
+    def GetMaxAmount(self):
+        if self.MaxAmount is not None:
+            return self.MaxAmount
+
+        return self.GetTradingAmount() * 3.1
 
     def init(self, C):
         self.IsBacktest = C.do_back_test
@@ -463,11 +473,13 @@ class LevelGridStrategy(BaseStrategy):
             self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
+            self.SellCount = state.get('sell_count', 0)
+
+            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         yesterday = self.GetYesterday(C)
@@ -582,7 +594,7 @@ class LevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -592,12 +604,12 @@ class LevelGridStrategy(BaseStrategy):
             self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
-        buy_amount = self.TradingAmount
+        buy_amount = self.GetTradingAmount()
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.MaxAmount:
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
@@ -614,7 +626,7 @@ class LevelGridStrategy(BaseStrategy):
         if close_position:
             unit_to_sell = current_holding
         else:
-            sell_amount = self.TradingAmount
+            sell_amount = self.GetTradingAmount()
 
             unit_to_sell = int(sell_amount / current_price)
             unit_to_sell = (unit_to_sell // 100) * 100
@@ -627,6 +639,7 @@ class LevelGridStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
+            self.SellCount += 1
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
@@ -650,6 +663,7 @@ class LevelGridStrategy(BaseStrategy):
             self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
+            self.SellCount = state['sell_count']
 
         stock = self.Stocks[0]
 
@@ -658,7 +672,7 @@ class LevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def LoadStrategyState(self, stocks, stockNames):
@@ -684,13 +698,14 @@ class LevelGridStrategy(BaseStrategy):
                     'base_price': state.get('base_price'),
                     'logical_holding': state.get('logical_holding', 0),
                     'buy_index': state.get('buy_index', 0),
-                    'sell_index': state.get('sell_index', 0)
+                    'sell_index': state.get('sell_index', 0),
+                    'sell_count': state.get('sell_count', 0)
                 }
         except Exception as e:
             print(f"Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex):
+    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex, sellCount):
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -699,7 +714,8 @@ class LevelGridStrategy(BaseStrategy):
             'base_price': basePrice,
             'logical_holding': logicalHolding,
             'buy_index': buyIndex,
-            'sell_index': sellIndex
+            'sell_index': sellIndex,
+            'sell_count': sellCount,
         }
 
         if self.IsBacktest:

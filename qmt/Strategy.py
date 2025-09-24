@@ -29,13 +29,13 @@ class BaseStrategy():
         self.PriceDate = None
         self.Prices = None
         self.NotClosePositionStocks = {
-            '159985.SZ'    # 豆粕
-            '159687.SZ'    # 亚太精选
-            '513080.SH'    # 法国CAC40
-            '159691.SZ'    # 港股红利
-            '159518.SZ'    # 标普油气
-            '513350.SH'    # 标普油气
-            '159509.SZ'    # 纳指科技
+            '159985.SZ',    # 豆粕
+            '159687.SZ',    # 亚太精选
+            '513080.SH',    # 法国CAC40
+            '159691.SZ',    # 港股红利
+            '159518.SZ',    # 标普油气
+            '513350.SH',    # 标普油气
+            '159509.SZ',    # 纳指科技
         }
 
     def GetTradingAmount(self):
@@ -100,7 +100,7 @@ class BaseStrategy():
 
     def RebuildWaitingListFromOpenOrders(self):
         if self.IsBacktest:
-            return []
+            return
 
         self.WaitingList = []
         orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
@@ -1313,11 +1313,12 @@ class PairLevelGridStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
+            self.SellCount += 1
+
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
                 self.buy_index = 0
-                self.SellCount += 1
             else:
                 self.current_held = None
                 self.base_price = None
@@ -1351,11 +1352,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def LoadStrategyState(self, stocks, stockNames):
         """Load strategy state from file"""
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
         if self.IsBacktest:
             self.State = None
             return

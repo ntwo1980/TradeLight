@@ -18,10 +18,7 @@ class BaseStrategy():
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
         self.SellCount = 0
-        if MaxAmount is None:
-            self.MaxAmount = self.TradingAmount * 3.5
-        else:
-            self.MaxAmount = MaxAmount
+        self.MaxAmount = MaxAmount
         self.ClosePosition = closePosition
         self.OldClosePosition = self.ClosePosition
         self.WaitingList = []
@@ -48,7 +45,7 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        return self.GetTradingAmount() * 3.1
+        return self.GetTradingAmount() * 3.5
 
     def init(self, C):
         self.IsBacktest = C.do_back_test
@@ -1570,7 +1567,7 @@ class MomentumRotationStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.MaxAmount:
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock

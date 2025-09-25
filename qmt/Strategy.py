@@ -572,7 +572,7 @@ class LevelGridStrategy(BaseStrategy):
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
-                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                level = self.levels[self.sell_index if not good_up or self.sell_index == len(self.levels) - 1 else self.sell_index + 1]
                 diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade
@@ -583,7 +583,7 @@ class LevelGridStrategy(BaseStrategy):
 
             if self.buy_index < len(self.levels) and self.slope > 0:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
-                level = self.levels[self.buy_index if not good_up else self.buy_index + 1]
+                level = self.levels[self.buy_index if not bad_down or self.buy_index == len(self.levels) - 1 else self.buy_index + 1]
                 diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade

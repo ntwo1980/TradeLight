@@ -492,21 +492,25 @@ class LevelGridStrategy(BaseStrategy):
         yesterday = self.GetYesterday(C)
         if self.prices_date is None or self.prices_date != yesterday:
             stock = stocks[0]
-            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=250)
             self.prices_date = yesterday
-            self.prices = prices[stock]
+            self.all_prices = prices[stock]
+            self.prices = prices[stock][-30:]
             prices = self.prices
             self.yesterday_price = prices['close'][-1]
             self.current_price = self.yesterday_price
             self.max_price = prices['close'][-10:].max()
 
+            sma_5 = talib.SMA(prices['close'], timeperiod=5)
+            sma_10 = talib.SMA(prices['close'], timeperiod=10)
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))
             y = np.log(np.array(prices['close'].values))
             self.slope, intercept = np.polyfit(x, y, 1)
             self.r_squared = 1 - (sum((y - (self.slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
 
-            close_prices = prices['close'].values[-10:]
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.006 and self.prices['close'].max() * 1.2 and self.all_prices['close'].max():
+                self.ClosePosition = True
 
     def f(self, C):
         super().f(C)
@@ -563,12 +567,13 @@ class LevelGridStrategy(BaseStrategy):
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and self.slope < 0 and current_holding > 0:
-            print('清仓')
+            print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
         else:
-            if self.sell_index < len(self.levels) and current_holding > 0 and not good_up:
+            if self.sell_index < len(self.levels) and current_holding > 0:
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
-                diff = self.current_price * self.levels[self.sell_index] / 100
+                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade
 
@@ -576,9 +581,10 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and self.slope > 0 and not bad_down:
+            if self.buy_index < len(self.levels) and self.slope > 0:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
-                diff = self.current_price * self.levels[self.buy_index] / 100
+                level = self.levels[self.buy_index if not good_up else self.buy_index + 1]
+                diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade
 
@@ -1816,4 +1822,3 @@ class JointquantEmailStrategy(BaseStrategy):
                     json.dump(data, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 print(f"Failed to save strategy state: {e}")
-

@@ -940,7 +940,8 @@ class PairGridStrategy(BaseStrategy):
 
             new_base_price = old_base_price * price_new / price_old
             self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
-
+            if self.IsBacktest:
+                self.f(C)
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:
@@ -1140,7 +1141,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -1155,7 +1156,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
@@ -1199,7 +1200,7 @@ class PairLevelGridStrategy(BaseStrategy):
         executed = False
 
         min_trade = base_price * self.min_trade
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and self.slope < 0 and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and slope < 0 and current_holding > 0:
             print('清仓')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
         else:
@@ -1304,6 +1305,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
             new_base_price = old_base_price * price_new / price_old
             self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            if self.IsBacktest:
+                self.f(C)
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:

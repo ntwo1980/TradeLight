@@ -753,6 +753,9 @@ class PairGridStrategy(BaseStrategy):
         self.yesterday_price = 0
         self.current_held = None
         self.threshold_ratio = 0.01
+        self.pending_switch_to = None
+        self.pending_switch_cash = 0
+        self.new_base_price = None
 
         C.set_universe(self.Stocks)
 
@@ -776,19 +779,10 @@ class PairGridStrategy(BaseStrategy):
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = yesterday
 
-    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
-        print(f'SwitchPosition holding is {current_holding}')
+    def SwitchPosition_Buy(self, C, current_prices):
+        cash_from_sale = self.pending_switch_cash
 
-        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
-        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        price_old = current_prices[old_stock]
-        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
-        self.logical_holding = 0
-        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
-
-        cash_from_sale = current_holding * price_old
-
-        price_new = current_prices[new_stock]
+        price_new = current_prices[self.pending_switch_to]
 
         unit_to_buy = int(cash_from_sale / price_new)
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
@@ -800,9 +794,28 @@ class PairGridStrategy(BaseStrategy):
         # 检查可用资金
         available_cash = self.GetAvailableCash()
 
-        if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
-            self.base_price = new_base_price
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale):
+            self.base_price = self.new_base_price
+            self.pending_switch_to = None
+            self.pending_switch_cash = 0
+            self.new_base_price = None
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
+        print(f'SwitchPosition holding is {current_holding}')
+
+        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        price_old = current_prices[old_stock]
+        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
+        self.logical_holding = 0
+        self.pending_switch_to = new_stock
+        self.pending_switch_cash = current_holding * price_old
+        self.current_held = None
+        self.base_price = None
+        self.new_base_price = new_base_price
+        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
         prices = self.prices[stock]
@@ -914,10 +927,10 @@ class PairGridStrategy(BaseStrategy):
             target_stock = self.stock_A
 
         # --- 2. 换仓逻辑：等值转移 ---
-        if self.current_held and self.current_held != target_stock:
+        if self.pending_switch_to is not None:
+            self.SwitchPosition_Buy(C, current_prices)
+        elif self.current_held and self.current_held != target_stock:
             print(f"执行换仓: {self.current_held} → {target_stock}")
-
-            current_prices = self.GetCurrentPrice([self.current_held, target_stock], C)
 
             old_stock = self.current_held
             new_stock = target_stock
@@ -926,7 +939,7 @@ class PairGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
 
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
@@ -1078,6 +1091,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.max_price = 0
         self.yesterday_price = 0
         self.current_held = None
+        self.pending_switch_to = None
+        self.pending_switch_cash = 0
+        self.new_base_price = None
 
         C.set_universe(self.Stocks)
 
@@ -1104,19 +1120,10 @@ class PairLevelGridStrategy(BaseStrategy):
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = yesterday
 
-    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
-        print(f'SwitchPosition holding is {current_holding}')
+    def SwitchPosition_Buy(self, C, current_prices):
+        cash_from_sale = self.pending_switch_cash
 
-        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
-        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        price_old = current_prices[old_stock]
-        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
-        self.logical_holding = 0
-        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
-
-        cash_from_sale = current_holding * price_old
-
-        price_new = current_prices[new_stock]
+        price_new = current_prices[self.pending_switch_to]
 
         unit_to_buy = int(cash_from_sale / price_new)
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
@@ -1128,9 +1135,28 @@ class PairLevelGridStrategy(BaseStrategy):
         # 检查可用资金
         available_cash = self.GetAvailableCash()
 
-        if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale, isSwitch = True):
-            self.base_price = new_base_price
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale):
+            self.base_price = self.new_base_price
+            self.pending_switch_to = None
+            self.pending_switch_cash = 0
+            self.new_base_price = None
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
+        print(f'SwitchPosition holding is {current_holding}')
+
+        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        price_old = current_prices[old_stock]
+        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
+        self.logical_holding = 0
+        self.pending_switch_to = new_stock
+        self.pending_switch_cash = current_holding * price_old
+        self.current_held = None
+        self.base_price = None
+        self.new_base_price = new_base_price
+        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
         prices = self.prices[stock]
@@ -1265,7 +1291,9 @@ class PairLevelGridStrategy(BaseStrategy):
             target_stock = self.stock_A
 
         # --- 2. 换仓逻辑：等值转移 ---
-        if self.current_held and self.current_held != target_stock:
+        if self.pending_switch_to is not None:
+            self.SwitchPosition_Buy(C, current_prices)
+        elif self.current_held and self.current_held != target_stock:
             print(f"执行换仓: {self.current_held} → {target_stock}")
 
             old_stock = self.current_held
@@ -1275,7 +1303,7 @@ class PairLevelGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:

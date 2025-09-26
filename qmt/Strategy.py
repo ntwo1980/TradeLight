@@ -303,7 +303,7 @@ class SimpleGridStrategy(BaseStrategy):
         base_price = self.base_price  # copy a local base_price
 
         if base_price is None:
-            base_price = self.max_price
+            base_price = max(self.max_price, self.current_price)
 
         print({
             'stock': self.Stocks[0],
@@ -359,6 +359,9 @@ class SimpleGridStrategy(BaseStrategy):
 
         if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
             unit_to_sell = current_holding
+
+        if self.logical_holding < unit_to_sell:
+            unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
@@ -546,7 +549,7 @@ class LevelGridStrategy(BaseStrategy):
         base_price = self.base_price  # copy a local base_price
 
         if base_price is None:
-            base_price = self.max_price
+            base_price = max(self.max_price, self.current_price)
 
         print({
             'stock': self.Stocks[0],
@@ -572,7 +575,7 @@ class LevelGridStrategy(BaseStrategy):
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
-                level = self.levels[self.sell_index if not good_up or self.sell_index == len(self.levels) - 1 else self.sell_index + 1]
+                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                 diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade
@@ -583,7 +586,7 @@ class LevelGridStrategy(BaseStrategy):
 
             if self.buy_index < len(self.levels) and self.slope > 0:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
-                level = self.levels[self.buy_index if not bad_down or self.buy_index == len(self.levels) - 1 else self.buy_index + 1]
+                level = self.levels[self.buy_index if not good_up else self.buy_index + 1]
                 diff = self.current_price * level / 100
                 if diff < min_trade:
                     diff = min_trade
@@ -633,6 +636,9 @@ class LevelGridStrategy(BaseStrategy):
 
         if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
             unit_to_sell = current_holding
+
+        if self.logical_holding < unit_to_sell:
+            unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
@@ -817,7 +823,7 @@ class PairGridStrategy(BaseStrategy):
 
         base_price = self.base_price
         if base_price is None:
-            base_price = prices['close'][-10:].max()
+            base_price = max(prices['close'][-10:].max(), self.current_price)
 
         print({
             'stock': stock,
@@ -925,10 +931,10 @@ class PairGridStrategy(BaseStrategy):
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
         else:
-            old_holding = self.logical_holding
-            self.RunGridTrading(C, self.stock_A)
+            if self.logical_holding == 0:
+                self.RunGridTrading(C, self.stock_A)
 
-            if old_holding <=0 and self.logical_holding <= 0:
+            if self.logical_holding == 0:
                 self.RunGridTrading(C, self.stock_B)
 
         return
@@ -963,6 +969,9 @@ class PairGridStrategy(BaseStrategy):
 
         if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
             unit_to_sell = current_holding
+
+        if self.logical_holding < unit_to_sell:
+            unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1144,7 +1153,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         base_price = self.base_price
         if base_price is None:
-            base_price = prices['close'][-10:].max()
+            base_price = max(prices['close'][-10:].max(), self.current_price)
 
         print({
             'stock': stock,
@@ -1314,6 +1323,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
             if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
                 unit_to_sell = current_holding
+
+        if self.logical_holding < unit_to_sell:
+            unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1590,6 +1602,9 @@ class MomentumRotationStrategy(BaseStrategy):
 
         if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
             unit_to_sell = current_holding
+
+        if self.logical_holding < unit_to_sell:
+            unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])

@@ -512,7 +512,7 @@ class LevelGridStrategy(BaseStrategy):
             self.slope, intercept = np.polyfit(x, y, 1)
             self.r_squared = 1 - (sum((y - (self.slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.006 and self.prices['close'].max() * 1.2 and self.all_prices['close'].max():
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.006:
                 self.ClosePosition = True
 
     def f(self, C):

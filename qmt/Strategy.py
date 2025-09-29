@@ -525,7 +525,7 @@ class LevelGridStrategy(BaseStrategy):
                 'days_above_ma': self.days_above_sma
             })
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.0015:
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.005:
                 self.ClosePosition = True
 
     def f(self, C):
@@ -1211,7 +1211,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma': days_above_sma
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and slope < -0.0015:
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and slope < -0.005:
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()

@@ -23,6 +23,7 @@ class BaseStrategy():
         self.MaxAmount = MaxAmount
         self.ClosePositionSetting = closePosition
         self.ClosePosition = False
+        self.ClosePositionDate = None
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -484,8 +485,9 @@ class LevelGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
             self.SellCount = state.get('sell_count', 0)
+            self.ClosePositionDate = state.get('close_position_date', None)
 
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
+            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
@@ -525,7 +527,7 @@ class LevelGridStrategy(BaseStrategy):
                 'days_above_ma': self.days_above_sma
             })
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.005:
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10):
                 self.ClosePosition = True
 
     def f(self, C):
@@ -570,8 +572,10 @@ class LevelGridStrategy(BaseStrategy):
             'yesterday_price': self.yesterday_price,
             'current_price': self.current_price,
             'base_price': base_price,
+            'close_position_date': self.ClosePositionDate,
             'atr': self.atr,
             'slope': self.slope,
+            'self.days_above_sma': self.days_above_sma,
             'r_squared': self.r_squared,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index
@@ -597,7 +601,7 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and self.slope > -0.001 and self.days_above_sma > 5:
+            if not self.ClosePosition and self.buy_index < len(self.levels) and self.slope > -0.001 and self.days_above_sma > 10:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
@@ -609,7 +613,7 @@ class LevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -658,6 +662,8 @@ class LevelGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
+            if close_position:
+                self.ClosePositionDate = self.Today
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
@@ -690,7 +696,7 @@ class LevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def LoadStrategyState(self, stocks, stockNames):
@@ -717,13 +723,14 @@ class LevelGridStrategy(BaseStrategy):
                     'logical_holding': state.get('logical_holding', 0),
                     'buy_index': state.get('buy_index', 0),
                     'sell_index': state.get('sell_index', 0),
-                    'sell_count': state.get('sell_count', 0)
+                    'sell_count': state.get('sell_count', 0),
+                    'close_position_date': state.get('close_position_date', None)
                 }
         except Exception as e:
             print(f"Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex, sellCount):
+    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -734,6 +741,7 @@ class LevelGridStrategy(BaseStrategy):
             'buy_index': buyIndex,
             'sell_index': sellIndex,
             'sell_count': sellCount,
+            'close_position_date': closePositionDate
         }
 
         if self.IsBacktest:
@@ -1211,7 +1219,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma': days_above_sma
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and slope < -0.005:
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()

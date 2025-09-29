@@ -21,8 +21,8 @@ class BaseStrategy():
         self.TradingAmount = TradingAmount
         self.SellCount = 0
         self.MaxAmount = MaxAmount
-        self.ClosePosition = closePosition
-        self.OldClosePosition = self.ClosePosition
+        self.ClosePositionSetting = closePosition
+        self.ClosePosition = False
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -63,7 +63,7 @@ class BaseStrategy():
         if month == 4 or (month == 3 and day >=20):
             self.ClosePosition = True
         else:
-            self.ClosePosition = self.OldClosePosition
+            self.ClosePosition = False
 
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"
@@ -468,6 +468,7 @@ class LevelGridStrategy(BaseStrategy):
         self.atr = 0
         self.slope = 0
         self.r_squared = 0
+        self.days_above_ma = 0
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
@@ -493,7 +494,8 @@ class LevelGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
-            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
+            # print(prices)
             self.prices_date = self.Yesterday
             self.all_prices = prices[stock]
             self.prices = prices[stock][-30:]
@@ -502,15 +504,28 @@ class LevelGridStrategy(BaseStrategy):
             self.current_price = self.yesterday_price
             self.max_price = prices['close'][-10:].max()
 
-            sma_5 = talib.SMA(prices['close'], timeperiod=5)
-            sma_10 = talib.SMA(prices['close'], timeperiod=10)
+            sma_5 = talib.SMA(self.all_prices['close'], timeperiod=5)
+            sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
+            sma_30 = talib.MA(self.all_prices['close'], timeperiod=30)
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))
             y = np.log(np.array(prices['close'].values))
             self.slope, intercept = np.polyfit(x, y, 1)
             self.r_squared = 1 - (sum((y - (self.slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
+            self.days_above_sma = np.sum(self.all_prices['close'].values[30:] > sma_30[30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.006:
+            print({
+                'stock': self.Stocks[0],
+                'stock_name': self.StockNames[0],
+                'yesterday': self.prices['close'].index[-1],
+                'yesterday_price': self.yesterday_price,
+                'slope': self.slope,
+                'sma_5': sma_5[-1],
+                'sma_10': sma_10[-1],
+                'days_above_ma': self.days_above_sma
+            })
+
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and self.slope < -0.0015:
                 self.ClosePosition = True
 
     def f(self, C):
@@ -566,9 +581,10 @@ class LevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and self.slope < 0 and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+            self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
@@ -581,7 +597,7 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and self.slope > 0:
+            if self.buy_index < len(self.levels) and self.slope > 0 and self.days_above_sma > 5:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
@@ -1112,7 +1128,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
-            self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):
@@ -1154,17 +1170,22 @@ class PairLevelGridStrategy(BaseStrategy):
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
-        prices = self.prices[stock]
+        all_prices = self.prices[stock]
+        prices = self.prices[stock][-30:]
         current_price = prices['close'][-1]
         high = prices['high'].values
         low = prices['low'].values
         close = prices['close'].values
 
         rsi = talib.RSI(close, timeperiod=6)[-1]
+        sma_5 = talib.SMA(all_prices['close'], timeperiod=5)
+        sma_10 = talib.SMA(all_prices['close'], timeperiod=10)
+        sma_30 = talib.MA(all_prices['close'], timeperiod=30)
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
-        slope, _ = np.polyfit(x, log_prices, 1)
+        slope, r_squared = np.polyfit(x, log_prices, 1)
+        days_above_sma = np.sum(all_prices['close'].values[30:] > sma_30[30:])
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -1184,8 +1205,14 @@ class PairLevelGridStrategy(BaseStrategy):
             'base_price': base_price,
             'rsi': rsi,
             'atr': self.atr,
-            'slope': slope
+            'slope': slope,
+            'sma_5': sma_5[-1],
+            'sma_10': sma_10[-1],
+            'days_above_ma': days_above_sma
         })
+
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and slope < -0.0015:
+            self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()
         holdings = self.GetPositions()
@@ -1194,12 +1221,18 @@ class PairLevelGridStrategy(BaseStrategy):
         executed = False
 
         min_trade = base_price * self.min_trade
+
+        good_up = r_squared > 0.8 and slope > 0
+        bad_down = r_squared > 0.8 and slope < 0
+
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and slope < 0 and current_holding > 0:
-            print('清仓')
+            print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+            self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels):
-                diff = self.current_price * self.levels[self.sell_index] / 100
+                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                diff = self.current_price * level / 100
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
                 if diff < min_trade:
                     diff = min_trade
@@ -1208,8 +1241,9 @@ class PairLevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and slope > 0:
-                diff = self.current_price * self.levels[self.buy_index] / 100
+            if self.buy_index < len(self.levels) and slope > 0 and days_above_sma > 5:
+                level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
+                diff = self.current_price * level / 100
                 # diff = self.levels[self.buy_index] * self.atr * 0.8
                 if diff < min_trade:
                     diff = min_trade

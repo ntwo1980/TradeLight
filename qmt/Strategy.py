@@ -491,7 +491,7 @@ class LevelGridStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, None)
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -551,10 +551,6 @@ class LevelGridStrategy(BaseStrategy):
 
         # Get current market price
         self.UpdateMarketData(C, self.Stocks)
-
-        if self.ClosePositionDate is not None:
-            # print(self.prices)
-            pass
 
         if self.max_price == 0:
             print("max_price is 0")

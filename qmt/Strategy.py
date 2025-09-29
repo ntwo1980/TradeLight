@@ -1223,7 +1223,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma': days_above_sma
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10):
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (slope < -0.005 or days_above_sma <= 10):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()
@@ -1253,7 +1253,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and slope > -0.001 and days_above_sma > 5:
+            if not self.ClosePosition and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
                 # diff = self.levels[self.buy_index] * self.atr * 0.8

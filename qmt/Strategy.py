@@ -597,7 +597,7 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and self.slope > 0 and self.days_above_sma > 5:
+            if self.buy_index < len(self.levels) and self.slope > -0.001 and self.days_above_sma > 5:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
@@ -1225,7 +1225,7 @@ class PairLevelGridStrategy(BaseStrategy):
         good_up = r_squared > 0.8 and slope > 0
         bad_down = r_squared > 0.8 and slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and slope < 0 and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
             self.ClosePosition = False
@@ -1241,7 +1241,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-            if self.buy_index < len(self.levels) and slope > 0 and days_above_sma > 5:
+            if self.buy_index < len(self.levels) and slope > -0.001 and days_above_sma > 5:
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
                 # diff = self.levels[self.buy_index] * self.atr * 0.8

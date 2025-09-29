@@ -552,6 +552,10 @@ class LevelGridStrategy(BaseStrategy):
         # Get current market price
         self.UpdateMarketData(C, self.Stocks)
 
+        if self.ClosePositionDate is not None:
+            # print(self.prices)
+            pass
+
         if self.max_price == 0:
             print("max_price is 0")
             return
@@ -601,7 +605,7 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if not self.ClosePosition and self.buy_index < len(self.levels) and self.slope > -0.001 and self.days_above_sma > 10:
+            if not self.ClosePosition and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100

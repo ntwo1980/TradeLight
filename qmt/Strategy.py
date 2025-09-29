@@ -14,6 +14,8 @@ class BaseStrategy():
         self.StrategyPrefix = strategyPrefix
         self.StrategyId = strategyId
         self.IsBacktest = True
+        self.Today = None
+        self.Yesterday = None
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
@@ -53,9 +55,10 @@ class BaseStrategy():
         self.RebuildWaitingListFromOpenOrders()
 
     def f(self, C):
-        today = self.GetToday(C)
-        month = self.GetMonth(today)
-        day = self.GetDay(today)
+        self.Today = self.GetToday(C)
+        self.Yesterday = self.GetYesterday(C)
+        month = self.GetMonth(self.Today)
+        day = self.GetDay(self.Today)
 
         if month == 4 or (month == 3 and day >=20):
             self.ClosePosition = True
@@ -161,9 +164,7 @@ class BaseStrategy():
         return yesterday
 
     def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
-        yesterday = self.GetYesterday(C)
-
-        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=yesterday, dividend_type='front')
+        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=self.Yesterday, dividend_type='front')
 
         for stock in stocks:
             if stock not in prices:
@@ -254,11 +255,10 @@ class SimpleGridStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
-        yesterday = self.GetYesterday(C)
-        if self.prices_date is None or self.prices_date != yesterday:
+        if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
-            self.prices_date = yesterday
+            self.prices_date = self.Yesterday
             self.prices = prices[stock]
             prices = self.prices
             self.yesterday_price = prices['close'][-1]
@@ -275,7 +275,6 @@ class SimpleGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():
@@ -492,11 +491,10 @@ class LevelGridStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
-        yesterday = self.GetYesterday(C)
-        if self.prices_date is None or self.prices_date != yesterday:
+        if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
-            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=250)
-            self.prices_date = yesterday
+            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            self.prices_date = self.Yesterday
             self.all_prices = prices[stock]
             self.prices = prices[stock][-30:]
             prices = self.prices
@@ -521,7 +519,6 @@ class LevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():
@@ -774,10 +771,9 @@ class PairGridStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
-        yesterday = self.GetYesterday(C)
-        if self.prices_date is None or self.prices_date != yesterday:
+        if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
-            self.prices_date = yesterday
+            self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):
         cash_from_sale = self.pending_switch_cash
@@ -875,7 +871,6 @@ class PairGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():
@@ -1116,10 +1111,9 @@ class PairLevelGridStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
-        yesterday = self.GetYesterday(C)
-        if self.prices_date is None or self.prices_date != yesterday:
+        if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
-            self.prices_date = yesterday
+            self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):
         cash_from_sale = self.pending_switch_cash
@@ -1240,7 +1234,6 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():
@@ -1481,7 +1474,6 @@ class MomentumRotationStrategy(BaseStrategy):
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
-        yesterday = self.GetYesterday(C)
         self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
 
 
@@ -1559,7 +1551,6 @@ class MomentumRotationStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():
@@ -1586,7 +1577,7 @@ class MomentumRotationStrategy(BaseStrategy):
             print(self.prices)
             print(ranks)
         else:
-            print(yesterday)
+            print(self.Yesterday)
 
         current_prices = self.GetCurrentPrice(self.Stocks, C)
 
@@ -1721,10 +1712,11 @@ class JointquantEmailStrategy(BaseStrategy):
             self.SaveStrategyState(None, [])
 
     def f(self, C):
+        super().f(C)
+
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        yesterday = self.GetYesterday(C)
         available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList():

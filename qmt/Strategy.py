@@ -588,7 +588,6 @@ class LevelGridStrategy(BaseStrategy):
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
-            self.SellCount = 0
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
@@ -1239,7 +1238,6 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
-            self.SellCount = 0
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels):

@@ -271,7 +271,7 @@ class SimpleGridStrategy(BaseStrategy):
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -320,7 +320,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None:
+        if base_price is None or base_price == 0:
             base_price = max(self.max_price, self.current_price)
 
         print({
@@ -580,7 +580,7 @@ class LevelGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None:
+        if base_price is None or base_price == 0:
             base_price = max(self.max_price, self.current_price)
 
         print({
@@ -873,7 +873,7 @@ class PairGridStrategy(BaseStrategy):
             self.current_price = current_price
 
         base_price = self.base_price
-        if base_price is None:
+        if base_price is None or base_price == 0:
             base_price = max(prices['close'][-10:].max(), self.current_price)
 
         print({
@@ -1221,7 +1221,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_price = current_price
 
         base_price = self.base_price
-        if base_price is None:
+        if base_price is None or base_price == 0:
             base_price = max(prices['close'][-10:].max(), self.current_price)
 
         print({

@@ -1127,12 +1127,13 @@ class PairLevelGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
             self.SellCount = state.get('sell_count', 0)
+            self.ClosePositionDate = state.get('close_position_date', None)
 
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
+            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
         elif self.IsBacktest:
             print("No historical state found, will initialize base_price using first average")
         else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0)
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0, None)
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -1211,6 +1212,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'yesterday_price': current_price,
             'current_price': self.current_price,
             'base_price': base_price,
+            'close_position_date': self.ClosePositionDate,
             'rsi': rsi,
             'atr': self.atr,
             'slope': slope,
@@ -1261,7 +1263,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -1398,7 +1400,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
-
+            if close_position:
+                self.ClosePositionDate = self.Today
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
@@ -1431,7 +1434,7 @@ class PairLevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def LoadStrategyState(self, stocks, stockNames):
@@ -1463,7 +1466,7 @@ class PairLevelGridStrategy(BaseStrategy):
             print(f"Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount):
+    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
         stock = stocks[0]
         stockName = stockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -1475,6 +1478,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_index': buyIndex,
             'sell_index': sellIndex,
             'sell_count': sellCount,
+            'close_position_date': closePositionDate
         }
 
         if self.IsBacktest:

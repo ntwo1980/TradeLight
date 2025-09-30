@@ -8,7 +8,7 @@ import os
 import math
 
 class BaseStrategy():
-    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = 30000, MaxAmount = None, closePosition = False):
+    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = None, MaxAmount = None, closePosition = False):
         self.Stocks = stocks
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
@@ -52,6 +52,7 @@ class BaseStrategy():
 
     def init(self, C):
         self.IsBacktest = C.do_back_test
+        self.LoadGlobalSetting()
 
         self.RebuildWaitingListFromOpenOrders()
 
@@ -65,6 +66,23 @@ class BaseStrategy():
             self.ClosePosition = True
         else:
             self.ClosePosition = False
+
+    def LoadGlobalSetting(self):
+        file = 'global.json'
+
+        if self.TradingAmount is not None:
+            return
+
+        if not os.path.exists(file):
+            self.TradingAmount = 30000
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+
+                self.TradingAmount = state.get('trading_amount, 30000')
+        except Exception as e:
+            print(f"Failed to load global setting: {e}")
+
 
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"

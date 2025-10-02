@@ -480,8 +480,7 @@ class LevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [1, 2, 4, 8, 12, 22]
-        self.min_trade = 0.02
+        self.levels = [2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -491,6 +490,7 @@ class LevelGridStrategy(BaseStrategy):
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
+        self.simple_stocks = ['159518.SZ', '513350.SH']
 
         C.set_universe(self.Stocks)
 
@@ -606,7 +606,6 @@ class LevelGridStrategy(BaseStrategy):
             'sell_index': self.sell_index
         })
 
-        min_trade = base_price * self.min_trade
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
@@ -619,8 +618,6 @@ class LevelGridStrategy(BaseStrategy):
                 # diff = self.levels[self.sell_index] * self.atr * 0.8
                 level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                 diff = self.current_price * level / 100
-                if diff < min_trade:
-                    diff = min_trade
 
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
@@ -630,8 +627,6 @@ class LevelGridStrategy(BaseStrategy):
                 # diff = self.levels[self.buy_index] * self.atr  * 0.8
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
-                if diff < min_trade:
-                    diff = min_trade
 
                 buy_threshold = base_price - diff
                 if self.current_price <= buy_threshold:

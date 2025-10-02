@@ -62,7 +62,9 @@ class BaseStrategy():
         month = self.GetMonth(self.Today)
         day = self.GetDay(self.Today)
 
-        if month == 4 or (month == 3 and day >=20):
+        if (month == 4 and day <= 20) or (month == 3 and day >=20):
+            self.ClosePosition = True
+        elif month == 12 and day >=20:
             self.ClosePosition = True
         else:
             self.ClosePosition = False
@@ -480,7 +482,10 @@ class LevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
+        self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
+        if self.Stocks[0] in self.simple_stocks:
+            self.levels = [2, 2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -490,7 +495,6 @@ class LevelGridStrategy(BaseStrategy):
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
-        self.simple_stocks = ['159518.SZ', '513350.SH']
 
         C.set_universe(self.Stocks)
 
@@ -615,18 +619,36 @@ class LevelGridStrategy(BaseStrategy):
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
-                # diff = self.levels[self.sell_index] * self.atr * 0.8
-                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
-                diff = self.current_price * level / 100
+                if self.Stocks[0] in self.simple_stocks:
+                    level = self.levels[self.sell_index]
+                    if level == self.levels[0]:
+                        diff = max(self.atr, self.current_price * level / 100)
+                    else:
+                        diff = self.current_price * level / 100
+                else:
+                    level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                    diff = self.current_price * level / 100
 
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
 
-            if not self.ClosePosition and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
-                # diff = self.levels[self.buy_index] * self.atr  * 0.8
-                level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
-                diff = self.current_price * level / 100
+            pre_buy_check = False
+            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
+                pre_buy_check = True
+            elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
+                pre_buy_check = True
+
+            if pre_buy_check:
+                if self.Stocks[0] in self.simple_stocks:
+                    level = self.levels[self.buy_index]
+                    if level == self.levels[0]:
+                        diff = max(self.atr, self.current_price * level / 100)
+                    else:
+                        diff = self.current_price * level / 100
+                else:
+                    level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
+                    diff = self.current_price * level / 100
 
                 buy_threshold = base_price - diff
                 if self.current_price <= buy_threshold:

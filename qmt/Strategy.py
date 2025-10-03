@@ -1151,10 +1151,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [1, 2, 4, 8, 12, 22]
+        self.levels = [2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
-        self.min_trade = 0.02
         self.max_price = 0
         self.yesterday_price = 0
         self.current_held = None
@@ -1282,8 +1281,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
         executed = False
 
-        min_trade = base_price * self.min_trade
-
         good_up = r_squared > 0.8 and slope > 0
         bad_down = r_squared > 0.8 and slope < 0
 
@@ -1295,9 +1292,6 @@ class PairLevelGridStrategy(BaseStrategy):
             if self.sell_index < len(self.levels):
                 level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                 diff = self.current_price * level / 100
-                # diff = self.levels[self.sell_index] * self.atr * 0.8
-                if diff < min_trade:
-                    diff = min_trade
 
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
@@ -1306,9 +1300,6 @@ class PairLevelGridStrategy(BaseStrategy):
             if not self.ClosePosition and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:
                 level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                 diff = self.current_price * level / 100
-                # diff = self.levels[self.buy_index] * self.atr * 0.8
-                if diff < min_trade:
-                    diff = min_trade
 
                 buy_threshold = base_price - diff
                 if self.current_price <= buy_threshold:

@@ -72,8 +72,8 @@ class BaseStrategy():
     def LoadGlobalSetting(self):
         file = 'global.json'
 
-        if self.TradingAmount is not None:
-            return
+        # if self.TradingAmount is not None:
+        #     return
 
         if not os.path.exists(file):
             self.TradingAmount = 30000

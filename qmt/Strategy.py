@@ -81,7 +81,7 @@ class BaseStrategy():
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
 
-                self.TradingAmount = state.get('trading_amount, 30000')
+                self.TradingAmount = state.get('trading_amount', 30000)
         except Exception as e:
             print(f"Failed to load global setting: {e}")
 
@@ -1151,7 +1151,10 @@ class PairLevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.base_price = None
         self.logical_holding = 0
-        self.levels = [2, 4, 8, 12, 22]
+        self.simple_stocks = ['159518.SZ', '513350.SH']
+        self.levels = [2, 2, 4, 8, 12, 22]
+        if self.Stocks[0] in self.simple_stocks:
+            self.levels = [2, 2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.max_price = 0
@@ -1248,6 +1251,7 @@ class PairLevelGridStrategy(BaseStrategy):
         else:
             self.current_price = current_price
 
+        base_price = self.base_price
         if base_price is None or base_price == 0:
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
@@ -1289,17 +1293,37 @@ class PairLevelGridStrategy(BaseStrategy):
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
             self.ClosePosition = False
         else:
-            if self.sell_index < len(self.levels):
-                level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
-                diff = self.current_price * level / 100
+            if self.sell_index < len(self.levels) and current_holding > 0:
+                if self.Stocks[0] in self.simple_stocks:
+                    level = self.levels[self.sell_index]
+                    if level == self.levels[0]:
+                        diff = max(self.atr, self.current_price * level / 100)
+                    else:
+                        diff = self.current_price * level / 100
+                else:
+                    level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                    diff = self.current_price * level / 100
 
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
 
-            if not self.ClosePosition and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:
-                level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
-                diff = self.current_price * level / 100
+            pre_buy_check = False
+            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:
+                pre_buy_check = True
+            elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
+                pre_buy_check = True
+
+            if pre_buy_check:
+                if self.Stocks[0] in self.simple_stocks:
+                    level = self.levels[self.buy_index]
+                    if level == self.levels[0]:
+                        diff = max(self.atr, self.current_price * level / 100)
+                    else:
+                        diff = self.current_price * level / 100
+                else:
+                    level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
+                    diff = self.current_price * level / 100
 
                 buy_threshold = base_price - diff
                 if self.current_price <= buy_threshold:
@@ -1503,7 +1527,8 @@ class PairLevelGridStrategy(BaseStrategy):
                     'logical_holding': state.get('logical_holding', 0),
                     'buy_index': state.get('buy_index', 0),
                     'sell_index': state.get('sell_index', 0),
-                    'sell_count': state.get('sell_count', 0)
+                    'sell_count': state.get('sell_count', 0),
+                    'close_position_date': state.get('close_position_date', None)
                 }
         except Exception as e:
             print(f"Failed to load strategy state: {e}")
@@ -1521,7 +1546,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_index': buyIndex,
             'sell_index': sellIndex,
             'sell_count': sellCount,
-        'close_position_date': closePositionDate
+            'close_position_date': closePositionDate
         }
 
         if self.IsBacktest:

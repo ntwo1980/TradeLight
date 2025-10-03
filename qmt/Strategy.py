@@ -19,6 +19,7 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
+        self.SellMultiplier = 1
         self.SellCount = 0
         self.MaxAmount = MaxAmount
         self.ClosePositionSetting = closePosition
@@ -42,7 +43,7 @@ class BaseStrategy():
         }
 
     def GetTradingAmount(self):
-        return self.TradingAmount * (self.SellCount / 100 + 1)
+        return self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
     def GetMaxAmount(self):
         if self.MaxAmount is not None:
@@ -82,6 +83,7 @@ class BaseStrategy():
                 state = json.load(f)
 
                 self.TradingAmount = state.get('trading_amount', 30000)
+                self.SellMultiplier = state.get('sell_multiplier', 1)
         except Exception as e:
             print(f"Failed to load global setting: {e}")
 

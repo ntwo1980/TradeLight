@@ -19,6 +19,8 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
+        self.base_price = None
+        self.logical_holding = 0
         self.SellMultiplier = 1
         self.SellCount = 0
         self.MaxAmount = MaxAmount
@@ -86,6 +88,33 @@ class BaseStrategy():
                 self.SellMultiplier = state.get('sell_multiplier', 1)
         except Exception as e:
             print(f"Failed to load global setting: {e}")
+
+
+    def LoadStrategyState(self, stocks, stockNames):
+        if self.IsBacktest:
+            self.State = None
+            return None
+
+        stock = stocks[0]
+        stockName = stockNames[0]
+        state = None
+        file = self.GetStateFileName(stock, stockName)
+
+        if not os.path.exists(file):
+            return None
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+                # Check if state for current stock exists
+
+                self.base_price = state['base_price']
+                self.logical_holding = state['logical_holding']
+                self.SellCount = state.get('sell_count', 0)
+
+                return state
+        except Exception as e:
+            return None
+            print(f"Failed to load strategy state: {e}")
 
 
     def GetUniqueStrategyName(self, stock):
@@ -254,8 +283,6 @@ class SimpleGridStrategy(BaseStrategy):
 
         self.prices = None
         self.prices_date = None
-        self.base_price = None
-        self.logical_holding = 0
         self.atr = 0
         self.rsi = 50
         self.grid_unit = 0
@@ -264,18 +291,12 @@ class SimpleGridStrategy(BaseStrategy):
 
         C.set_universe(self.Stocks)
 
-        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        state = self.State
-        if state and state['base_price'] is not None:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.SellCount = state.get('sell_count', 0)
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
-        elif self.IsBacktest:
-            print("No historical state found, will initialize base_price using first average")
-        else:
+        if state is None and not self.IsBacktest:
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
+
+        print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -399,13 +420,7 @@ class SimpleGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        self.LoadStrategyState(self.Stocks, self.StockNames)
-        state = self.State
-
-        if not self.IsBacktest and state and state['base_price'] is not None:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.SellCount = state['sell_count']
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         stock = self.Stocks[0]
 
@@ -423,35 +438,6 @@ class SimpleGridStrategy(BaseStrategy):
             return max(atr, price * 0.01)
 
         return atr
-
-    def LoadStrategyState(self, stocks, stockNames):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            self.State = None
-            return
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
-        if not os.path.exists(file):
-            self.State = None
-            return
-        try:
-
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-
-                self.State = {
-                    'base_price': state.get('base_price'),
-                    'logical_holding': state.get('logical_holding', 0),
-                    'sell_count': state.get('sell_count', 0)
-                }
-        except Exception as e:
-            print(f"Failed to load strategy state: {e}")
-
 
     def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, sellCount):
         stock = stocks[0]
@@ -482,8 +468,6 @@ class LevelGridStrategy(BaseStrategy):
 
         self.prices = None
         self.prices_date = None
-        self.base_price = None
-        self.logical_holding = 0
         self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
         if self.Stocks[0] in self.simple_stocks:
@@ -500,22 +484,16 @@ class LevelGridStrategy(BaseStrategy):
 
         C.set_universe(self.Stocks)
 
-        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        state = self.State
-        if state and state['base_price'] is not None:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
+        if state is None and not self.IsBacktest:
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, None)
+        elif state is not None:
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
-            self.SellCount = state.get('sell_count', 0)
             self.ClosePositionDate = state.get('close_position_date', None)
 
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
-        elif self.IsBacktest:
-            print("No historical state found, will initialize base_price using first average")
-        else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, None)
+        print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -723,15 +701,12 @@ class LevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        self.LoadStrategyState(self.Stocks, self.StockNames)
-        state = self.State
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        if not self.IsBacktest and state and state['base_price'] is not None:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
+        if state is not None and not self.IsBacktest:
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
-            self.SellCount = state['sell_count']
+            self.ClosePositionDate = state.get('close_position_date', None)
 
         stock = self.Stocks[0]
 
@@ -742,37 +717,6 @@ class LevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
-
-    def LoadStrategyState(self, stocks, stockNames):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            self.State = None
-            return
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
-        if not os.path.exists(file):
-            self.State = None
-            return
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-
-                self.State = {
-                    'base_price': state.get('base_price'),
-                    'logical_holding': state.get('logical_holding', 0),
-                    'buy_index': state.get('buy_index', 0),
-                    'sell_index': state.get('sell_index', 0),
-                    'sell_count': state.get('sell_count', 0),
-                    'close_position_date': state.get('close_position_date', None)
-                }
-        except Exception as e:
-            print(f"Failed to load strategy state: {e}")
-
 
     def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
         stock = stocks[0]
@@ -808,8 +752,6 @@ class PairGridStrategy(BaseStrategy):
 
         self.prices = None
         self.prices_date = None
-        self.base_price = None
-        self.logical_holding = 0
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -824,19 +766,14 @@ class PairGridStrategy(BaseStrategy):
 
         C.set_universe(self.Stocks)
 
-        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        state = self.State
-        if state and state['base_price'] is not None:
-            self.current_held = state['current_held']
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.SellCount = state.get('sell_count', 0)
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}, sell_count={self.SellCount}")
-        elif self.IsBacktest:
-            print("No historical state found, will initialize base_price using first average")
-        else:
+        if state is None and not self.IsBacktest:
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0)
+        elif state is not None:
+            self.current_held = state['current_held']
+
+        print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -1071,14 +1008,10 @@ class PairGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        self.LoadStrategyState(self.Stocks, self.StockNames)
-        state = self.State
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        if not self.IsBacktest and state and state['base_price'] is not None:
+        if state is not None and not self.IsBacktest:
             self.current_held = state['current_held']
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.SellCount = state['sell_count']
 
         stock = self.Stocks[0]
 
@@ -1089,34 +1022,6 @@ class PairGridStrategy(BaseStrategy):
 
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
-
-    def LoadStrategyState(self, stocks, stockNames):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            self.State = None
-            return
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
-        if not os.path.exists(file):
-            self.State = None
-            return
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-                self.State = {
-                    'current_held': state.get('current_held'),
-                    'base_price': state.get('base_price'),
-                    'logical_holding': state.get('logical_holding', 0),
-                    'sell_count': state.get('sell_count', 0)
-                }
-        except Exception as e:
-            print(f"Failed to load strategy state: {e}")
-
 
     def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, sellCount):
         stock = stocks[0]
@@ -1151,8 +1056,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.prices = None
         self.prices_date = None
-        self.base_price = None
-        self.logical_holding = 0
         self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
         if self.Stocks[0] in self.simple_stocks:
@@ -1168,23 +1071,17 @@ class PairLevelGridStrategy(BaseStrategy):
 
         C.set_universe(self.Stocks)
 
-        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        state = self.State
-        if state and state['base_price'] is not None:
+        if state is None and not self.IsBacktest:
+            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0, None)
+        elif state is not None:
             self.current_held = state['current_held']
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
-            self.SellCount = state.get('sell_count', 0)
             self.ClosePositionDate = state.get('close_position_date', None)
 
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
-        elif self.IsBacktest:
-            print("No historical state found, will initialize base_price using first average")
-        else:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0, None)
+        print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -1486,15 +1383,13 @@ class PairLevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        self.LoadStrategyState(self.Stocks, self.StockNames)
-        state = self.State
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        if not self.IsBacktest and state and state['base_price'] is not None:
+        if state is not None and not self.IsBacktest:
             self.current_held = state['current_held']
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
+            self.ClosePositionDate = state.get('close_position_date', None)
 
         stock = self.Stocks[0]
 
@@ -1505,36 +1400,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
-
-    def LoadStrategyState(self, stocks, stockNames):
-        """Load strategy state from file"""
-        if self.IsBacktest:
-            self.State = None
-            return
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
-        if not os.path.exists(file):
-            self.State = None
-            return
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-                self.State = {
-                    'current_held': state.get('current_held'),
-                    'base_price': state.get('base_price'),
-                    'logical_holding': state.get('logical_holding', 0),
-                    'buy_index': state.get('buy_index', 0),
-                    'sell_index': state.get('sell_index', 0),
-                    'sell_count': state.get('sell_count', 0),
-                    'close_position_date': state.get('close_position_date', None)
-                }
-        except Exception as e:
-            print(f"Failed to load strategy state: {e}")
-
 
     def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
         stock = stocks[0]
@@ -1570,24 +1435,18 @@ class MomentumRotationStrategy(BaseStrategy):
         super().init(C)
 
         self.prices = None
-        self.base_price = None
-        self.logical_holding = 0
         self.current_held = None
 
         C.set_universe(self.Stocks)
 
-        self.LoadStrategyState(self.Stocks, self.StockNames)
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        state = self.State
-        if state and state['base_price'] is not None:
-            self.current_held = state['current_held']
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
-        elif self.IsBacktest:
-            print("No historical state found, will initialize base_price using first average")
-        else:
+        if state is None and not self.IsBacktest:
             self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
+        elif state is not None:
+            self.current_held = state['current_held']
+
+        print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
 
     def UpdateMarketData(self, C, stocks):
         self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
@@ -1756,33 +1615,6 @@ class MomentumRotationStrategy(BaseStrategy):
             return True
 
         return False
-
-    def LoadStrategyState(self, stocks, stockNames):
-        """Load strategy state from file"""
-
-        if self.IsBacktest:
-            self.State = None
-            return
-
-        stock = stocks[0]
-        stockName = stockNames[0]
-        file = self.GetStateFileName(stock, stockName)
-
-        if not os.path.exists(file):
-            self.State = None
-            return
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-                self.State = {
-                    'current_held': state.get('current_held'),
-                    'base_price': state.get('base_price'),
-                    'logical_holding': state.get('logical_holding', 0),
-                }
-        except Exception as e:
-            print(f"Failed to load strategy state: {e}")
-
 
     def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding):
         stock = stocks[0]

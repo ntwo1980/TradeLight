@@ -294,7 +294,7 @@ class SimpleGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
+            self.SaveStrategyState(None, 0, 0)
 
         print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
@@ -367,7 +367,7 @@ class SimpleGridStrategy(BaseStrategy):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(self.base_price, self.logical_holding, self.SellCount)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
@@ -429,7 +429,7 @@ class SimpleGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(self.base_price, self.logical_holding, self.SellCount)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
 
@@ -439,9 +439,9 @@ class SimpleGridStrategy(BaseStrategy):
 
         return atr
 
-    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, sellCount):
-        stock = stocks[0]
-        stockName = stockNames[0]
+    def SaveStrategyState(self, basePrice, logicalHolding, sellCount):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
@@ -487,7 +487,7 @@ class LevelGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, None)
+            self.SaveStrategyState(None, 0, 0, 0, 0, None)
         elif state is not None:
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
@@ -635,7 +635,7 @@ class LevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState(self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -715,12 +715,12 @@ class LevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState(self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, stocks, stockNames, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
-        stock = stocks[0]
-        stockName = stockNames[0]
+    def SaveStrategyState(self, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
@@ -769,7 +769,7 @@ class PairGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0)
+            self.SaveStrategyState(None, 0, 0, 0)
         elif state is not None:
             self.current_held = state['current_held']
 
@@ -800,7 +800,7 @@ class PairGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -815,7 +815,7 @@ class PairGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+        self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
@@ -866,7 +866,7 @@ class PairGridStrategy(BaseStrategy):
             executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(stock, self.base_price, self.logical_holding, self.SellCount)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
@@ -1020,12 +1020,12 @@ class PairGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, sellCount):
-        stock = stocks[0]
-        stockName = stockNames[0]
+    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding, sellCount):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
@@ -1074,7 +1074,7 @@ class PairLevelGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0, 0, 0, 0, None)
+            self.SaveStrategyState(None, 0, 0, 0, 0, 0, None)
         elif state is not None:
             self.current_held = state['current_held']
             self.buy_index = state['buy_index']
@@ -1108,7 +1108,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -1123,7 +1123,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+        self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
@@ -1229,7 +1229,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.Stocks, self.StockNames, stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState(stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -1398,12 +1398,12 @@ class PairLevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
-        stock = stocks[0]
-        stockName = stockNames[0]
+    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
@@ -1442,7 +1442,7 @@ class MomentumRotationStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(self.Stocks, self.StockNames, None, 0, 0)
+            self.SaveStrategyState(None, 0, 0)
         elif state is not None:
             self.current_held = state['current_held']
 
@@ -1518,7 +1518,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
             self.base_price = price_new
-            self.SaveStrategyState(self.Stocks, self.StockNames, self.current_held, self.base_price, self.logical_holding)
+            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding)
 
     def f(self, C):
         super().f(C)
@@ -1616,9 +1616,9 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return False
 
-    def SaveStrategyState(self, stocks, stockNames, currentHeld, basePrice, logicalHolding):
-        stock = stocks[0]
-        stockName = stockNames[0]
+    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {

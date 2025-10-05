@@ -126,6 +126,7 @@ class BaseStrategy():
             except Exception as e:
                 print(f"Failed to save strategy state: {e}")
 
+
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"
 

@@ -116,6 +116,15 @@ class BaseStrategy():
             return None
             print(f"Failed to load strategy state: {e}")
 
+    def SaveStrategyState(self, file, data):
+        if self.IsBacktest:
+            print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save strategy state: {e}")
 
     def GetUniqueStrategyName(self, stock):
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"
@@ -294,7 +303,7 @@ class SimpleGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(None, 0, 0)
+            self.SaveStrategyState()
 
         print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
@@ -367,7 +376,7 @@ class SimpleGridStrategy(BaseStrategy):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState()
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
@@ -429,7 +438,7 @@ class SimpleGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState()
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
 
@@ -439,25 +448,18 @@ class SimpleGridStrategy(BaseStrategy):
 
         return atr
 
-    def SaveStrategyState(self, basePrice, logicalHolding, sellCount):
+    def SaveStrategyState(self):
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
-            'base_price': basePrice,
-            'logical_holding': logicalHolding,
-            'sell_count': sellCount,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'sell_count': self.SellCount,
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)
 
 class LevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -487,7 +489,7 @@ class LevelGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(None, 0, 0, 0, 0, None)
+            self.SaveStrategyState()
         elif state is not None:
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
@@ -635,7 +637,7 @@ class LevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState()
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -715,31 +717,24 @@ class LevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState()
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
+    def SaveStrategyState(self):
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
-            'base_price': basePrice,
-            'logical_holding': logicalHolding,
-            'buy_index': buyIndex,
-            'sell_index': sellIndex,
-            'sell_count': sellCount,
-            'close_position_date': closePositionDate
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'buy_index': self.buy_index,
+            'sell_index': self.sell_index,
+            'sell_count': self.SellCount,
+            'close_position_date': self.ClosePositionDate
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)
 
 class PairGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -769,7 +764,7 @@ class PairGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(None, 0, 0, 0)
+            self.SaveStrategyState()
         elif state is not None:
             self.current_held = state['current_held']
 
@@ -800,7 +795,7 @@ class PairGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
-            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -815,7 +810,7 @@ class PairGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
+        self.SaveStrategyState()
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
@@ -866,7 +861,7 @@ class PairGridStrategy(BaseStrategy):
             executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(stock, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState()
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
@@ -1020,29 +1015,22 @@ class PairGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.SellCount)
+            self.SaveStrategyState()
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding, sellCount):
+    def SaveStrategyState(self):
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
-            'current_held': currentHeld,
-            'base_price': basePrice,
-            'logical_holding': logicalHolding,
-            'sell_count': sellCount,
+            'current_held': self.current_held,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'sell_count': self.SellCount,
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)
 
 class PairLevelGridStrategy(BaseStrategy):
     def __init__(self, strategyId='a', threshold_ratio = 0.01, **kwargs):
@@ -1074,7 +1062,7 @@ class PairLevelGridStrategy(BaseStrategy):
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is None and not self.IsBacktest:
-            self.SaveStrategyState(None, 0, 0, 0, 0, 0, None)
+            self.SaveStrategyState()
         elif state is not None:
             self.current_held = state['current_held']
             self.buy_index = state['buy_index']
@@ -1108,7 +1096,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
-            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+            self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
         print(f'SwitchPosition holding is {current_holding}')
@@ -1123,7 +1111,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount)
+        self.SaveStrategyState()
         print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
@@ -1229,7 +1217,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
-            self.SaveStrategyState(stock, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState()
 
             if self.base_price is not None:
                 print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -1398,32 +1386,25 @@ class PairLevelGridStrategy(BaseStrategy):
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding, self.buy_index, self.sell_index, self.SellCount, self.ClosePositionDate)
+            self.SaveStrategyState()
             print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
-    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding, buyIndex, sellIndex, sellCount, closePositionDate):
+    def SaveStrategyState(self):
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
 
         data = {
-            'current_held': currentHeld,
-            'base_price': basePrice,
-            'logical_holding': logicalHolding,
-            'buy_index': buyIndex,
-            'sell_index': sellIndex,
-            'sell_count': sellCount,
-            'close_position_date': closePositionDate
+            'current_held': self.current_held,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'buy_index': self.buy_index,
+            'sell_index': self.sell_index,
+            'sell_count': self.SellCount,
+            'close_position_date': self.ClosePositionDate
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)
 
 class MomentumRotationStrategy(BaseStrategy):
     def __init__(self, strategyId='a', days=25, rank=1, **kwargs):
@@ -1627,14 +1608,7 @@ class MomentumRotationStrategy(BaseStrategy):
             'logical_holding': logicalHolding,
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)
 
 class JointquantEmailStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -1800,11 +1774,4 @@ class JointquantEmailStrategy(BaseStrategy):
             'held': held
         }
 
-        if self.IsBacktest:
-            print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                print(f"Failed to save strategy state: {e}")
+        super().SaveStrategyState(file, data)

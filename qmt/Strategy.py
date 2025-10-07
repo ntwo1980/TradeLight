@@ -178,7 +178,7 @@ class BaseStrategy():
         if not self.IsBacktest:
             self.RefreshWaitingList()
             if self.WaitingList:
-                print(f"Error: There are pending orders not confirmed: {self.WaitingList},暂停后续报单")
+                print(f"Error: There are pending orders not confirmed: {self.WaitingList}, pause subsequent orders")
                 return False
 
         return True
@@ -773,7 +773,7 @@ class PairGridStrategy(BaseStrategy):
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
 
         if unit_to_buy == 0:
-            print(f"换仓金额不足100股，跳过")
+            print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
         # 检查可用资金
@@ -800,7 +800,7 @@ class PairGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
         self.SaveStrategyState()
-        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
+        print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
         prices = self.prices[stock]
@@ -882,7 +882,7 @@ class PairGridStrategy(BaseStrategy):
         self.UpdateMarketData(C, self.Stocks)
 
         if len(self.prices) < 2:
-            print("Error: 数据不足，跳过")
+            print("Error: Insufficient data, skipped")
             return
 
         current_prices = self.GetCurrentPrice(self.Stocks, C)
@@ -897,17 +897,15 @@ class PairGridStrategy(BaseStrategy):
 
         current_ratio = price_A / price_B
 
-        # print(f"配对分析: A/B={current_ratio:.4f}, 历史均值={mean_ratio:.4f}, 阈值=[{mean_ratio*(1-self.threshold_ratio):.4f}, {mean_ratio*(1+self.threshold_ratio):.4f}]")
-
         target_stock = None
         if current_ratio > mean_ratio * (1 + self.threshold_ratio):
             # A/B 太高 → A 贵，B 便宜 → 押注 B 回归 → 持有 B
             target_stock = self.stock_B
-            print('切换至 B（B 被低估）')
+            print('Switching to B (B is undervalued)')
         elif current_ratio < mean_ratio * (1 - self.threshold_ratio):
             # A/B 太低 → A 便宜，B 贵 → 押注 A 回归 → 持有 A
             target_stock = self.stock_A
-            print('切换至 A（A 被低估）')
+            print('Switching to A (A is undervalued)')
         else:
             target_stock = self.current_held  # 维持现状
 
@@ -919,7 +917,7 @@ class PairGridStrategy(BaseStrategy):
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
         elif self.current_held and self.current_held != target_stock:
-            print(f"执行换仓: {self.current_held} → {target_stock}")
+            print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}")
 
             old_stock = self.current_held
             new_stock = target_stock
@@ -1074,7 +1072,7 @@ class PairLevelGridStrategy(BaseStrategy):
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
 
         if unit_to_buy == 0:
-            print(f"换仓金额不足100股，跳过")
+            print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
         # 检查可用资金
@@ -1101,7 +1099,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
         self.SaveStrategyState()
-        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
+        print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def RunGridTrading(self, C, stock):
         all_prices = self.prices[stock]
@@ -1238,7 +1236,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.UpdateMarketData(C, self.Stocks)
 
         if len(self.prices) < 2:
-            print("Error: 数据不足，跳过")
+            print("Error: Insufficient data, skipped")
             return
 
         current_prices = self.GetCurrentPrice(self.Stocks, C)
@@ -1253,17 +1251,13 @@ class PairLevelGridStrategy(BaseStrategy):
 
         current_ratio = price_A / price_B
 
-        # print(f"配对分析: A/B={current_ratio:.4f}, 历史均值={mean_ratio:.4f}, 阈值=[{mean_ratio*(1-self.threshold_ratio):.4f}, {mean_ratio*(1+self.threshold_ratio):.4f}]")
-
         target_stock = None
         if current_ratio > mean_ratio * (1 + self.threshold_ratio):
-            # A/B 太高 → A 贵，B 便宜 → 押注 B 回归 → 持有 B
             target_stock = self.stock_B
-            print('切换至 B（B 被低估）')
+            print('Switching to B (B is undervalued)')
         elif current_ratio < mean_ratio * (1 - self.threshold_ratio):
-            # A/B 太低 → A 便宜，B 贵 → 押注 A 回归 → 持有 A
             target_stock = self.stock_A
-            print('切换至 A（A 被低估）')
+            print('Switching to A (A is undervalued)')
         else:
             target_stock = self.current_held  # 维持现状
 
@@ -1275,7 +1269,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
         elif self.current_held and self.current_held != target_stock:
-            print(f"执行换仓: {self.current_held} → {target_stock}")
+            print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}")
 
             old_stock = self.current_held
             new_stock = target_stock
@@ -1465,12 +1459,11 @@ class MomentumRotationStrategy(BaseStrategy):
     def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices):
         print(f'SwitchPosition holding is {current_holding}')
 
-        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)
         self.logical_holding = 0
-        print(f"平仓 {current_holding} 股 {old_stock} @ {price_old:.3f}")
+        print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
         cash_from_sale = current_holding * price_old
 
@@ -1480,7 +1473,7 @@ class MomentumRotationStrategy(BaseStrategy):
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
 
         if unit_to_buy == 0:
-            print(f"换仓金额不足100股，跳过")
+            print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
         # 检查可用资金
@@ -1697,7 +1690,7 @@ class JointquantEmailStrategy(BaseStrategy):
         current_holding = holdings.get(stock, 0)
 
         if current_holding <= 0:
-            print(f"无511880.SH持仓")
+            print(f"No position in 511880.SH")
             return
 
         current_price = 100
@@ -1710,7 +1703,7 @@ class JointquantEmailStrategy(BaseStrategy):
         sell_volume = sell_units * 100
 
         if sell_volume <=0 :
-            print(f"资金缺口小，不足卖出100股，暂不操作")
+            print(f"Insufficient funds to sell 100 shares; no action taken for now.")
             return
 
         if sell_volume > 0:

@@ -931,12 +931,8 @@ class PairGridStrategy(BaseStrategy):
                 self.f(C)
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
-        else:
-            if self.logical_holding == 0:
-                self.RunGridTrading(C, self.stock_A)
-
-            if self.logical_holding == 0:
-                self.RunGridTrading(C, self.stock_B)
+        elif target_stock:
+            self.RunGridTrading(C, target_stock)
 
         return
 
@@ -1277,12 +1273,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.f(C)
         elif self.current_held:
             self.RunGridTrading(C, self.current_held)
-        else:
-            old_holding = self.logical_holding
-            self.RunGridTrading(C, self.stock_A)
-
-            if old_holding <=0 and self.logical_holding <= 0:
-                self.RunGridTrading(C, self.stock_B)
+        elif target_stock:
+            self.RunGridTrading(C, target_stock)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):
         if trading_amount is None:

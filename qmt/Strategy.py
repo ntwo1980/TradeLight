@@ -474,7 +474,7 @@ class LevelGridStrategy(BaseStrategy):
         self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
         if self.Stocks[0] in self.simple_stocks:
-            self.levels = [2, 2, 2, 4, 8, 12, 22]
+            self.levels = [2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -1034,7 +1034,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
         if self.Stocks[0] in self.simple_stocks:
-            self.levels = [2, 2, 2, 4, 8, 12, 22]
+            self.levels = [2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.max_price = 0
@@ -1170,10 +1170,7 @@ class PairLevelGridStrategy(BaseStrategy):
             if self.sell_index < len(self.levels) and current_holding > 0:
                 if self.Stocks[0] in self.simple_stocks:
                     level = self.levels[self.sell_index]
-                    if level == self.levels[0]:
-                        diff = max(self.atr, self.current_price * level / 100)
-                    else:
-                        diff = self.current_price * level / 100
+                    diff = max(self.atr, self.current_price * level / 100)
                 else:
                     level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                     diff = self.current_price * level / 100
@@ -1191,10 +1188,7 @@ class PairLevelGridStrategy(BaseStrategy):
             if pre_buy_check:
                 if self.Stocks[0] in self.simple_stocks:
                     level = self.levels[self.buy_index]
-                    if level == self.levels[0]:
-                        diff = max(self.atr, self.current_price * level / 100)
-                    else:
-                        diff = self.current_price * level / 100
+                    diff = max(self.atr, self.current_price * level / 100)
                 else:
                     level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                     diff = self.current_price * level / 100

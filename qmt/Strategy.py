@@ -430,6 +430,7 @@ class SimpleGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
+        print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         stock = self.Stocks[0]
@@ -502,7 +503,6 @@ class LevelGridStrategy(BaseStrategy):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
-            # print(prices)
             self.prices_date = self.Yesterday
             self.all_prices = prices[stock]
             self.prices = prices[stock][-30:]
@@ -514,6 +514,7 @@ class LevelGridStrategy(BaseStrategy):
             sma_5 = talib.SMA(self.all_prices['close'], timeperiod=5)
             sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
             sma_30 = talib.MA(self.all_prices['close'], timeperiod=30)
+
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))
             y = np.log(np.array(prices['close'].values))
@@ -692,6 +693,7 @@ class LevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
+        print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:
@@ -986,6 +988,7 @@ class PairGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
+        print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:
@@ -1109,6 +1112,7 @@ class PairLevelGridStrategy(BaseStrategy):
         sma_5 = talib.SMA(all_prices['close'], timeperiod=5)
         sma_10 = talib.SMA(all_prices['close'], timeperiod=10)
         sma_30 = talib.MA(all_prices['close'], timeperiod=30)
+
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
@@ -1340,6 +1344,7 @@ class PairLevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
+        print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:

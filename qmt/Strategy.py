@@ -51,7 +51,7 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        return self.GetTradingAmount() * 3.5
+        return self.GetTradingAmount() * 4.5
 
     def init(self, C):
         self.IsBacktest = C.do_back_test
@@ -641,6 +641,11 @@ class LevelGridStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
+        print(current_price)
+        print(unit_to_buy)
+        print(current_price * (unit_to_buy + self.logical_holding))
+        print(self.GetMaxAmount())
+        print(self.SellCount)
         if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
@@ -1285,6 +1290,11 @@ class PairLevelGridStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
+        print(current_price)
+        print(unit_to_buy)
+        print(current_price * (unit_to_buy + self.logical_holding))
+        print(self.GetMaxAmount())
+        print(self.SellCount)
         if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)

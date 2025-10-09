@@ -42,6 +42,10 @@ class BaseStrategy():
             '159518.SZ',    # 标普油气
             '513350.SH',    # 标普油气
             '159509.SZ',    # 纳指科技
+            '159866.SZ',    # 日经
+            '513520.SH',    # 日经
+            '159561.SZ',    # 德国
+            '513030.SH',    # 德国
         }
 
     def GetTradingAmount(self):
@@ -226,7 +230,10 @@ class BaseStrategy():
         return yesterday
 
     def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
-        prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=self.Yesterday, dividend_type='front')
+        # prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=self.Yesterday, dividend_type='front')
+        prices = {}
+        for stock in stocks:
+            prices[stock] = C.get_market_data_ex(fields, [stock], period=period, count=count, end_time=self.Yesterday, dividend_type='front')[stock]
 
         for stock in stocks:
             if stock not in prices:

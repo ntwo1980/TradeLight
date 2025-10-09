@@ -430,7 +430,8 @@ class SimpleGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        print(f'g()')
+        if not self.IsBacktest:
+            print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         stock = self.Stocks[0]
@@ -564,7 +565,7 @@ class LevelGridStrategy(BaseStrategy):
             if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1]
+                base_price = close_ma[-1] * 1.02
 
         print({
             'stock': self.Stocks[0],
@@ -693,7 +694,8 @@ class LevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        print(f'g()')
+        if not self.IsBacktest:
+            print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:
@@ -828,7 +830,7 @@ class PairGridStrategy(BaseStrategy):
             if days_above_ma > 9:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1]
+                base_price = close_ma[-1] * 1.02
 
         print({
             'stock': stock,
@@ -988,7 +990,8 @@ class PairGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        print(f'g()')
+        if not self.IsBacktest:
+            print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:
@@ -1344,7 +1347,8 @@ class PairLevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        print(f'g()')
+        if not self.IsBacktest:
+            print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
         if state is not None and not self.IsBacktest:

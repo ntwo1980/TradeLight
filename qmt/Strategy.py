@@ -34,6 +34,7 @@ class BaseStrategy():
         self.State = None
         self.PriceDate = None
         self.Prices = None
+        self.rsi = 0
         self.NotClosePositionStocks = {
             '159985.SZ',    # 豆粕
             '159687.SZ',    # 亚太精选
@@ -301,7 +302,6 @@ class SimpleGridStrategy(BaseStrategy):
         self.prices = None
         self.prices_date = None
         self.atr = 0
-        self.rsi = 50
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
@@ -363,7 +363,10 @@ class SimpleGridStrategy(BaseStrategy):
         base_price = self.base_price  # copy a local base_price
 
         if base_price is None or base_price == 0:
-            base_price = max(self.max_price, self.current_price)
+            if self.rsi >= 60:
+                base_price = self.prices['close'][-1] * 2
+            else:
+                base_price = max(self.max_price, self.current_price)
 
         print({
             'stock': self.Stocks[0],
@@ -518,6 +521,7 @@ class LevelGridStrategy(BaseStrategy):
             self.yesterday_price = prices['close'][-1]
             self.current_price = self.yesterday_price
             self.max_price = prices['close'][-10:].max()
+            self.rsi = talib.RSI(prices['close'], timeperiod=6)[-1]
 
             sma_5 = talib.SMA(self.all_prices['close'], timeperiod=5)
             sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
@@ -569,7 +573,9 @@ class LevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
-            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if self.rsi >= 60:
+                base_price = self.prices['close'][-1] * 2
+            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1] * 1.02
@@ -583,6 +589,7 @@ class LevelGridStrategy(BaseStrategy):
             'base_price': base_price,
             'close_position_date': self.ClosePositionDate,
             'atr': self.atr,
+            'rsi': self.rsi,
             'slope': self.slope,
             'self.days_above_sma': self.days_above_sma,
             'r_squared': self.r_squared,
@@ -834,7 +841,9 @@ class PairGridStrategy(BaseStrategy):
         if base_price is None or base_price == 0:
             close_ma = talib.MA(close, timeperiod=20)
             days_above_ma = np.sum(close[-10:] > close_ma[-10:])
-            if days_above_ma > 9:
+            if self.rsi >= 60:
+                base_price = self.prices['close'][-1] * 2
+            elif days_above_ma > 9:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1] * 1.02
@@ -1140,7 +1149,9 @@ class PairLevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(prices['close'][-3:] > close_ma[-3:])
-            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if self.rsi >= 60:
+                base_price = self.prices['close'][-1] * 2
+            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1]

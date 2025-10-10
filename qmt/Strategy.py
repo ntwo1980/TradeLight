@@ -591,7 +591,7 @@ class LevelGridStrategy(BaseStrategy):
             'atr': self.atr,
             'rsi': self.rsi,
             'slope': self.slope,
-            'self.days_above_sma': self.days_above_sma,
+            'days_above_sma': self.days_above_sma,
             'r_squared': self.r_squared,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index

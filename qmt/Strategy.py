@@ -1578,7 +1578,7 @@ class MomentumRotationStrategy(BaseStrategy):
         if self.current_held is None:
             self.ExecuteBuy(C, target, current_prices[target], available_cash)
         elif self.current_held != target:
-            self.SwitchPosition(C, self.current_held, current_holding, target, current_prices)
+            self.SwitchPosition(C, self.current_held, self.logical_holding, target, current_prices)
 
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):

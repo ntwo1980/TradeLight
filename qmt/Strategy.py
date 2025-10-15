@@ -34,7 +34,9 @@ class BaseStrategy():
         self.State = None
         self.PriceDate = None
         self.Prices = None
+        self.PriceRatio = 1
         self.rsi = 0
+        self.SellExecuted = False
         self.NotClosePositionStocks = {
             '159985.SZ',    # 豆粕
             '159687.SZ',    # 亚太精选
@@ -93,6 +95,7 @@ class BaseStrategy():
         self.RebuildWaitingListFromOpenOrders()
 
     def f(self, C):
+        self.SellExecuted = False
         self.Today = self.GetToday(C)
         self.Yesterday = self.GetYesterday(C)
         month = self.GetMonth(self.Today)
@@ -405,6 +408,9 @@ class SimpleGridStrategy(BaseStrategy):
             else:
                 base_price = max(self.max_price, self.current_price)
 
+        if self.current_price > 0 and base_price > 0:
+            self.PriceRatio = self.current_price / base_price
+
         self.Print({
             'stock': self.Stocks[0],
             'stock_name': self.StockNames[0],
@@ -419,6 +425,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         if self.current_price >= base_price + self.grid_unit:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
+            self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
         elif self.current_price <= base_price - self.grid_unit:
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
@@ -617,6 +624,9 @@ class LevelGridStrategy(BaseStrategy):
             else:
                 base_price = close_ma[-1] * 1.02
 
+        if self.current_price > 0 and base_price > 0:
+            self.PriceRatio = self.current_price / base_price
+
         self.Print({
             'stock': self.Stocks[0],
             'stock_name': self.StockNames[0],
@@ -656,6 +666,7 @@ class LevelGridStrategy(BaseStrategy):
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
+                    self.SellExecuted = executed
 
             pre_buy_check = False
             if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
@@ -885,6 +896,9 @@ class PairGridStrategy(BaseStrategy):
             else:
                 base_price = close_ma[-1] * 1.02
 
+        if self.current_price > 0 and base_price > 0:
+            self.PriceRatio = self.current_price / base_price
+
         self.Print({
             'stock': stock,
             'yesterday': prices['close'].index[-1],
@@ -902,6 +916,7 @@ class PairGridStrategy(BaseStrategy):
         executed = False
         if self.current_price >= base_price + grid_unit:
             executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+            self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
         elif self.current_price <= base_price - grid_unit:
             executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
@@ -990,8 +1005,6 @@ class PairGridStrategy(BaseStrategy):
             self.RunGridTrading(C, self.current_held)
         elif target_stock:
             self.RunGridTrading(C, target_stock)
-
-        return
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):
         if trading_amount is None:
@@ -1193,6 +1206,9 @@ class PairLevelGridStrategy(BaseStrategy):
             else:
                 base_price = close_ma[-1]
 
+        if self.current_price > 0 and base_price > 0:
+            self.PriceRatio = self.current_price / base_price
+
         self.Print({
             'stock': stock,
             'yesterday': prices['close'].index[-1],
@@ -1236,6 +1252,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+                    self.SellExecuted = executed
 
             pre_buy_check = False
             if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:

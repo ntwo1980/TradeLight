@@ -78,7 +78,7 @@ class BaseStrategy():
         if tradingAmount > 50000:
             tradingAmount = 50000
 
-        if cash / totalAsset > 0.2:
+        if cash / totalAsset > 0.3:
             tradingAmount = 10000
 
         return tradingAmount

@@ -58,6 +58,9 @@ class BaseStrategy():
 
         totalAsset = self.GetTotalAsset()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+        if tradingAmount > 50000:
+            tradingAmount = 50000
 
         if cash / totalAsset < 0.1:
             tradingAmount = 10000
@@ -71,6 +74,9 @@ class BaseStrategy():
 
         totalAsset = self.GetTotalAsset()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+        if tradingAmount > 50000:
+            tradingAmount = 50000
 
         if cash / totalAsset > 0.2:
             tradingAmount = 10000

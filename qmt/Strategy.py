@@ -409,10 +409,7 @@ class SimpleGridStrategy(BaseStrategy):
         base_price = self.base_price  # copy a local base_price
 
         if base_price is None or base_price == 0:
-            if self.rsi >= 60:
-                base_price = self.prices['close'][-1] * 2
-            else:
-                base_price = max(self.max_price, self.current_price)
+            base_price = max(self.max_price, self.current_price)
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price
@@ -623,9 +620,7 @@ class LevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
-            if self.rsi >= 60:
-                base_price = self.prices['close'][-1] * 2
-            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1] * 1.02
@@ -895,9 +890,7 @@ class PairGridStrategy(BaseStrategy):
         if base_price is None or base_price == 0:
             close_ma = talib.MA(close, timeperiod=20)
             days_above_ma = np.sum(close[-10:] > close_ma[-10:])
-            if self.rsi >= 60:
-                base_price = self.prices['close'][-1] * 2
-            elif days_above_ma > 9:
+            if days_above_ma > 9:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1] * 1.02
@@ -1205,9 +1198,7 @@ class PairLevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(prices['close'][-3:] > close_ma[-3:])
-            if self.rsi >= 60:
-                base_price = self.prices['close'][-1] * 2
-            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1]

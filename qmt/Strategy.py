@@ -766,15 +766,22 @@ class LevelGridStrategy(BaseStrategy):
             self.sell_index = state['sell_index']
             self.ClosePositionDate = state.get('close_position_date', None)
 
-        stock = self.Stocks[0]
-
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
+        if self.logical_holding > 0 and self.base_price is not None:
             original_base_price = self.base_price
-            beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
-            self.base_price = self.base_price + beta * (self.current_price - self.base_price)
+            if abs(self.base_price - self.current_price) > self.atr * 4:
+                beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
+                self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState()
-            self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+                self.SaveStrategyState()
+                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+            elif self.r_squared > 0.7:
+                if self.slope >= 0:
+                    self.base_price = self.base_price + self.current_price * 0.005
+                else:
+                    self.base_price = self.base_price - self.current_price * 0.005
+
+                self.SaveStrategyState()
+                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def SaveStrategyState(self):
         stock = self.Stocks[0]
@@ -1184,7 +1191,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
-        slope, r_squared = np.polyfit(x, log_prices, 1)
+        self.slope, self.r_squared = np.polyfit(x, log_prices, 1)
         days_above_sma = np.sum(all_prices['close'].values[30:] > sma_30[30:])
 
         if not self.IsBacktest:
@@ -1215,13 +1222,13 @@ class PairLevelGridStrategy(BaseStrategy):
             'close_position_date': self.ClosePositionDate,
             'rsi': rsi,
             'atr': self.atr,
-            'slope': slope,
+            'slope': self.slope,
             'sma_5': sma_5[-1],
             'sma_10': sma_10[-1],
             'days_above_ma': days_above_sma
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (slope < -0.005 or days_above_sma <= 10):
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()
@@ -1230,8 +1237,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
         executed = False
 
-        good_up = r_squared > 0.8 and slope > 0
-        bad_down = r_squared > 0.8 and slope < 0
+        good_up = self.r_squared > 0.8 and self.slope > 0
+        bad_down = self.r_squared > 0.8 and self.slope < 0
 
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             self.Print('Close Position')
@@ -1252,7 +1259,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False
-            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and slope > -0.002 and days_above_sma > 10:
+            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
                 pre_buy_check = True
@@ -1376,8 +1383,6 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Print(f"Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-
-
     def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):
         if close_position:
             unit_to_sell = current_holding
@@ -1428,13 +1433,24 @@ class PairLevelGridStrategy(BaseStrategy):
 
         stock = self.Stocks[0]
 
-        if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
+        if self.logical_holding > 0 and self.base_price is not None:
             original_base_price = self.base_price
-            beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
-            self.base_price = self.base_price + beta * (self.current_price - self.base_price)
+            if abs(self.base_price - self.current_price) > self.atr * 4:
+                beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
+                self.base_price = self.base_price + beta * (self.current_price - self.base_price)
 
-            self.SaveStrategyState()
-            self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+                self.SaveStrategyState()
+                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+            elif self.r_squared > 0.7:
+                if self.slope >= 0:
+                    self.base_price = self.base_price + self.current_price * 0.005
+                else:
+                    self.base_price = self.base_price - self.current_price * 0.005
+
+                self.SaveStrategyState()
+                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+
+
 
     def SaveStrategyState(self):
         stock = self.Stocks[0]

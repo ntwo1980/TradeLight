@@ -19,6 +19,7 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
+        self.FixTradingAmount = False
         self.base_price = None
         self.logical_holding = 0
         self.SellMultiplier = 1
@@ -52,34 +53,39 @@ class BaseStrategy():
         }
 
     def GetBuyTradingAmount(self):
-        positions = self.GetPositions()
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
-        totalAsset = self.GetTotalAsset()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-        if tradingAmount > 50000:
-            tradingAmount = 50000
 
-        if cash / totalAsset < 0.1:
-            tradingAmount = 10000
+        if not self.FixTradingAmount:
+            positions = self.GetPositions()
+            yhrl = positions.get('511880.SH', 0)
+            cash = self.GetAvailableCash() + yhrl
+
+            totalAsset = self.GetTotalAsset()
+            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+            if tradingAmount > 50000:
+                tradingAmount = 50000
+
+            if cash / totalAsset < 0.1:
+                tradingAmount = 10000
 
         return tradingAmount
 
     def GetSellTradingAmount(self):
-        positions = self.GetPositions()
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
-        totalAsset = self.GetTotalAsset()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-        if tradingAmount > 50000:
-            tradingAmount = 50000
 
-        if cash / totalAsset > 0.3:
-            tradingAmount = 10000
+        if not self.FixTradingAmount:
+            positions = self.GetPositions()
+            yhrl = positions.get('511880.SH', 0)
+            cash = self.GetAvailableCash() + yhrl
+
+            totalAsset = self.GetTotalAsset()
+            tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+            if tradingAmount > 50000:
+                tradingAmount = 50000
+
+            if cash / totalAsset > 0.3:
+                tradingAmount = 10000
 
         return tradingAmount
 
@@ -561,6 +567,7 @@ class LevelGridStrategy(BaseStrategy):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=160)
+            prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=290)
             prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices_date = self.Yesterday
             self.all_prices = prices[stock]
@@ -575,6 +582,7 @@ class LevelGridStrategy(BaseStrategy):
             sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
             sma_30 = talib.SMA(self.all_prices['close'], timeperiod=30)
             ma_120 = talib.MA(prices120[stock]['close'], timeperiod=120)
+            ma_250 = talib.MA(prices250[stock]['close'], timeperiod=250)
 
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))
@@ -583,8 +591,9 @@ class LevelGridStrategy(BaseStrategy):
             self.r_squared = 1 - (sum((y - (self.slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
             self.days_above_sma = np.sum(self.all_prices['close'].values[-30:] > sma_30[-30:])
             self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
+            self.days_above_ma250 = np.sum(self.all_prices['close'].values[-30:] > ma_250[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10 or self.days_above_ma120 < 3):
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
     def f(self, C):
@@ -645,7 +654,7 @@ class LevelGridStrategy(BaseStrategy):
             'rsi': self.rsi,
             'slope': self.slope,
             'days_above_sma': self.days_above_sma,
-            'days_above_ma120': self.days_above_ma120,
+            'days_above_ma250': self.days_above_ma250,
             'r_squared': self.r_squared,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index
@@ -1142,6 +1151,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=160)
+            self.prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)
             self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):
@@ -1195,6 +1205,8 @@ class PairLevelGridStrategy(BaseStrategy):
         sma_10 = talib.SMA(all_prices['close'], timeperiod=10)
         sma_30 = talib.SMA(all_prices['close'], timeperiod=30)
         ma_120 = talib.MA(self.prices120[stock]['close'], timeperiod=120)
+        ma_250 = talib.MA(self.prices250[stock]['close'], timeperiod=250)
+
 
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
@@ -1202,6 +1214,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.slope, self.r_squared = np.polyfit(x, log_prices, 1)
         days_above_sma = np.sum(all_prices['close'].values[-30:] > sma_30[-30:])
         days_above_ma120 = np.sum(all_prices['close'].values[-30:] > ma_120[-30:])
+        days_above_ma250 = np.sum(all_prices['close'].values[-30:] > ma_250[-30:])
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -1229,6 +1242,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'yesterday': prices['close'].index[-1],
             'yesterday_price': current_price,
             'current_price': self.current_price,
+            'self.logical_holding': self.logical_holding,
             'base_price': base_price,
             'close_position_date': self.ClosePositionDate,
             'rsi': rsi,
@@ -1237,10 +1251,11 @@ class PairLevelGridStrategy(BaseStrategy):
             'sma_5': sma_5[-1],
             'sma_10': sma_10[-1],
             'days_above_ma': days_above_sma,
-            'days_above_ma120': days_above_ma120
+            'days_above_ma120': days_above_ma120,
+            'days_above_ma250': days_above_ma250,
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10 or days_above_ma120 < 3):
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10 or days_above_ma250 < 1):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()
@@ -1377,8 +1392,10 @@ class PairLevelGridStrategy(BaseStrategy):
         else:
             buy_amount = trading_amount
 
+
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+        print({'buy_amount': buy_amount, 'current_price': current_price, 'self.logical_holding': self.logical_holding, 'GetMaxAmount': self.GetMaxAmount()})
 
         if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])

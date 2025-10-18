@@ -1509,6 +1509,8 @@ class MomentumRotationStrategy(BaseStrategy):
 
         self.prices = None
         self.current_held = None
+        self.pending_switch_to = None
+        self.pending_switch_cash = 0
 
         C.set_universe(self.Stocks)
 
@@ -1523,7 +1525,6 @@ class MomentumRotationStrategy(BaseStrategy):
 
     def UpdateMarketData(self, C, stocks):
         self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
-
 
     def GetRank1(self):
         rank_list = []
@@ -1565,18 +1566,22 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return rank_list
 
-    def SwitchPosition(self, C, old_stock, current_holding, new_stock, current_prices):
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices):
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)
         self.logical_holding = 0
+        self.current_held = None
+        self.pending_switch_to = new_stock
+        self.pending_switch_cash = current_holding * price_old
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
-        cash_from_sale = current_holding * price_old
+    def SwitchPosition_Buy(self, C, current_prices):
+        cash_from_sale = self.pending_switch_cash
 
-        price_new = current_prices[new_stock]
+        price_new = current_prices[self.pending_switch_to]
 
         unit_to_buy = int(cash_from_sale / price_new)
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
@@ -1588,8 +1593,10 @@ class MomentumRotationStrategy(BaseStrategy):
         # 检查可用资金
         available_cash = self.GetAvailableCash()
 
-        if self.ExecuteBuy(C, new_stock, price_new, available_cash, trading_amount = cash_from_sale):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount=cash_from_sale):
             self.base_price = price_new
+            self.pending_switch_to = None
+            self.pending_switch_cash = 0
             self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding)
 
     def f(self, C):
@@ -1628,17 +1635,13 @@ class MomentumRotationStrategy(BaseStrategy):
         current_prices = self.GetCurrentPrice(self.Stocks, C)
 
         target = ranks[0][0]
-        # target = self.current_held if self.current_held is not None else self.Stocks[0]
 
-        # self.Print(ranks[0][1] - ranks[1][1] )
-        # if ranks[0][1] - ranks[1][1] > 1:
-        #     target = ranks[0][0]
-
-        if self.current_held is None:
+        if self.pending_switch_to is not None:
+            self.SwitchPosition_Buy(C, current_prices)
+        elif self.current_held is None:
             self.ExecuteBuy(C, target, current_prices[target], available_cash)
         elif self.current_held != target:
-            self.SwitchPosition(C, self.current_held, self.logical_holding, target, current_prices)
-
+            self.SwitchPosition_Sell(C, self.current_held, self.logical_holding, target, current_prices)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):
         if trading_amount is None:
@@ -1695,7 +1698,7 @@ class MomentumRotationStrategy(BaseStrategy):
         data = {
             'current_held': currentHeld,
             'base_price': basePrice,
-            'logical_holding': logicalHolding,
+            'logical_holding': logicalHolding
         }
 
         super().SaveStrategyState(file, data)

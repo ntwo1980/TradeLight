@@ -560,6 +560,7 @@ class LevelGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
+            prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=160)
             prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices_date = self.Yesterday
             self.all_prices = prices[stock]
@@ -572,16 +573,18 @@ class LevelGridStrategy(BaseStrategy):
 
             sma_5 = talib.SMA(self.all_prices['close'], timeperiod=5)
             sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
-            sma_30 = talib.MA(self.all_prices['close'], timeperiod=30)
+            sma_30 = talib.SMA(self.all_prices['close'], timeperiod=30)
+            ma_120 = talib.MA(prices120[stock]['close'], timeperiod=120)
 
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))
             y = np.log(np.array(prices['close'].values))
             self.slope, intercept = np.polyfit(x, y, 1)
             self.r_squared = 1 - (sum((y - (self.slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
-            self.days_above_sma = np.sum(self.all_prices['close'].values[30:] > sma_30[30:])
+            self.days_above_sma = np.sum(self.all_prices['close'].values[-30:] > sma_30[-30:])
+            self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10):
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10 or self.days_above_ma120 < 3):
                 self.ClosePosition = True
 
     def f(self, C):
@@ -642,6 +645,7 @@ class LevelGridStrategy(BaseStrategy):
             'rsi': self.rsi,
             'slope': self.slope,
             'days_above_sma': self.days_above_sma,
+            'days_above_ma120': self.days_above_ma120,
             'r_squared': self.r_squared,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index
@@ -1137,6 +1141,7 @@ class PairLevelGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
+            self.prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=160)
             self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):
@@ -1188,13 +1193,15 @@ class PairLevelGridStrategy(BaseStrategy):
         rsi = talib.RSI(close, timeperiod=6)[-1]
         sma_5 = talib.SMA(all_prices['close'], timeperiod=5)
         sma_10 = talib.SMA(all_prices['close'], timeperiod=10)
-        sma_30 = talib.MA(all_prices['close'], timeperiod=30)
+        sma_30 = talib.SMA(all_prices['close'], timeperiod=30)
+        ma_120 = talib.MA(self.prices120[stock]['close'], timeperiod=120)
 
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
         self.slope, self.r_squared = np.polyfit(x, log_prices, 1)
-        days_above_sma = np.sum(all_prices['close'].values[30:] > sma_30[30:])
+        days_above_sma = np.sum(all_prices['close'].values[-30:] > sma_30[-30:])
+        days_above_ma120 = np.sum(all_prices['close'].values[-30:] > ma_120[-30:])
 
         if not self.IsBacktest:
             current_prices = self.GetCurrentPrice([stock], C)
@@ -1229,10 +1236,11 @@ class PairLevelGridStrategy(BaseStrategy):
             'slope': self.slope,
             'sma_5': sma_5[-1],
             'sma_10': sma_10[-1],
-            'days_above_ma': days_above_sma
+            'days_above_ma': days_above_sma,
+            'days_above_ma120': days_above_ma120
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10):
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10 or days_above_ma120 < 3):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()

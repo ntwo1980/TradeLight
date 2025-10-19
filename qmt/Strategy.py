@@ -19,6 +19,7 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
+        self.RetainAmount = 0
         self.FixTradingAmount = False
         self.base_price = None
         self.logical_holding = 0
@@ -60,7 +61,7 @@ class BaseStrategy():
             yhrl = positions.get('511880.SH', 0)
             cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset()
+            totalAsset = self.GetTotalAsset() - self.RetainAmount
             # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
             if tradingAmount > 50000:
                 tradingAmount = 50000
@@ -78,7 +79,7 @@ class BaseStrategy():
             yhrl = positions.get('511880.SH', 0)
             cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset()
+            totalAsset = self.GetTotalAsset() - self.RetainAmount
             tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
             # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
             if tradingAmount > 50000:
@@ -134,6 +135,7 @@ class BaseStrategy():
 
                 self.TradingAmount = state.get('trading_amount', 30000)
                 self.SellMultiplier = state.get('sell_multiplier', 1)
+                self.RetainAmount = state.get('retain_amount', 0)
         except Exception as e:
             self.Print(f"Error: Failed to load global setting: {e}")
 

@@ -53,7 +53,7 @@ class BaseStrategy():
             '513030.SH',    # 德国
         }
 
-    def GetBuyTradingAmount(self):
+    def GetBuyTradingAmount(self, limitByAsset = True):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
         if not self.FixTradingAmount:
@@ -66,7 +66,7 @@ class BaseStrategy():
             if tradingAmount > 50000:
                 tradingAmount = 50000
 
-            if cash / totalAsset < 0.1:
+            if limitByAsset and cash / totalAsset < 0.1:
                 tradingAmount = 10000
 
         return tradingAmount
@@ -94,7 +94,7 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        return self.GetBuyTradingAmount() * 3.5
+        return self.GetBuyTradingAmount(False) * 3.5
 
     def Print(self, string, **kwargs):
         prefix = f"{self.StrategyPrefix}_{self.Stocks[0].replace('.', '')}_{self.StockNames[0]}_{self.StrategyId}"

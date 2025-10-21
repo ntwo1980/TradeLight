@@ -756,9 +756,10 @@ class LevelGridStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
-            self.SellCount += 1
             if close_position:
                 self.ClosePositionDate = self.Today
+            else:
+                self.SellCount += 1
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
@@ -792,9 +793,9 @@ class LevelGridStrategy(BaseStrategy):
                 self.SaveStrategyState()
                 self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
             elif self.r_squared > 0.7:
-                if self.slope >= 0:
+                if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
-                else:
+                elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
 
                 self.SaveStrategyState()
@@ -1434,9 +1435,10 @@ class PairLevelGridStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
-            self.SellCount += 1
             if close_position:
                 self.ClosePositionDate = self.Today
+            else:
+                self.SellCount += 1
             if self.logical_holding > 0:
                 self.base_price = current_price
                 self.sell_index += 1
@@ -1473,9 +1475,9 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.SaveStrategyState()
                 self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
             elif self.r_squared > 0.7:
-                if self.slope >= 0:
+                if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
-                else:
+                elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
 
                 self.SaveStrategyState()

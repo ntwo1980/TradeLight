@@ -1454,6 +1454,7 @@ class PairLevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
+        return
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)

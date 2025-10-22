@@ -634,9 +634,10 @@ class LevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
-            if self.rsi > 60:
-                base_price = self.prices['close'][-1] * 2
-            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            # if self.rsi > 60:
+            #     base_price = self.prices['close'][-1] * 2
+            # elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = close_ma[-1] * 1.02
@@ -752,7 +753,10 @@ class LevelGridStrategy(BaseStrategy):
         if self.logical_holding < unit_to_sell:
             unit_to_sell = self.logical_holding
 
+
         if unit_to_sell > 0:    # Ensure at least 100 shares
+            # if not close_position and unit_to_sell == self.logical_holding and self.rsi > 60:
+            #     return False
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
@@ -1230,12 +1234,13 @@ class PairLevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(prices['close'][-3:] > close_ma[-3:])
-            if rsi > 60:
-                base_price = prices['close'][-1] * 2
-            elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            # if rsi > 60:
+            #     base_price = prices['close'][-1] * 2
+            # elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1]
+                base_price = close_ma[-1] * 1.02
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price
@@ -1272,7 +1277,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             self.Print('Close Position')
-            executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+            executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True, rsi)
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
@@ -1285,7 +1290,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
                 sell_threshold = base_price + diff
                 if self.current_price >= sell_threshold:
-                    executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
+                    executed = self.ExecuteSell(C, stock, self.current_price, current_holding, False, rsi)
                     self.SellExecuted = executed
 
             pre_buy_check = False
@@ -1415,7 +1420,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Print(f"Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):
+    def ExecuteSell(self, C, stock, current_price, current_holding, close_position, rsi):
         if close_position:
             unit_to_sell = current_holding
         else:
@@ -1432,6 +1437,8 @@ class PairLevelGridStrategy(BaseStrategy):
             unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
+            # if not close_position and unit_to_sell == current_holding and rsi > 60:
+            #     return False
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell

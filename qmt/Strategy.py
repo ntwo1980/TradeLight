@@ -6,9 +6,11 @@ import talib
 import json
 import os
 import math
+import bisect
 
 class BaseStrategy():
-    def __init__(self, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = None, MaxAmount = None, closePosition = False):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = None, MaxAmount = None, closePosition = False):
+        self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
         self.StrategyPrefix = strategyPrefix
@@ -52,6 +54,37 @@ class BaseStrategy():
             '159561.SZ',    # 德国
             '513030.SH',    # 德国
         }
+        if not hasattr(self.Universe, 'Strategies'):
+            self.Universe.Strategies = {}
+
+        uniqueName = self.GetUniqueStrategyName(self.Stocks[0])
+        self.Universe.Strategies[uniqueName] = self
+
+    def FindSellCountIndex(self):
+        if not hasattr(self.Universe, 'StrategyList'):
+            self.Universe.StrategyList = sorted(
+            self.Universe.Strategies.values(),
+            key=lambda obj: obj.SellCount)
+
+        sell_counts = [s.SellCount for s in self.Universe.StrategyList]
+
+        pos = bisect.bisect_right(sell_counts, self.SellCount)  # 返回插入位置
+
+        index = pos - 1
+        if index < 0:
+            index = 0
+
+        return index
+
+    def GetCashPercent(self):
+        positions = self.GetPositions()
+        yhrl = positions.get('511880.SH', 0)
+        cash = self.GetAvailableCash() + yhrl
+
+        totalAsset = self.GetTotalAsset() - self.RetainAmount
+
+        return cash / totalAsset
+
 
     def GetBuyTradingAmount(self, limitByAsset = True):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
@@ -66,8 +99,8 @@ class BaseStrategy():
             if tradingAmount > 50000:
                 tradingAmount = 50000
 
-            if limitByAsset and cash / totalAsset < 0.1:
-                tradingAmount = 10000
+            # if limitByAsset and cash / totalAsset < 0.1:
+            #     tradingAmount = 10000
 
         return tradingAmount
 
@@ -80,13 +113,66 @@ class BaseStrategy():
             cash = self.GetAvailableCash() + yhrl
 
             totalAsset = self.GetTotalAsset() - self.RetainAmount
-            tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
             # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
             if tradingAmount > 50000:
                 tradingAmount = 50000
 
-            if cash / totalAsset > 0.3:
+            # if cash / totalAsset > 0.3:
+            #     tradingAmount = 10000
+
+        return tradingAmount
+
+    def GetBuyTradingAmount1(self, limitByAsset = True):
+        if self.SellCount == 0:
+            return 10000
+
+        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+
+        if not self.FixTradingAmount:
+            positions = self.GetPositions()
+            yhrl = positions.get('511880.SH', 0)
+            cash = self.GetAvailableCash() + yhrl
+
+            totalAsset = self.GetTotalAsset() - self.RetainAmount
+            index = self.FindSellCountIndex()
+            total = len(self.Universe.StrategyList)
+            # print({'SellCount': self.SellCount, 'Index:': index})
+            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+
+            if index < total / 2 or (limitByAsset and cash / totalAsset < 0.1):
                 tradingAmount = 10000
+            elif index > total / 6:
+                if tradingAmount > 70000:
+                    tradingAmount = 70000
+            elif tradingAmount > 50000:
+                tradingAmount = 50000
+
+        return tradingAmount
+
+    def GetSellTradingAmount1(self):
+        if self.SellCount == 0:
+            return 10000
+
+        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+
+        if not self.FixTradingAmount:
+            positions = self.GetPositions()
+            yhrl = positions.get('511880.SH', 0)
+            cash = self.GetAvailableCash() + yhrl
+
+            totalAsset = self.GetTotalAsset() - self.RetainAmount
+            tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+            index = self.FindSellCountIndex()
+            total = len(self.Universe.StrategyList)
+            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+
+            if index < total / 2 or cash / totalAsset > 0.3:
+                tradingAmount = 10000
+            elif index > total / 6:
+                if tradingAmount > 70000:
+                    tradingAmount = 70000
+            elif tradingAmount > 50000:
+                tradingAmount = 50000
 
         return tradingAmount
 
@@ -634,13 +720,10 @@ class LevelGridStrategy(BaseStrategy):
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
-            # if self.rsi > 60:
-            #     base_price = self.prices['close'][-1] * 2
-            # elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
             if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1] * 1.02
+                base_price = self.prices['close'][-10:].mean() * 1.02
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price
@@ -922,7 +1005,7 @@ class PairGridStrategy(BaseStrategy):
             if days_above_ma > 9:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1] * 1.02
+                base_price = close[-10:].mean() * 1.02
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price
@@ -1240,7 +1323,7 @@ class PairLevelGridStrategy(BaseStrategy):
             if days_above_ma_10 > 8 and days_above_ma_5 == 3:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close_ma[-1] * 1.02
+                base_price = prices['close'][-10:].mean() * 1.02
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price

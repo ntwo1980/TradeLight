@@ -771,7 +771,7 @@ class LevelGridStrategy(BaseStrategy):
                     diff = base_price * level / 100
 
                 sell_threshold = base_price + diff * 1.001
-                if self.current_price >= sell_threshold:
+                if self.current_price >= sell_threshold and np.sum(self.all_prices['close'].values[-10:] > talib.SMA(self.prices['close'], timeperiod=10)[-10:]) < 10:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
                     self.SellExecuted = executed
 
@@ -1390,7 +1390,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     diff = base_price * level / 100
 
                 sell_threshold = base_price + diff * 1.001
-                if self.current_price >= sell_threshold:
+                if self.current_price >= sell_threshold and np.sum(prices['close'].values[-10:] > talib.SMA(prices['close'], timeperiod=10)[-10:]) < 10:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding, False, rsi)
                     self.SellExecuted = executed
 

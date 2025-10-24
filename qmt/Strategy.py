@@ -968,7 +968,7 @@ class PairGridStrategy(BaseStrategy):
         # 检查可用资金
         available_cash = self.GetAvailableCash()
 
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -1127,7 +1127,8 @@ class PairGridStrategy(BaseStrategy):
         elif target_stock:
             self.RunGridTrading(C, target_stock)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):    # PairGridStrategy
+
+    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):    # PairGridStrategy
         if trading_amount is None:
             buy_amount = self.GetBuyTradingAmount()
         else:
@@ -1136,7 +1137,7 @@ class PairGridStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount()):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock
@@ -1276,7 +1277,7 @@ class PairLevelGridStrategy(BaseStrategy):
         # 检查可用资金
         available_cash = self.GetAvailableCash()
 
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -1500,12 +1501,9 @@ class PairLevelGridStrategy(BaseStrategy):
         else:
             buy_amount = trading_amount
 
-
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
-        print({'buy_amount': buy_amount, 'current_price': current_price, 'self.logical_holding': self.logical_holding, 'GetMaxAmount': self.GetMaxAmount()})
-
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount()):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock

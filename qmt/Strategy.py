@@ -308,6 +308,15 @@ class BaseStrategy():
 
         return holdings
 
+    def GetAllPositions(self): # BaseStrategy
+        positions = self.GetTradeDetailData(self.Account, self.AccountType, 'position')
+        holdings = {}
+        for pos in positions:
+            key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
+            holdings[key] = pos.m_nVolume
+
+        return holdings
+
     def RebuildWaitingListFromOpenOrders(self): # BaseStrategy
         if self.IsBacktest:
             return
@@ -600,6 +609,12 @@ class SimpleGridStrategy(BaseStrategy):
             self.base_price = None
 
             self.SaveStrategyState()
+
+        positions = self.GetAllPositions()
+        position = positions.get(self.Stocks[0], 0)
+
+        if position != self.logical_holding:
+            self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
 
     def GetGridUnit(self, stock, price, atr):   # SimpleGridStrategy
         if stock == "159985.SZ":
@@ -898,6 +913,12 @@ class LevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
+        positions = self.GetAllPositions()
+        position = positions.get(self.Stocks[0], 0)
+
+        if position != self.logical_holding:
+            self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
+
     def SaveStrategyState(self):     # LevelGridStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
@@ -1186,8 +1207,6 @@ class PairGridStrategy(BaseStrategy):
         if state is not None and not self.IsBacktest:
             self.current_held = state['current_held']
 
-        stock = self.Stocks[0]
-
         if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
@@ -1201,6 +1220,12 @@ class PairGridStrategy(BaseStrategy):
             self.current_held = None
 
             self.SaveStrategyState()
+
+        positions = self.GetAllPositions()
+        position = positions.get(self.current_held, 0)
+
+        if position != self.logical_holding:
+            self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
 
     def SaveStrategyState(self):    # PairGridStrategy
         stock = self.Stocks[0]
@@ -1576,6 +1601,12 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_held = None
 
             self.SaveStrategyState()
+
+        positions = self.GetAllPositions()
+        position = positions.get(self.current_held, 0)
+
+        if position != self.logical_holding:
+            self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
 
         return
 

@@ -686,7 +686,7 @@ class LevelGridStrategy(BaseStrategy):
             self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
             self.days_above_ma250 = np.sum(self.all_prices['close'].values[-30:] > ma_250[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10 or self.days_above_ma250 < 1):
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
     def f(self, C):     # LevelGridStrategy
@@ -1364,7 +1364,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma250': days_above_ma250,
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_sma <= 10 or days_above_ma250 < 1):
+        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()

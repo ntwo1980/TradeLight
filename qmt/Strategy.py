@@ -520,11 +520,11 @@ class SimpleGridStrategy(BaseStrategy):
             'grid_unit': self.grid_unit})
 
 
-        if self.current_price >= base_price + self.grid_unit:
+        if self.current_price >= base_price + self.grid_unit * 1.001:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - self.grid_unit:
+        elif self.current_price <= base_price - self.grid_unit * 1.001:
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
         if executed:
@@ -770,7 +770,7 @@ class LevelGridStrategy(BaseStrategy):
                     level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                     diff = base_price * level / 100
 
-                sell_threshold = base_price + diff
+                sell_threshold = base_price + diff * 1.001
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
                     self.SellExecuted = executed
@@ -792,7 +792,7 @@ class LevelGridStrategy(BaseStrategy):
                     level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                     diff = base_price * level / 100
 
-                buy_threshold = base_price - diff
+                buy_threshold = base_price - diff * 1.001
                 if self.current_price <= buy_threshold:
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
@@ -1035,11 +1035,11 @@ class PairGridStrategy(BaseStrategy):
         current_holding = holdings.get(stock, 0)
 
         executed = False
-        if self.current_price >= base_price + grid_unit:
+        if self.current_price >= base_price + grid_unit * 1.001:
             executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - grid_unit:
+        elif self.current_price <= base_price - grid_unit * 1.001:
             executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 
         if executed:
@@ -1351,7 +1351,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'yesterday': prices['close'].index[-1],
             'yesterday_price': current_price,
             'current_price': self.current_price,
-            'self.logical_holding': self.logical_holding,
+            'logical_holding': self.logical_holding,
             'base_price': base_price,
             'close_position_date': self.ClosePositionDate,
             'rsi': rsi,
@@ -1389,7 +1389,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
                     diff = base_price * level / 100
 
-                sell_threshold = base_price + diff
+                sell_threshold = base_price + diff * 1.001
                 if self.current_price >= sell_threshold:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding, False, rsi)
                     self.SellExecuted = executed
@@ -1408,7 +1408,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
                     diff = base_price * level / 100
 
-                buy_threshold = base_price - diff
+                buy_threshold = base_price - diff * 1.001
                 if self.current_price <= buy_threshold:
                     executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
 

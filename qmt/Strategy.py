@@ -534,7 +534,7 @@ class SimpleGridStrategy(BaseStrategy):
                 self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
             else:
                 self.Print(f"State saved: base_price=None, position={self.logical_holding}")
-        elif self.IsBacktest:
+        if self.IsBacktest:
             self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
@@ -572,10 +572,11 @@ class SimpleGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
-            if self.logical_holding > 0:
-                self.base_price = current_price
-            else:
-                self.base_price = None
+            self.base_price = current_price
+            # if self.logical_holding > 0:
+            #     self.base_price = current_price
+            # else:
+            #     self.base_price = None
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
             return True
         return False
@@ -594,7 +595,11 @@ class SimpleGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
             self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+        elif self.logical_holding <= 0 and self.base_price is not None:
+            self.logical_holding = 0
+            self.base_price = None
 
+            self.SaveStrategyState()
 
     def GetGridUnit(self, stock, price, atr):
         if stock == "159985.SZ":
@@ -798,7 +803,7 @@ class LevelGridStrategy(BaseStrategy):
                 self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
             else:
                 self.Print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
-        elif self.IsBacktest:
+        if self.IsBacktest:
             self.g(C)
 
     def ExecuteBuy(self, C, stock, current_price, available_cash):
@@ -836,24 +841,24 @@ class LevelGridStrategy(BaseStrategy):
         if self.logical_holding < unit_to_sell:
             unit_to_sell = self.logical_holding
 
-
         if unit_to_sell > 0:    # Ensure at least 100 shares
             # if not close_position and unit_to_sell == self.logical_holding and self.rsi > 60:
             #     return False
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
+            self.base_price = current_price
             if close_position:
                 self.ClosePositionDate = self.Today
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:
-                self.base_price = current_price
+                # self.base_price = current_price
                 self.sell_index += 1
                 self.buy_index = 0
 
             else:
-                self.base_price = None
+                # self.base_price = None
                 self.sell_index = 0
                 self.buy_index = 0
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
@@ -887,6 +892,11 @@ class LevelGridStrategy(BaseStrategy):
 
                 self.SaveStrategyState()
                 self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+        elif self.logical_holding <= 0 and self.base_price is not None:
+            self.logical_holding = 0
+            self.base_price = None
+
+            self.SaveStrategyState()
 
     def SaveStrategyState(self):
         stock = self.Stocks[0]
@@ -1005,7 +1015,7 @@ class PairGridStrategy(BaseStrategy):
             if days_above_ma > 9:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
-                base_price = close[-10:].mean() * 1.02
+                base_price = close_ma[-1] * 1.02
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price
@@ -1039,7 +1049,7 @@ class PairGridStrategy(BaseStrategy):
                 self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
             else:
                 self.Print(f"State saved: base_price=None, position={self.logical_holding}")
-        elif self.IsBacktest:
+        if self.IsBacktest:
             self.g(C)
 
     def f(self, C):
@@ -1156,11 +1166,12 @@ class PairGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
-            if self.logical_holding > 0:
-                self.base_price = current_price
-            else:
-                self.current_held = None
-                self.base_price = None
+            self.base_price = current_price
+            # if self.logical_holding > 0:
+                # self.base_price = current_price
+            # else:
+                # self.current_held = None
+                # self.base_price = None
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
             return True
 
@@ -1183,6 +1194,12 @@ class PairGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
             self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+        elif self.logical_holding <= 0 and self.base_price is not None:
+            self.logical_holding = 0
+            self.base_price = None
+            self.current_held = None
+
+            self.SaveStrategyState()
 
     def SaveStrategyState(self):
         stock = self.Stocks[0]
@@ -1401,7 +1418,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
             else:
                 self.Print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
-        elif self.IsBacktest:
+        if self.IsBacktest:
             self.g(C)
 
     def f(self, C):
@@ -1525,17 +1542,18 @@ class PairLevelGridStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
+            self.base_price = current_price
             if close_position:
                 self.ClosePositionDate = self.Today
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:
-                self.base_price = current_price
+                # self.base_price = current_price
                 self.sell_index += 1
                 self.buy_index = 0
             else:
-                self.current_held = None
-                self.base_price = None
+                # self.current_held = None
+                # self.base_price = None
                 self.sell_index = 0
                 self.buy_index = 0
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
@@ -1544,7 +1562,6 @@ class PairLevelGridStrategy(BaseStrategy):
         return False
 
     def g(self, C):
-        return
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
@@ -1554,6 +1571,15 @@ class PairLevelGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
             self.ClosePositionDate = state.get('close_position_date', None)
+
+        if self.logical_holding <= 0 and self.base_price is not None:
+            self.logical_holding = 0
+            self.base_price = None
+            self.current_held = None
+
+            self.SaveStrategyState()
+
+        return
 
         stock = self.Stocks[0]
 
@@ -1759,7 +1785,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.Print("Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):
+    def ExecuteSell(self, C, stock, current_price, current_holding):   # no call
         sell_amount = self.TradingAmount
 
         unit_to_sell = int(sell_amount / current_price)
@@ -1776,6 +1802,7 @@ class MomentumRotationStrategy(BaseStrategy):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
+            self.base_price = current_price
             if self.logical_holding > 0:
                 self.base_price = current_price
             else:

@@ -187,13 +187,13 @@ class BaseStrategy():
         full_message = f"{prefix}: {string}"
         print(full_message, **kwargs)
 
-    def init(self, C):
+    def init(self, C):   # BaseStrategy
         self.IsBacktest = C.do_back_test
         self.LoadGlobalSetting()
 
         self.RebuildWaitingListFromOpenOrders()
 
-    def f(self, C):
+    def f(self, C):   # BaseStrategy
         self.SellExecuted = False
         self.Today = self.GetToday(C)
         self.Yesterday = self.GetYesterday(C)
@@ -207,7 +207,7 @@ class BaseStrategy():
         else:
             self.ClosePosition = False
 
-    def LoadGlobalSetting(self):
+    def LoadGlobalSetting(self):  # BaseStrategy
         file = 'global.json'
 
         # if self.TradingAmount is not None:
@@ -226,7 +226,7 @@ class BaseStrategy():
             self.Print(f"Error: Failed to load global setting: {e}")
 
 
-    def LoadStrategyState(self, stocks, stockNames):
+    def LoadStrategyState(self, stocks, stockNames):  # BaseStrategy
         if self.IsBacktest:
             self.State = None
             return None
@@ -252,7 +252,7 @@ class BaseStrategy():
             return None
             self.Print(f"Error: Failed to load strategy state: {e}")
 
-    def SaveStrategyState(self, file, data):
+    def SaveStrategyState(self, file, data):   # BaseStrategy
         if self.IsBacktest:
             self.Print(json.dumps(data, ensure_ascii=False, indent=4))
         else:
@@ -263,10 +263,10 @@ class BaseStrategy():
                 self.Print(f"Error: Failed to save strategy state: {e}")
 
 
-    def GetUniqueStrategyName(self, stock):
+    def GetUniqueStrategyName(self, stock): # BaseStrategy
         return f"{self.StrategyPrefix}_{stock.replace('.', '')}_{self.StrategyId}"
 
-    def GetStateFileName(self, stock, stockName):
+    def GetStateFileName(self, stock, stockName): # BaseStrategy
         name = self.GetUniqueStrategyName(stock)
         return f"{name}_{stockName}.json"
 
@@ -280,7 +280,7 @@ class BaseStrategy():
 
         return '093000' <= now_time <= '113000' or '130000' <= now_time <= '150000'
 
-    def GetAvailableCash(self):
+    def GetAvailableCash(self): # BaseStrategy
         account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')
         if len(account) == 0:
             self.Print(f'Error: Account {self.Account} is not logged in, please check')
@@ -289,7 +289,7 @@ class BaseStrategy():
         account = account[0]
         return int(account.m_dAvailable)
 
-    def GetTotalAsset(self):
+    def GetTotalAsset(self): # BaseStrategy
         account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')
         if len(account) == 0:
             self.Print(f'Error: Account {self.Account} is not logged in, please check')
@@ -299,7 +299,7 @@ class BaseStrategy():
         return int(account.m_dBalance)
 
 
-    def GetPositions(self):
+    def GetPositions(self): # BaseStrategy
         positions = self.GetTradeDetailData(self.Account, self.AccountType, 'position')
         holdings = {}
         for pos in positions:
@@ -308,7 +308,7 @@ class BaseStrategy():
 
         return holdings
 
-    def RebuildWaitingListFromOpenOrders(self):
+    def RebuildWaitingListFromOpenOrders(self): # BaseStrategy
         if self.IsBacktest:
             return
 
@@ -319,7 +319,7 @@ class BaseStrategy():
             if order.m_nOrderStatus in [49, 50, 51, 52, 55] and strategyName in order.m_strRemark:  # 待报, 已报, 已报待撤, 部成待撤, 部成
                 self.WaitingList.append(order.m_strRemark)
 
-    def CheckWaitingList(self):
+    def CheckWaitingList(self): # BaseStrategy
         if not self.IsBacktest:
             self.RefreshWaitingList()
             if self.WaitingList:
@@ -328,7 +328,7 @@ class BaseStrategy():
 
         return True
 
-    def GetTicketPrices(self, stocks, C):
+    def GetTicketPrices(self, stocks, C): # BaseStrategy
         prices = C.get_full_tick(stocks)
 
         for stock in stocks:
@@ -370,7 +370,7 @@ class BaseStrategy():
 
         return yesterday
 
-    def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):
+    def GetHistoricalPrices(self, C, stocks, fields=['high', 'low', 'close'], period='1d', count=30):  # BaseStrategy
         # prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=self.Yesterday, dividend_type='front')
         prices = {}
         for stock in stocks:
@@ -383,7 +383,7 @@ class BaseStrategy():
 
         return prices
 
-    def GetCurrentPrice(self, stocks, C):
+    def GetCurrentPrice(self, stocks, C): # BaseStrategy
         prices_dict = {}
 
         if self.IsBacktest:
@@ -398,7 +398,7 @@ class BaseStrategy():
 
         return prices_dict
 
-    def RefreshWaitingList(self):
+    def RefreshWaitingList(self):  # BaseStrategy
         if self.WaitingList:
             foundList = []
             orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
@@ -409,7 +409,7 @@ class BaseStrategy():
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
 
-    def Buy(self, C, stock, quantity, price, strategy_name, order_type=2):
+    def Buy(self, C, stock, quantity, price, strategy_name, order_type=2):  # BaseStrategy
         timestamp = int(time.time())
         msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         self.PassOrder(23, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
@@ -421,7 +421,7 @@ class BaseStrategy():
             self.Print(f"Buy {quantity} shares")
         return msg
 
-    def Sell(self, C, stock, quantity, price, strategy_name, order_type=2):
+    def Sell(self, C, stock, quantity, price, strategy_name, order_type=2):  # BaseStrategy
         timestamp = int(time.time())
         msg = f"{strategy_name}_sell_{quantity}_{timestamp}"
         self.PassOrder(24, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
@@ -436,7 +436,7 @@ class SimpleGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
 
-    def init(self, C):
+    def init(self, C):   # SimpleGridStrategy
         super().init(C)
 
         self.prices = None
@@ -455,7 +455,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
-    def UpdateMarketData(self, C, stocks):
+    def UpdateMarketData(self, C, stocks):   # SimpleGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
@@ -470,7 +470,7 @@ class SimpleGridStrategy(BaseStrategy):
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             self.grid_unit = self.GetGridUnit(stock, self.yesterday_price, self.atr)
 
-    def f(self, C):
+    def f(self, C):   # SimpleGridStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -537,7 +537,7 @@ class SimpleGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash):
+    def ExecuteBuy(self, C, stock, current_price, available_cash):   # SimpleGridStrategy
         buy_amount = self.GetBuyTradingAmount()
 
         unit_to_buy = int(buy_amount / current_price)
@@ -554,7 +554,7 @@ class SimpleGridStrategy(BaseStrategy):
             self.Print("Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):
+    def ExecuteSell(self, C, stock, current_price, current_holding):   # SimpleGridStrategy
         sell_amount = self.GetSellTradingAmount()
 
         unit_to_sell = int(sell_amount / current_price)
@@ -581,7 +581,7 @@ class SimpleGridStrategy(BaseStrategy):
             return True
         return False
 
-    def g(self, C):
+    def g(self, C):   # SimpleGridStrategy
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
@@ -601,13 +601,13 @@ class SimpleGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-    def GetGridUnit(self, stock, price, atr):
+    def GetGridUnit(self, stock, price, atr):   # SimpleGridStrategy
         if stock == "159985.SZ":
             return max(atr, price * 0.01)
 
         return atr
 
-    def SaveStrategyState(self):
+    def SaveStrategyState(self):   # SimpleGridStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -624,7 +624,7 @@ class LevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(strategyPrefix='levelgrid', strategyId='a', **kwargs)
 
-    def init(self, C):
+    def init(self, C):     # LevelGridStrategy
         super().init(C)
 
         self.prices = None
@@ -656,7 +656,7 @@ class LevelGridStrategy(BaseStrategy):
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
 
-    def UpdateMarketData(self, C, stocks):
+    def UpdateMarketData(self, C, stocks):     # LevelGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=160)
@@ -689,7 +689,7 @@ class LevelGridStrategy(BaseStrategy):
             if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_sma <= 10 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
-    def f(self, C):
+    def f(self, C):     # LevelGridStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -806,7 +806,7 @@ class LevelGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash):
+    def ExecuteBuy(self, C, stock, current_price, available_cash):     # LevelGridStrategy
         buy_amount = self.GetBuyTradingAmount()
 
         unit_to_buy = int(buy_amount / current_price)
@@ -825,7 +825,7 @@ class LevelGridStrategy(BaseStrategy):
             self.Print("Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):
+    def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):     # LevelGridStrategy
         if close_position:
             unit_to_sell = current_holding
         else:
@@ -866,7 +866,7 @@ class LevelGridStrategy(BaseStrategy):
 
         return False
 
-    def g(self, C):
+    def g(self, C):     # LevelGridStrategy
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
@@ -898,7 +898,7 @@ class LevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-    def SaveStrategyState(self):
+    def SaveStrategyState(self):     # LevelGridStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -920,7 +920,7 @@ class PairGridStrategy(BaseStrategy):
         self.stock_A = self.Stocks[0]
         self.stock_B = self.Stocks[1]
 
-    def init(self, C):
+    def init(self, C):    # PairGridStrategy
         super().init(C)
 
         self.prices = None
@@ -948,12 +948,12 @@ class PairGridStrategy(BaseStrategy):
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}, sell_count={self.SellCount}")
 
-    def UpdateMarketData(self, C, stocks):
+    def UpdateMarketData(self, C, stocks):    # PairGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
             self.prices_date = self.Yesterday
 
-    def SwitchPosition_Buy(self, C, current_prices):
+    def SwitchPosition_Buy(self, C, current_prices):    # PairGridStrategy
         cash_from_sale = self.pending_switch_cash
 
         price_new = current_prices[self.pending_switch_to]
@@ -975,7 +975,7 @@ class PairGridStrategy(BaseStrategy):
             self.new_base_price = None
             self.SaveStrategyState()
 
-    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairGridStrategy
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
@@ -991,7 +991,7 @@ class PairGridStrategy(BaseStrategy):
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
-    def RunGridTrading(self, C, stock):
+    def RunGridTrading(self, C, stock):    # PairGridStrategy
         prices = self.prices[stock]
         current_price = prices['close'][-1]
         high = prices['high'].values
@@ -1052,7 +1052,7 @@ class PairGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def f(self, C):
+    def f(self, C):    # PairGridStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -1127,7 +1127,7 @@ class PairGridStrategy(BaseStrategy):
         elif target_stock:
             self.RunGridTrading(C, target_stock)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):
+    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):    # PairGridStrategy
         if trading_amount is None:
             buy_amount = self.GetBuyTradingAmount()
         else:
@@ -1148,7 +1148,7 @@ class PairGridStrategy(BaseStrategy):
             self.Print("Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):
+    def ExecuteSell(self, C, stock, current_price, current_holding):    # PairGridStrategy
         sell_amount = self.GetSellTradingAmount()
 
         unit_to_sell = int(sell_amount / current_price)
@@ -1177,7 +1177,7 @@ class PairGridStrategy(BaseStrategy):
 
         return False
 
-    def g(self, C):
+    def g(self, C):    # PairGridStrategy
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
@@ -1201,7 +1201,7 @@ class PairGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-    def SaveStrategyState(self):
+    def SaveStrategyState(self):    # PairGridStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -1222,7 +1222,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.stock_B = self.Stocks[1]
         self.threshold_ratio = threshold_ratio
 
-    def init(self, C):
+    def init(self, C):    # PairLevelGridStrategy
         super().init(C)
 
         self.prices = None
@@ -1254,14 +1254,14 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
 
-    def UpdateMarketData(self, C, stocks):
+    def UpdateMarketData(self, C, stocks):    # PairLevelGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=160)
             self.prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)
             self.prices_date = self.Yesterday
 
-    def SwitchPosition_Buy(self, C, current_prices):
+    def SwitchPosition_Buy(self, C, current_prices):    # PairLevelGridStrategy
         cash_from_sale = self.pending_switch_cash
 
         price_new = current_prices[self.pending_switch_to]
@@ -1283,7 +1283,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.new_base_price = None
             self.SaveStrategyState()
 
-    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairLevelGridStrategy
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
@@ -1299,7 +1299,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
-    def RunGridTrading(self, C, stock):
+    def RunGridTrading(self, C, stock):    # PairLevelGridStrategy
         all_prices = self.prices[stock]
         prices = self.prices[stock][-30:]
         current_price = prices['close'][-1]
@@ -1421,7 +1421,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def f(self, C):
+    def f(self, C):    # PairLevelGridStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -1494,7 +1494,7 @@ class PairLevelGridStrategy(BaseStrategy):
         elif target_stock:
             self.RunGridTrading(C, target_stock)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):
+    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):    # PairLevelGridStrategy
         if trading_amount is None:
             buy_amount = self.GetBuyTradingAmount()
         else:
@@ -1520,7 +1520,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Print(f"Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding, close_position, rsi):
+    def ExecuteSell(self, C, stock, current_price, current_holding, close_position, rsi):    # PairLevelGridStrategy
         if close_position:
             unit_to_sell = current_holding
         else:
@@ -1561,7 +1561,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return False
 
-    def g(self, C):
+    def g(self, C):    # PairLevelGridStrategy
         if not self.IsBacktest:
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
@@ -1602,7 +1602,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
 
 
-    def SaveStrategyState(self):
+    def SaveStrategyState(self):    # PairLevelGridStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -1625,7 +1625,7 @@ class MomentumRotationStrategy(BaseStrategy):
         self.days = days
         self.rank = 1
 
-    def init(self, C):
+    def init(self, C):    # MomentumRotationStrategy
         super().init(C)
 
         self.prices = None
@@ -1644,10 +1644,10 @@ class MomentumRotationStrategy(BaseStrategy):
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, current_held={self.current_held}")
 
-    def UpdateMarketData(self, C, stocks):
+    def UpdateMarketData(self, C, stocks):    # MomentumRotationStrategy
         self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=self.days+1)
 
-    def GetRank1(self):
+    def GetRank1(self):    # MomentumRotationStrategy
         rank_list = []
 
         for stock in self.Stocks:
@@ -1665,7 +1665,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return rank_list
 
-    def GetRank2(self):
+    def GetRank2(self):    # MomentumRotationStrategy
         rank_list = []
 
         for stock in self.Stocks:
@@ -1687,7 +1687,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return rank_list
 
-    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices):
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices):    # MomentumRotationStrategy
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
@@ -1699,7 +1699,7 @@ class MomentumRotationStrategy(BaseStrategy):
         self.pending_switch_cash = current_holding * price_old
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
-    def SwitchPosition_Buy(self, C, current_prices):
+    def SwitchPosition_Buy(self, C, current_prices):    # MomentumRotationStrategy
         cash_from_sale = self.pending_switch_cash
 
         price_new = current_prices[self.pending_switch_to]
@@ -1720,7 +1720,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.pending_switch_cash = 0
             self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding)
 
-    def f(self, C):
+    def f(self, C):    # MomentumRotationStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -1764,7 +1764,7 @@ class MomentumRotationStrategy(BaseStrategy):
         elif self.current_held != target:
             self.SwitchPosition_Sell(C, self.current_held, self.logical_holding, target, current_prices)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):
+    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):    # MomentumRotationStrategy
         if trading_amount is None:
             buy_amount = self.TradingAmount
         else:
@@ -1785,7 +1785,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.Print("Error: Insufficient cash or calculated shares is zero, cannot buy")
             return False
 
-    def ExecuteSell(self, C, stock, current_price, current_holding):   # no call
+    def ExecuteSell(self, C, stock, current_price, current_holding):   # no call    # MomentumRotationStrategy
         sell_amount = self.TradingAmount
 
         unit_to_sell = int(sell_amount / current_price)
@@ -1812,7 +1812,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         return False
 
-    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding):
+    def SaveStrategyState(self, currentHeld, basePrice, logicalHolding):    # MomentumRotationStrategy
         stock = self.Stocks[0]
         stockName = self.StockNames[0]
         file = self.GetStateFileName(stock, stockName)
@@ -1829,7 +1829,7 @@ class JointquantEmailStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(strategyPrefix='jointquantemail', strategyId='a', **kwargs)
 
-    def init(self, C):
+    def init(self, C):     # JointquantEmailStrategy
         super().init(C)
 
         self.last_time = None
@@ -1847,7 +1847,7 @@ class JointquantEmailStrategy(BaseStrategy):
         else:
             self.SaveStrategyState(None, [])
 
-    def f(self, C):
+    def f(self, C):     # JointquantEmailStrategy
         super().f(C)
 
         if not self.IsBacktest and not self.IsTradingTime():
@@ -1903,7 +1903,7 @@ class JointquantEmailStrategy(BaseStrategy):
         if executed:
             self.SaveStrategyState(self.last_time, self.held)
 
-    def ExecuteBuy(self, C, stock, current_price, trading_amount = None):
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None):     # JointquantEmailStrategy
         if trading_amount is None:
             buy_amount = self.TradingAmount
         else:
@@ -1919,7 +1919,7 @@ class JointquantEmailStrategy(BaseStrategy):
             self.logical_holding += unit_to_buy
             return True
 
-    def SellYHRL(self, C, target_cash, holdings):
+    def SellYHRL(self, C, target_cash, holdings):     # JointquantEmailStrategy
         stock = '511880.SH'
         current_holding = holdings.get(stock, 0)
 
@@ -1943,7 +1943,7 @@ class JointquantEmailStrategy(BaseStrategy):
         if sell_volume > 0:
             self.PassOrder(24, 1101, self.Account, stock, 14, -1, sell_volume, '', 2, '', C)
 
-    def ExecuteSell(self, C, stock, current_holding):
+    def ExecuteSell(self, C, stock, current_holding):     # JointquantEmailStrategy
         sell_amount = self.TradingAmount
 
         unit_to_sell = current_holding
@@ -1956,7 +1956,7 @@ class JointquantEmailStrategy(BaseStrategy):
 
         return False
 
-    def LoadStrategyState(self):
+    def LoadStrategyState(self):     # JointquantEmailStrategy
         """Load strategy state from file"""
 
         if self.IsBacktest:
@@ -1980,7 +1980,7 @@ class JointquantEmailStrategy(BaseStrategy):
             self.Print(f"Error: Failed to load strategy state: {e}")
 
 
-    def SaveStrategyState(self, last_time, held):
+    def SaveStrategyState(self, last_time, held):     # JointquantEmailStrategy
         file = self.GetStateFileName(self.Stocks[0], self.StockNames[0])
 
         data = {

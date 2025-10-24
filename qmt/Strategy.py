@@ -61,20 +61,23 @@ class BaseStrategy():
         self.Universe.Strategies[uniqueName] = self
 
     def FindSellCountIndex(self):
-        if not hasattr(self.Universe, 'StrategyList'):
-            self.Universe.StrategyList = sorted(
-            self.Universe.Strategies.values(),
-            key=lambda obj: obj.SellCount)
-
-        sell_counts = [s.SellCount for s in self.Universe.StrategyList]
+        sell_counts = [s.SellCount for s in self.Universe.Strategies.values() if not isinstance(s, SimpleGridStrategy) ]
+        sell_counts.sort()
 
         pos = bisect.bisect_right(sell_counts, self.SellCount)  # 返回插入位置
+
+        # print({'aaa': 111, 'sell_counts': sell_counts, 'SellCount': self.SellCount, 'pos': pos})
 
         index = pos - 1
         if index < 0:
             index = 0
 
         return index
+
+    def FindMaxSellCount(self):
+        sell_counts = [s.SellCount for s in self.Universe.Strategies.values() if not isinstance(s, SimpleGridStrategy) ]
+
+        return max(sell_counts)
 
     def GetCashPercent(self):
         positions = self.GetPositions()
@@ -86,7 +89,7 @@ class BaseStrategy():
         return cash / totalAsset
 
 
-    def GetBuyTradingAmount(self, limitByAsset = True):
+    def GetBuyTradingAmount1(self, limitByAsset = True):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
         if not self.FixTradingAmount:
@@ -104,7 +107,7 @@ class BaseStrategy():
 
         return tradingAmount
 
-    def GetSellTradingAmount(self):
+    def GetSellTradingAmount1(self):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
         if not self.FixTradingAmount:
@@ -122,10 +125,8 @@ class BaseStrategy():
 
         return tradingAmount
 
-    def GetBuyTradingAmount1(self, limitByAsset = True):
-        if self.SellCount == 0:
-            return 10000
-
+    def GetBuyTradingAmount(self, limitByAsset = True):
+        maxSellCount = self.FindMaxSellCount()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
         if not self.FixTradingAmount:
@@ -135,23 +136,20 @@ class BaseStrategy():
 
             totalAsset = self.GetTotalAsset() - self.RetainAmount
             index = self.FindSellCountIndex()
-            total = len(self.Universe.StrategyList)
-            # print({'SellCount': self.SellCount, 'Index:': index})
-            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+            total = len(self.Universe.Strategies)
 
-            if index < total / 2 or (limitByAsset and cash / totalAsset < 0.1):
-                tradingAmount = 10000
-            elif index > total / 6:
-                if tradingAmount > 70000:
-                    tradingAmount = 70000
-            elif tradingAmount > 50000:
-                tradingAmount = 50000
+            # print({'SellCount': self.SellCount, 'Index:': index})
+
+            if tradingAmount > totalAsset / 20:
+                tradingAmount = totalAsset / 20
+
+            if maxSellCount > 5 and index < total / 2:
+                tradingAmount = tradingAmount / 2
 
         return tradingAmount
 
-    def GetSellTradingAmount1(self):
-        if self.SellCount == 0:
-            return 10000
+    def GetSellTradingAmount(self):
+        maxSellCount = self.FindMaxSellCount()
 
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
@@ -163,16 +161,14 @@ class BaseStrategy():
             totalAsset = self.GetTotalAsset() - self.RetainAmount
             tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
             index = self.FindSellCountIndex()
-            total = len(self.Universe.StrategyList)
+            total = len(self.Universe.Strategies)
             # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
 
-            if index < total / 2 or cash / totalAsset > 0.3:
-                tradingAmount = 10000
-            elif index > total / 6:
-                if tradingAmount > 70000:
-                    tradingAmount = 70000
-            elif tradingAmount > 50000:
-                tradingAmount = 50000
+            if tradingAmount > totalAsset / 20:
+                tradingAmount = totalAsset / 20
+
+            if maxSellCount > 5 and index < total / 2:
+                tradingAmount = tradingAmount / 2
 
         return tradingAmount
 
@@ -616,6 +612,9 @@ class SimpleGridStrategy(BaseStrategy):
         if position != self.logical_holding:
             self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
 
+            if self.IsBacktest:
+                self.logical_holding = position
+
     def GetGridUnit(self, stock, price, atr):   # SimpleGridStrategy
         if stock == "159985.SZ":
             return max(atr, price * 0.01)
@@ -918,6 +917,11 @@ class LevelGridStrategy(BaseStrategy):
 
         if position != self.logical_holding:
             self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
+
+            if self.IsBacktest:
+                self.logical_holding = position
+                if position == 0:
+                    self.base_price = None
 
     def SaveStrategyState(self):     # LevelGridStrategy
         stock = self.Stocks[0]
@@ -1226,6 +1230,12 @@ class PairGridStrategy(BaseStrategy):
 
         if position != self.logical_holding:
             self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
+
+            if self.IsBacktest:
+                self.logical_holding = position
+                if position == 0:
+                    self.current_held = None
+                    self.base_price = None
 
     def SaveStrategyState(self):    # PairGridStrategy
         stock = self.Stocks[0]
@@ -1607,6 +1617,12 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if position != self.logical_holding:
             self.Print(f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}")
+
+            if self.IsBacktest:
+                self.logical_holding = position
+                if position == 0:
+                    self.current_held = None
+                    self.base_price = None
 
         return
 

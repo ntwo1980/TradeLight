@@ -22,7 +22,6 @@ class BaseStrategy():
         self.AccountType = "STOCK"
         self.TradingAmount = TradingAmount
         self.RetainAmount = 0
-        self.FixTradingAmount = False
         self.base_price = None
         self.logical_holding = 0
         self.SellMultiplier = 1
@@ -56,9 +55,11 @@ class BaseStrategy():
         }
         if not hasattr(self.Universe, 'Strategies'):
             self.Universe.Strategies = {}
+            self.Universe.StrategyList = []
 
         uniqueName = self.GetUniqueStrategyName(self.Stocks[0])
         self.Universe.Strategies[uniqueName] = self
+        self.Universe.StrategyList.append(self)
 
     def FindSellCountIndex(self):
         sell_counts = [s.SellCount for s in self.Universe.Strategies.values() if not isinstance(s, SimpleGridStrategy) ]
@@ -88,40 +89,37 @@ class BaseStrategy():
 
         return cash / totalAsset
 
-
     def GetBuyTradingAmount1(self, limitByAsset = True):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
-        if not self.FixTradingAmount:
-            positions = self.GetPositions()
-            yhrl = positions.get('511880.SH', 0)
-            cash = self.GetAvailableCash() + yhrl
+        positions = self.GetPositions()
+        yhrl = positions.get('511880.SH', 0)
+        cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset() - self.RetainAmount
-            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-            if tradingAmount > totalAsset / 20:
-                tradingAmount = totalAsset / 20
+        totalAsset = self.GetTotalAsset() - self.RetainAmount
+        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+        if tradingAmount > totalAsset / 20:
+            tradingAmount = totalAsset / 20
 
-            # if limitByAsset and cash / totalAsset < 0.1:
-            #     tradingAmount = 10000
+        # if limitByAsset and cash / totalAsset < 0.1:
+        #     tradingAmount = 10000
 
         return tradingAmount
 
     def GetSellTradingAmount1(self):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
-        if not self.FixTradingAmount:
-            positions = self.GetPositions()
-            yhrl = positions.get('511880.SH', 0)
-            cash = self.GetAvailableCash() + yhrl
+        positions = self.GetPositions()
+        yhrl = positions.get('511880.SH', 0)
+        cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset() - self.RetainAmount
-            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-            if tradingAmount > totalAsset / 20:
-                tradingAmount = totalAsset / 20
+        totalAsset = self.GetTotalAsset() - self.RetainAmount
+        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+        if tradingAmount > totalAsset / 20:
+            tradingAmount = totalAsset / 20
 
-            # if cash / totalAsset > 0.3:
-            #     tradingAmount = 10000
+        # if cash / totalAsset > 0.3:
+        #     tradingAmount = 10000
 
         return tradingAmount
 
@@ -129,22 +127,26 @@ class BaseStrategy():
         maxSellCount = self.FindMaxSellCount()
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
-        if not self.FixTradingAmount:
-            positions = self.GetPositions()
-            yhrl = positions.get('511880.SH', 0)
-            cash = self.GetAvailableCash() + yhrl
+        positions = self.GetPositions()
+        yhrl = positions.get('511880.SH', 0)
+        cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset() - self.RetainAmount
-            index = self.FindSellCountIndex()
-            total = len(self.Universe.Strategies)
+        totalAsset = self.GetTotalAsset() - self.RetainAmount
+        index = self.FindSellCountIndex()
+        total = len(self.Universe.Strategies)
 
-            # print({'SellCount': self.SellCount, 'Index:': index})
+        # for s in sorted(self.Universe.StrategyList, key=lambda x: -x.SellCount, reverse=True):
+        #     print({'sc': s.SellCount})
 
-            if tradingAmount > totalAsset / 20:
-                tradingAmount = totalAsset / 20
+        # print({'SellCount': self.SellCount, 'Index:': index})
 
-            if maxSellCount > 5 and index < total / 2:
-                tradingAmount = tradingAmount / 2
+        if tradingAmount > totalAsset / 20:
+            tradingAmount = totalAsset / 20
+
+        # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
+        #     tradingAmount = 10000
+        if maxSellCount > 5 and index < total / 2:
+            tradingAmount = tradingAmount / 2
 
         return tradingAmount
 
@@ -153,22 +155,21 @@ class BaseStrategy():
 
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
 
-        if not self.FixTradingAmount:
-            positions = self.GetPositions()
-            yhrl = positions.get('511880.SH', 0)
-            cash = self.GetAvailableCash() + yhrl
+        positions = self.GetPositions()
+        yhrl = positions.get('511880.SH', 0)
+        cash = self.GetAvailableCash() + yhrl
 
-            totalAsset = self.GetTotalAsset() - self.RetainAmount
-            tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-            index = self.FindSellCountIndex()
-            total = len(self.Universe.Strategies)
-            # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
+        totalAsset = self.GetTotalAsset() - self.RetainAmount
+        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        index = self.FindSellCountIndex()
+        total = len(self.Universe.Strategies)
+        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
 
-            if tradingAmount > totalAsset / 20:
-                tradingAmount = totalAsset / 20
+        if tradingAmount > totalAsset / 20:
+            tradingAmount = totalAsset / 20
 
-            if maxSellCount > 5 and index < total / 2:
-                tradingAmount = tradingAmount / 2
+        if maxSellCount > 5 and index < total / 2:
+            tradingAmount = tradingAmount / 2
 
         return tradingAmount
 

@@ -30,6 +30,8 @@ class BaseStrategy():
         self.ClosePositionSetting = closePosition
         self.ClosePosition = False
         self.ClosePositionDate = None
+        self.LastBuyDate = None
+        self.LastSellDate = None
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -106,7 +108,9 @@ class BaseStrategy():
         # if limitByAsset and cash / totalAsset < 0.1:
         #     tradingAmount = 10000
 
-        return tradingAmount
+        buy_index = getattr(self, 'buy_index', 0)
+
+        return tradingAmount if buy_index < 2 else tradingAmount / 2
 
     def GetSellTradingAmount1(self):
         tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
@@ -123,7 +127,9 @@ class BaseStrategy():
         # if cash / totalAsset > 0.3:
         #     tradingAmount = 10000
 
-        return tradingAmount
+        sell_index = getattr(self, 'sell_index', 0)
+        return tradingAmount if buy_index < 2 else tradingAmount / 2
+        # return tradingAmount
 
     def GetBuyTradingAmount(self, limitByAsset = True):
         maxSellCount = self.FindMaxSellCount()
@@ -150,6 +156,7 @@ class BaseStrategy():
         if maxSellCount > 5 and index < total / 2:
             tradingAmount = tradingAmount / 2
 
+        # buy_index = getattr(self, 'buy_index', 0)
         return tradingAmount
 
     def GetSellTradingAmount(self):
@@ -172,6 +179,8 @@ class BaseStrategy():
 
         if maxSellCount > 5 and index < total / 2:
             tradingAmount = tradingAmount / 2
+
+        # sell_index = getattr(self, 'sell_index', 0)
 
         return tradingAmount
 
@@ -245,6 +254,8 @@ class BaseStrategy():
                 self.base_price = state['base_price']
                 self.logical_holding = state['logical_holding']
                 self.SellCount = state.get('sell_count', 0)
+                self.LastBuyDate = state.get('last_buy_date', None)
+                self.LastSellDate = state.get('last_sell_date', None)
 
                 return state
         except Exception as e:
@@ -556,6 +567,7 @@ class SimpleGridStrategy(BaseStrategy):
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
             self.base_price = current_price
+            self.LastBuyDate = self.Today
             self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
@@ -581,6 +593,7 @@ class SimpleGridStrategy(BaseStrategy):
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
             self.base_price = current_price
+            self.LastSellDate = self.Today
             # if self.logical_holding > 0:
             #     self.base_price = current_price
             # else:
@@ -632,7 +645,8 @@ class SimpleGridStrategy(BaseStrategy):
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
-            'sell_count': self.SellCount,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate
         }
 
         super().SaveStrategyState(file, data)
@@ -836,6 +850,7 @@ class LevelGridStrategy(BaseStrategy):
             self.base_price = current_price
             self.buy_index += 1
             self.sell_index = 0
+            self.LastBuyDate = self.Today
             self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
@@ -865,6 +880,7 @@ class LevelGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.base_price = current_price
+            self.LastSellDate = self.Today
             if close_position:
                 self.ClosePositionDate = self.Today
             else:
@@ -937,7 +953,9 @@ class LevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
-            'close_position_date': self.ClosePositionDate
+            'close_position_date': self.ClosePositionDate,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate
         }
 
         super().SaveStrategyState(file, data)
@@ -1171,6 +1189,7 @@ class PairGridStrategy(BaseStrategy):
             self.current_held = stock
             self.logical_holding += unit_to_buy
             self.base_price = current_price
+            self.LastBuyDate = self.Today
             self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
@@ -1196,6 +1215,7 @@ class PairGridStrategy(BaseStrategy):
             self.logical_holding -= unit_to_sell
             self.SellCount += 1
             self.base_price = current_price
+            self.LastSellDate = self.Today
             # if self.logical_holding > 0:
                 # self.base_price = current_price
             # else:
@@ -1250,6 +1270,8 @@ class PairGridStrategy(BaseStrategy):
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
             'sell_count': self.SellCount,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate
         }
 
         super().SaveStrategyState(file, data)
@@ -1547,6 +1569,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_held = stock
             self.logical_holding += unit_to_buy
             self.base_price = current_price
+            self.LastBuyDate = self.Today
             if not isSwitch:
                 self.buy_index += 1
                 self.sell_index = 0
@@ -1579,6 +1602,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.base_price = current_price
+            self.LastSellDate = self.Today
             if close_position:
                 self.ClosePositionDate = self.Today
             else:
@@ -1662,7 +1686,9 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
-            'close_position_date': self.ClosePositionDate
+            'close_position_date': self.ClosePositionDate,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate
         }
 
         super().SaveStrategyState(file, data)
@@ -1827,6 +1853,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.current_held = stock
             self.logical_holding += unit_to_buy
             self.base_price = current_price
+            self.LastBuyDate = self.Today
             self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
@@ -1851,6 +1878,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
             self.base_price = current_price
+            self.LastSellDate = self.Today
             if self.logical_holding > 0:
                 self.base_price = current_price
             else:
@@ -1868,7 +1896,9 @@ class MomentumRotationStrategy(BaseStrategy):
         data = {
             'current_held': currentHeld,
             'base_price': basePrice,
-            'logical_holding': logicalHolding
+            'logical_holding': logicalHolding,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate
         }
 
         super().SaveStrategyState(file, data)

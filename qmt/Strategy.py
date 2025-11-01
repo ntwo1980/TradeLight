@@ -747,10 +747,11 @@ class LevelGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):     # LevelGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
-            prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=290)[stock]
+            prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)[stock]
             prices120 = prices250.tail(160)
             prices = prices250.tail(60)
 
+            # prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
             self.prices_date = self.Yesterday
             self.all_prices = prices
             self.prices = prices[-30:]
@@ -1375,9 +1376,16 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def UpdateMarketData(self, C, stocks):    # PairLevelGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
-            self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
-            self.prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=160)
             self.prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)
+            self.prices120 = {}
+            self.prices = {}
+            for s in self.prices250:
+                self.prices120[s] = self.prices250[s].tail(160)
+                self.prices[s] = self.prices250[s].tail(60)
+
+            # self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
+            # self.prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=160)
+            # self.prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)
             self.prices_date = self.Yesterday
 
     def SwitchPosition_Buy(self, C, current_prices):    # PairLevelGridStrategy

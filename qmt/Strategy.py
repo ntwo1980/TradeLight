@@ -747,12 +747,13 @@ class LevelGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):     # LevelGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
-            prices120 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=160)
-            prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=290)
-            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=60)
+            prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=290)[stock]
+            prices120 = prices250.tail(160)
+            prices = prices250.tail(60)
+
             self.prices_date = self.Yesterday
-            self.all_prices = prices[stock]
-            self.prices = prices[stock][-30:]
+            self.all_prices = prices
+            self.prices = prices[-30:]
             prices = self.prices
             self.yesterday_price = prices['close'][-1]
             self.current_price = self.yesterday_price
@@ -762,8 +763,8 @@ class LevelGridStrategy(BaseStrategy):
             sma_5 = talib.SMA(self.all_prices['close'], timeperiod=5)
             sma_10 = talib.SMA(self.all_prices['close'], timeperiod=10)
             sma_30 = talib.SMA(self.all_prices['close'], timeperiod=30)
-            ma_120 = talib.MA(prices120[stock]['close'], timeperiod=120)
-            ma_250 = talib.MA(prices250[stock]['close'], timeperiod=250)
+            ma_120 = talib.MA(prices120['close'], timeperiod=120)
+            ma_250 = talib.MA(prices250['close'], timeperiod=250)
 
             self.atr = talib.ATR(prices['high'].values, prices['low'].values, prices['close'].values, timeperiod=4)[-1]
             x = np.arange(len(prices['close'].values))

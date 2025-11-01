@@ -37,6 +37,7 @@ class BaseStrategy():
         self.PassOrder = pass_order_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
+        self.UseLocalHistoryData = True
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -400,7 +401,10 @@ class BaseStrategy():
         # prices = C.get_market_data_ex(fields, stocks, period=period, count=count, end_time=self.Yesterday, dividend_type='front')
         prices = {}
         for stock in stocks:
-            prices[stock] = C.get_market_data_ex(fields, [stock], period=period, count=count, end_time=self.Yesterday, dividend_type='front')[stock]
+            if self.UseLocalHistoryData:
+                prices[stock] = self.GetLocalHistoricalPrice(C, stock, fields, count)
+            else:
+                prices[stock] = C.get_market_data_ex(fields, [stock], period=period, count=count, end_time=self.Yesterday, dividend_type='front')[stock]
 
         for stock in stocks:
             if stock not in prices:
@@ -408,6 +412,52 @@ class BaseStrategy():
                 return None
 
         return prices
+
+    def GetLocalHistoricalPrice(self, C, stock, fields, count):  # BaseStrategy
+        s = stock.replace('SH', 'XSHG')
+        s = s.replace('SZ', 'XSHE')
+
+        with open(f"prices/{s}.csv", 'r', encoding='utf-8') as f:
+            content = f.read()
+            df = self.ParseCsv(content)
+
+            return df
+
+    def ParseCsv(self, text):
+        lines = text.strip().split('\n')
+        if not lines:
+            return pd.DataFrame()
+
+        header = lines[0].split(',')
+        header = [h.strip('"').strip() for h in header]
+
+        data = []
+        for line in lines[1:]:
+            if not line.strip():
+                continue
+            fields = line.split(',')
+            if len(fields) != len(header):
+                continue
+            row = {}
+            for i, col in enumerate(header):
+                val = fields[i].strip().strip('"')
+                if i == 0:  # 日期列
+                    try:
+                        row['date'] = val
+                    except:
+                        continue  # 无效日期跳过
+                else:
+                    try:
+                        row[col] = float(val) if val else None
+                    except ValueError:
+                        row[col] = val
+            data.append(row)
+
+        df = pd.DataFrame(data)
+        if 'date' in df.columns:
+            df.set_index('date', inplace=True)
+
+        return df
 
     def GetCurrentPrice(self, stocks, C): # BaseStrategy
         prices_dict = {}

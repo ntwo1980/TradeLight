@@ -9,7 +9,7 @@ import math
 import bisect
 
 class BaseStrategy():
-    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, TradingAmount = None, MaxAmount = None, closePosition = False):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
@@ -36,6 +36,7 @@ class BaseStrategy():
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
         self.TimetagToDatetime = timetag_to_datetime_func
+        self.DownloadHistoryData = download_history_data_func
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -198,8 +199,14 @@ class BaseStrategy():
     def init(self, C):   # BaseStrategy
         self.IsBacktest = C.do_back_test
         self.LoadGlobalSetting()
+        # self.DownloadStocksHistoryData(C)
 
         self.RebuildWaitingListFromOpenOrders()
+
+    def DownloadStocksHistoryData(self, C):     # BaseStrategy
+        for s in self.Stocks:
+            self.Print(f"downloading data {s}")
+            self.DownloadHistoryData(s, "1d", "20200101","")
 
     def f(self, C):   # BaseStrategy
         self.SellExecuted = False

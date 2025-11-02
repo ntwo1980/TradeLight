@@ -9,7 +9,7 @@ import math
 import bisect
 
 class BaseStrategy():
-    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
@@ -35,6 +35,7 @@ class BaseStrategy():
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
+        self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
         self.UseLocalHistoryData = True
@@ -346,9 +347,9 @@ class BaseStrategy():
             if order.m_nOrderStatus in [49, 50, 51, 52, 55] and strategyName in order.m_strRemark:  # 待报, 已报, 已报待撤, 部成待撤, 部成
                 self.WaitingList.append(order.m_strRemark)
 
-    def CheckWaitingList(self): # BaseStrategy
+    def CheckWaitingList(self, C): # BaseStrategy
         if not self.IsBacktest:
-            self.RefreshWaitingList()
+            self.RefreshWaitingList(C)
             if self.WaitingList:
                 self.Print(f"Error: There are pending orders not confirmed: {self.WaitingList}, pause subsequent orders")
                 return False
@@ -474,13 +475,22 @@ class BaseStrategy():
 
         return prices_dict
 
-    def RefreshWaitingList(self):  # BaseStrategy
+    def RefreshWaitingList(self, C):  # BaseStrategy
+        ignored = [
+            'levelgrid_518880SH_a_buy_2200_1762124836',
+            'levelgrid_513090SH_a_buy_9400_1762124835',
+            'levelgrid_513080SH_a_buy_11600_1762124835',
+            'levelgrid_159967SZ_a_buy_73300_1762124835',
+            'levelgrid_512400SH_a_buy_27500_1762124835'
+        ]
+
         if self.WaitingList:
             foundList = []
             orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
             for order in orders:
                 if order.m_strRemark in self.WaitingList:
-                    if order.m_nOrderStatus in {54, 56, 57}:  # 已撤, 已成, 废单
+                    # self.Cancel(order.m_strOrderSysID,self.Account,self.AccountType,C)
+                    if order.m_nOrderStatus in {54, 56, 57} or order.m_nOrderStatus not in ignored:  # 已撤, 已成, 废单
                         foundList.append(order.m_strRemark)
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
@@ -554,7 +564,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
 
         # Get position
@@ -748,6 +758,7 @@ class LevelGridStrategy(BaseStrategy):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)[stock]
+            # print(prices250)
             prices120 = prices250.tail(160)
             prices = prices250.tail(60)
 
@@ -787,8 +798,11 @@ class LevelGridStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
+
+        # if not self.IsBacktest and not self.IsTradingTime():
+        #     return
 
         # Get position
         holdings = self.GetPositions()
@@ -1165,7 +1179,7 @@ class PairGridStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
 
         # Get position
@@ -1556,7 +1570,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
 
         # Get position
@@ -1868,7 +1882,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
 
         # Get position
@@ -1999,7 +2013,7 @@ class JointquantEmailStrategy(BaseStrategy):
 
         available_cash = self.GetAvailableCash()
 
-        if not self.CheckWaitingList():
+        if not self.CheckWaitingList(C):
             return
 
         # Get position

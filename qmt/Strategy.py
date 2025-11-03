@@ -172,7 +172,6 @@ class BaseStrategy():
         cash = self.GetAvailableCash() + yhrl
 
         totalAsset = self.GetTotalAsset() - self.RetainAmount
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
         index = self.FindSellCountIndex()
         total = len(self.Universe.Strategies)
         # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
@@ -588,7 +587,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None or base_price == 0:
+        if base_price is None or base_price == 0:    # SimpleGridStrategy
             base_price = max(self.max_price, self.current_price)
 
         if self.current_price > 0 and base_price > 0:
@@ -825,7 +824,7 @@ class LevelGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None or base_price == 0:
+        if base_price is None or base_price == 0:       # LevelGridStrategy
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
@@ -1128,7 +1127,7 @@ class PairGridStrategy(BaseStrategy):
             self.current_price = current_price
 
         base_price = self.base_price
-        if base_price is None or base_price == 0:
+        if base_price is None or base_price == 0:       # PairGridStrategy
             close_ma = talib.MA(close, timeperiod=20)
             days_above_ma = np.sum(close[-10:] > close_ma[-10:])
             if days_above_ma > 9:
@@ -1471,7 +1470,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_price = current_price
 
         base_price = self.base_price
-        if base_price is None or base_price == 0:
+        if base_price is None or base_price == 0:    # PairLevelGridStrategy
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
             days_above_ma_5 = np.sum(prices['close'][-3:] > close_ma[-3:])
@@ -1805,7 +1804,7 @@ class MomentumRotationStrategy(BaseStrategy):
         rank_list = []
 
         for stock in self.Stocks:
-            df = self.prices[stock]
+            df = self.prices[stock].tail(self.days+1)
             y = df['log'] = np.log(df.close)
             x = df['num'] = np.arange(df.log.size)
             slope, intercept = np.polyfit(x, y, 1)

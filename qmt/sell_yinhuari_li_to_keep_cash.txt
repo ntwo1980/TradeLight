@@ -46,7 +46,7 @@ def handlebar(C):
     available_cash = int(account.m_dAvailable)
 
     if available_cash >= A.target_cash:
-        print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
+        # print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
         return
 
     if A.waiting_list:

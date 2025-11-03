@@ -711,6 +711,7 @@ class SimpleGridStrategy(BaseStrategy):
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
+            'sell_count': self.SellCount,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate
         }

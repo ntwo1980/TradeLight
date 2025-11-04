@@ -647,7 +647,7 @@ class SimpleGridStrategy(BaseStrategy):
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
 
-        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
+        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
             unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:
@@ -940,7 +940,7 @@ class LevelGridStrategy(BaseStrategy):
             unit_to_sell = (unit_to_sell // 100) * 100
             unit_to_sell = min(unit_to_sell, current_holding)
 
-        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
+        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
             unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:
@@ -1276,7 +1276,7 @@ class PairGridStrategy(BaseStrategy):
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
 
-        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
+        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
             unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:
@@ -1669,7 +1669,7 @@ class PairLevelGridStrategy(BaseStrategy):
             unit_to_sell = (unit_to_sell // 100) * 100
             unit_to_sell = min(unit_to_sell, current_holding)
 
-            if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
+            if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
                 unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:
@@ -1947,7 +1947,7 @@ class MomentumRotationStrategy(BaseStrategy):
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
 
-        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.2:
+        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
             unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:

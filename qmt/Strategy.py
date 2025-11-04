@@ -991,13 +991,17 @@ class LevelGridStrategy(BaseStrategy):
                 self.SaveStrategyState()
                 self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
             elif self.r_squared > 0.7:
+                needChange = False
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
+                    needChange = True
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
+                    needChange = True
 
-                self.SaveStrategyState()
-                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
+                if needChange:
+                    self.SaveStrategyState()
+                    self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
         elif self.logical_holding <= 0 and self.base_price is not None:
             self.logical_holding = 0
             self.base_price = None
@@ -1744,15 +1748,17 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.SaveStrategyState()
                 self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
             elif self.r_squared > 0.7:
+                needChange = False
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
+                    needChange = True
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
+                    needChange = True
 
-                self.SaveStrategyState()
-                self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
-
-
+                if needChange:
+                    self.SaveStrategyState()
+                    self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
 
     def SaveStrategyState(self):    # PairLevelGridStrategy
         stock = self.Stocks[0]

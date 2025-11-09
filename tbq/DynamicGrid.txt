@@ -1,0 +1,298 @@
+//------------------------------------------------------------------------
+// 简称: 网格交易策略回测源码
+// 名称: 网格策略分析
+// 类别: 公式应用
+// 类型: 用户应用
+// 输出: Void
+//------------------------------------------------------------------------
+
+/*
+3.0版——网格交易_回测源码_升级说明
+1. ★ 增加了“多空双向网格”回测数据的信息输出
+2. ★ 增加了“策略报告”结果的直接查看
+3. 增加了保证金、手续费等信息的输出
+4. 优化了网格交易平仓次数的统计算法
+5. 优化了回测数据输出的表述呈现
+
+2.0版——网格交易——回测源码——升级说明
+1. 解决了代码正常运行时的“警告”提示信息
+2. 优化了保证金数据，回测更接近实盘网格交易
+3. 优化了手续费数据，回测更接近实盘网格交易
+4. 优化了期权、股票、ETF基金类标的的计算数据
+5. ★ 增加了期货套利品种（交易所合约）回测功能
+6. 增加了网格成交数据分析的输出（数据中心-文件查看器）
+7. 增加了回测标的的信息显示（K线图 双击鼠标）
+*/
+
+Params
+    Numeric pivot0(2600);       // 做多:回测期内最高价（做空反之）
+    Numeric gri(5);             // 每格跳数
+    Numeric Margin_taoli(5000); // 套利品种1手保证金额
+    Numeric HL_DuoKong(100);    // 多空双向网格价差幅度
+
+Vars
+    Numeric i;
+    Numeric grid;               // 每格价差
+    Numeric grid_pirce;         // 每格平仓盈利元数
+    Global Numeric HH(-999999);
+    Global Numeric LL(999999);
+    Global Numeric n_sel;       // 空头
+    Global Numeric n_buy;
+    Global Numeric n_short_ping; // 空头盈利总次数
+    Global Numeric n_long_ping;
+    Global Numeric pivot_pre;   // 前轴价
+    Global Numeric n_tradeday;
+    Global Numeric n_lots_all;
+    Global Numeric n_tiaoKONG;  // 跳空次数
+    Global Numeric n_return;    // 策略运行/循环次数，用于最后bar输出一次
+    Numeric profit_grid;        // 网格交易盈利=平仓格子盈利
+    Numeric profit_loss;        // 盈亏
+    Natural CodeProperty code;  // 合约属性
+    Natural CommissionRate rate; // 手续费率
+    Numeric Margin_1;           // 期货1手保证金，套利品种时需输入参数
+    Numeric ShouXuFei_KaiPing;  // 开+平1手的手续费
+
+Defs
+    Integer logfile(StringRef str)
+    {
+        FileAppend("D:\\data\\tbquant\\" + DateToString(CurrentDate) + "_" + FormulaName(),
+            SymbolName() + ",周期=" + Frequency + ",gri=" + Text(gri) + "跳 轴=" + Text(pivot0) + "元," + str);
+        Return 0;
+    }
+
+    Integer CROSS_CC(NumericRef i_ref)
+    {
+        ////////////////// 空头 ///////////////////////////////////////////////////
+        Numeric gri_h = pivot0 + i_ref * grid;
+        If ((c[1] <= gri_h Or c[1] < pivot_pre Or o[1] < pivot_pre) And c > gri_h And gri_h > pivot_pre)
+        { // 空头开仓
+            SellShort(1, gri_h);
+            pivot_pre = gri_h;
+            n_sel = n_sel + 1;
+            PlotAuto("n_sel", Text(gri_h) + "空" + Text(n_sel), gri_h, Magenta);
+        }
+        Numeric gri_h_ping = pivot0 + (199 - i_ref) * grid;
+        If ((c[1] >= gri_h_ping or c[1] > pivot_pre or o[1] > pivot_pre) And c < gri_h_ping And gri_h_ping < pivot_pre)
+        { // 空头 平仓
+            BuyToCover(1, gri_h_ping);
+            pivot_pre = gri_h_ping;
+            n_short_ping = n_short_ping + 1;
+            PlotAuto("n_short_ping", Text(gri_h_ping) + "平" + Text(n_short_ping), gri_h_ping, White);
+        }
+
+        ////////////////// 多头 ///////////////////////////////////////////////////
+        Numeric gri_l = pivot0 - i_ref * grid;
+        If ((c[1] >= gri_l or c[1] > pivot_pre or o[1] > pivot_pre) And c < gri_l And gri_l < pivot_pre)
+        { // 多头开仓
+            Buy(1, gri_l);
+            pivot_pre = gri_l;
+            n_buy = n_buy + 1;
+            PlotAuto("n_buy", Text(gri_l) + "多" + Text(n_buy), gri_l, Magenta);
+        }
+        Numeric gri_l_ping = pivot0 - (199 - i_ref) * grid;
+        If ((c[1] <= gri_l_ping Or c[1] < pivot_pre Or o[1] < pivot_pre) And c > gri_l_ping And gri_l_ping > pivot_pre)
+        { // 多头 平仓
+            Sell(1, gri_l_ping);
+            pivot_pre = gri_l_ping;
+            n_long_ping = n_long_ping + 1;
+            PlotAuto("n_long_ping", Text(gri_l_ping) + "平" + Text(n_long_ping), gri_l_ping, White);
+        }
+        Return 0;
+    }
+
+    Integer CROSS_HL(NumericRef i_ref)
+    {
+        ////////////////// 空头 ///////////////////////////////////////////////////
+        Numeric gri_h = pivot0 + i_ref * grid;
+        If ((h[1] <= gri_h Or l[1] < pivot_pre) And h > gri_h And gri_h > pivot_pre)
+        { // 空头开仓
+            SellShort(1, gri_h);
+            pivot_pre = gri_h;
+            n_sel = n_sel + 1;
+            PlotAuto("n_sel", Text(gri_h) + "空" + Text(n_sel), gri_h, Magenta);
+        }
+        Numeric gri_h_ping = pivot0 + (199 - i_ref) * grid;
+        If ((l[1] >= gri_h_ping or h[1] > pivot_pre) And l < gri_h_ping And gri_h_ping < pivot_pre)
+        { // 空头 平仓
+            BuyToCover(1, gri_h_ping);
+            pivot_pre = gri_h_ping;
+            n_short_ping = n_short_ping + 1;
+            PlotAuto("n_short_ping", Text(gri_h_ping) + "平" + Text(n_short_ping), gri_h_ping, White);
+        }
+
+        ////////////////// 多头 ///////////////////////////////////////////////////
+        Numeric gri_l = pivot0 - i_ref * grid;
+        If ((l[1] >= gri_l or h[1] > pivot_pre) And l < gri_l And gri_l < pivot_pre)
+        { // 多头开仓
+            Buy(1, gri_l);
+            pivot_pre = gri_l;
+            n_buy = n_buy + 1;
+            PlotAuto("n_buy", Text(gri_l) + "多" + Text(n_buy), gri_l, Magenta);
+        }
+        Numeric gri_l_ping = pivot0 - (199 - i_ref) * grid;
+        If ((h[1] <= gri_l_ping Or l[1] < pivot_pre) And h > gri_l_ping And gri_l_ping > pivot_pre)
+        { // 多头 平仓
+            Sell(1, gri_l_ping);
+            pivot_pre = gri_l_ping;
+            n_long_ping = n_long_ping + 1;
+            PlotAuto("n_long_ping", Text(gri_l_ping) + "平" + Text(n_long_ping), gri_l_ping, White);
+        }
+        Return 0;
+    }
+
+Events
+    OnBar(ArrayRef<Integer> indexs)
+    {
+        GetProperty(code);
+        GetCommissionRate(rate);
+        grid = MinMove * PriceScale * gri;                      // 每格价差的跳数
+        grid_pirce = BaseShares * contractUnit * grid;          // 每格平仓盈利元数
+
+        if (BarStatus == 0)
+            pivot_pre = c;
+
+        If (len(SymbolType) > 2) // 套利品种用收盘价测试，避免影线虚假影响
+        {
+            HH = Max(c, HH);    // 期间最高价：套利合约用c，非h
+            LL = Min(c, LL);    // 期间最低价
+            Margin_1 = Margin_taoli; // 套利
+            If (rate.ratioType == Enum_Rate_AmountPerHand)
+                ShouXuFei_KaiPing = 2 * (rate.openRatio + rate.closeTodayRatio) / 3.7; // 套利 3:修正
+            If (rate.ratioType == Enum_Rate_ByFillAmount)
+                ShouXuFei_KaiPing = 4 * rate.openRatio * O * 0.001 / 3; // 套利
+            For i = 0 to 199
+            {
+                CROSS_CC(i);
+            }
+        }
+        Else If (len(SymbolType) > 0) // 期货 或期权
+        {
+            HH = Max(H, HH);    // 期间最高价
+            LL = Min(L, LL);    // 期间最低价
+            Margin_1 = (MarginRatio * 1) * o * contractUnit;
+            If (rate.ratioType == Enum_Rate_AmountPerHand)
+                ShouXuFei_KaiPing = (rate.openRatio + rate.closeTodayRatio) / 1.5;
+            If (rate.ratioType == Enum_Rate_ByFillAmount)
+            {
+                If (code.bigCategory == Enum_CategoryFutures())
+                    ShouXuFei_KaiPing = rate.openRatio * O * 0.001 / 1.5;
+                If (code.bigCategory == Enum_CategoryOptions())
+                    ShouXuFei_KaiPing = rate.openRatio * code.strikePrice * 0.001 / 1.5;
+            }
+            /////////// Ag
+            If (SymbolName == "白银2504")
+            {
+                If (T < 0.03)
+                {
+                    For i = 0 to 199
+                    {
+                        CROSS_HL(i);
+                    }
+                }
+            }
+            Else
+            {
+                For i = 0 to 199
+                {
+                    CROSS_HL(i);
+                }
+            }
+        }
+        Else // 股票、ETF/基金
+        {
+            HH = Max(H, HH);    // 期间最高价
+            LL = Min(L, LL);    // 期间最低价
+            Margin_1 = BaseShares * (MarginRatio * 1) * o * contractUnit;
+            If (PriceScale == 0.01)
+                ShouXuFei_KaiPing = 2; // 股票手续费按2元/手，一般万免5+印花税+过户费
+            If (PriceScale == 0.001)
+                ShouXuFei_KaiPing = 0.1; // 基金手续费按0.1元/手，一般万0.5
+            For i = 0 to 199
+            {
+                CROSS_HL(i);
+            }
+        }
+
+        Numeric max_hl = Max(Abs(HH - pivot0), Abs(LL - pivot0));
+        Numeric total_vol = RoundUp(max_hl / grid, 0); // 最大持仓
+        Numeric n_ping = n_long_ping + n_short_ping;   // 平仓总次数
+        Numeric total_money;                           // 最大用总资金
+
+        If (code.bigCategory == Enum_CategoryFutures())
+            total_money = total_vol * (1 + total_vol) / 2 * grid_pirce + BaseShares * total_vol * Margin_1; // 期货= 持仓浮亏 + 期货保证金
+        Else If (code.bigCategory == Enum_CategoryOptions())
+            total_money = total_vol * (HH + LL) * 0.5 * contractUnit; // 期权买方 = 持仓最大量 * 持仓均价
+        Else If (code.bigCategory == Enum_CategoryStocks())
+            total_money = BaseShares * total_vol * HH; // 股票或基金的最大资金需求，按最高价计算，不计算格子的亏损资金
+
+        n_lots_all = RoundUp(Abs(c - pivot0) / grid, 0); // 以固定价为轴的持仓手数
+        profit_grid = n_ping * (grid_pirce - ShouXuFei_KaiPing); // 平仓盈亏
+        profit_loss = profit_grid - (1 + n_lots_all + 1) * n_lots_all / 2 * grid_pirce;
+
+        // 以固定价为轴盈亏 = 网格盈利 - 下跌加仓亏损 - 最高价持仓（轴价持仓）亏损为0
+        If (BarsSinceToday == 0)
+            n_tradeday = n_tradeday + 1; // 交易日统计
+        If (T == 0.09 And Abs(o - c[1]) > o * 0.005)
+            n_tiaoKONG = n_tiaoKONG + 1;
+
+        If (BarStatus == 2 And n_return == 0) // 输出回测信息
+        {
+            n_return = 1;
+            Numeric n_dayping = Round(n_ping / n_tradeday, 1); // 日均平仓次数
+            Numeric n_yueping = Round(n_ping / n_tradeday * 20, 1); // 月均平仓次数，1月≈20
+            Numeric n_gri_1yue_re = Round((Sqrt(1 + 8 * n_yueping * 1) - 1) * 0.5, 0); // 1个月，网格平仓次数，抗击下跌的格子数
+            Numeric n_gri_3yue_re = Round((Sqrt(1 + 8 * n_yueping * 3) - 1) * 0.5, 0); // 3个月
+            Numeric n_gri_6yue_re = Round((Sqrt(1 + 8 * n_yueping * 6) - 1) * 0.5, 0); // 6个月
+            Numeric bili_1yue_re = Round(n_gri_1yue_re * grid / HH * 100, 1); // 抗跌百分比
+            Numeric bili_3yue_re = Round(n_gri_3yue_re * grid / HH * 100, 1);
+            Numeric bili_6yue_re = Round(n_gri_6yue_re * grid / HH * 100, 1);
+
+            logfile("交日数=" + Text(n_tradeday) +
+                ",平仓数：总" + Text(n_ping) + "  日" + Text(n_dayping) + "  月" + Text(n_yueping) +
+                ",月抗跌格/比：1_" + Text(n_gri_1yue_re) + "/" + Text(bili_1yue_re) + "%" +
+                " 3_" + Text(n_gri_3yue_re) + "/" + Text(bili_3yue_re) + "%" +
+                " 6_" + Text(n_gri_6yue_re) + "/" + Text(bili_6yue_re) + "%" +
+                ",网格盈=" + Text(Round(profit_grid, 0)) + "元" +
+                ",网格年化= " + Text(Round(100 * profit_grid / total_money / n_tradeday * 240, 0)) + "%" +
+                ",总资金占用=" + Text(total_money) + "元" +
+                ",总盈亏(网格+浮亏)= " + Text(Round(profit_loss, 0)) + "元" +
+                ",每万元盈亏= " + Text(Round(10000 * profit_loss / total_money, 0)) + "元" +
+                ",最高价" + Text(HH) + "_" + Text(LL) + "最低价" +
+                " 波幅:" + Text(Round((HH - LL) / Abs((HH + LL) / 2) * 100, 1)) + "%" +
+                ",现持仓数=" + Text(n_lots_all) + ",最大仓数=" + Text(total_vol) +
+                ",1手保证金=" + Text(Round(Margin_1, 0)) +
+                ",1手手续费=" + Text(Round(ShouXuFei_KaiPing, 1)) +
+                ",多空双向网格价差=" + Text(HL_DuoKong) +
+                "时，盈利需天数=" + Text(Round((HL_DuoKong / gri) * (HL_DuoKong / gri) / (n_ping / n_tradeday), 1)));
+            // logfile("跳空次数=," + Text(n_tiaoKONG));
+        }
+
+        Commentary("CurrentBar=  " + Text(CurrentBar));
+        Commentary("计数单位：PriceScale=  " + Text(PriceScale));
+        Commentary("最小变动量：MinMove=  " + Text(MinMove));
+        Commentary("最小交易量：BaseShares=  " + Text(BaseShares)); // 最小交易量，TA=1，股票=100
+        Commentary("1跳： P*M=            " + Text(MinMove * PriceScale));
+        Commentary("1手量：contractUnit=   " + Text(contractUnit) + "吨");
+        Commentary("1格价差grid=P*M*gri=    " + Text(grid) + "元");
+        Commentary("1格平仓盈亏=   " + Text(grid_pirce) + "元");
+        // Commentary("保证金比率:code=" + Text(code.marginRatio)); // 有问题
+        Commentary("保证金比率:MarginRatio=" + Text(MarginRatio));
+        Commentary("1手保证金=   " + Text(Margin_1));
+        Commentary("手续费:=" + Text(ShouXuFei_KaiPing));
+        Commentary("Weekday=" + Text(WeekdayFromDateTime(Date + Time)));
+        Commentary("Symbol=" + Symbol);
+        Commentary("SymbolName=" + SymbolName);
+        Commentary("SymbolType=" + SymbolType);
+        Commentary("n_tradeday=" + Text(n_tradeday));
+        Commentary("code.strikePrice= " + Text(code.strikePrice));
+
+        PlotAuto("price001", pivot0 + grid);
+        PlotAuto("price002", pivot0 - grid);
+        PlotAuto("price003", pivot0 + 2 * grid);
+        PlotAuto("price004", pivot0 - 2 * grid);
+        PlotAuto("price005", pivot0 + 3 * grid);
+        PlotAuto("price006", pivot0 - 3 * grid);
+
+        Commentary("pivot_pre=" + Text(pivot_pre));
+    }
+//------------------------------------------------------------------------

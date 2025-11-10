@@ -26,9 +26,10 @@ class BaseStrategy():
         self.logical_holding = 0
         self.SellMultiplier = 1
         self.SellCount = 0
-        self.DynaicIncreaseCount = 0
+        self.DynamicIncreaseCount = 0
         self.MaxAmount = MaxAmount
         self.ClosePositionSetting = closePosition
+        self.GlobalClosePosition = False
         self.ClosePosition = False
         self.ClosePositionDate = None
         self.LastBuyDate = None
@@ -48,6 +49,7 @@ class BaseStrategy():
         self.SellExecuted = False
         self.NotClosePositionStocks = {
             '159985.SZ',    # 豆粕
+            '159980.SZ',    # 有色
             '159687.SZ',    # 亚太精选
             '513080.SH',    # 法国CAC40
             '159691.SZ',    # 港股红利
@@ -98,7 +100,7 @@ class BaseStrategy():
         return cash / totalAsset
 
     def GetBuyTradingAmount1(self, limitByAsset = True):
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4)  * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -117,7 +119,7 @@ class BaseStrategy():
         return tradingAmount if buy_index < 2 else tradingAmount / 2
 
     def GetSellTradingAmount1(self):
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4)  * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -137,7 +139,7 @@ class BaseStrategy():
 
     def GetBuyTradingAmount(self, limitByAsset = True):
         maxSellCount = self.FindMaxSellCount()
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4)  * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -166,7 +168,7 @@ class BaseStrategy():
     def GetSellTradingAmount(self):
         maxSellCount = self.FindMaxSellCount()
 
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4)  * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -218,11 +220,11 @@ class BaseStrategy():
         day = self.GetDay(self.Today)
 
         if (month == 4 and day <= 20) or (month == 3 and day >=20):
-            self.ClosePosition = True
+            self.GlobalClosePosition = True
         elif month == 12 and day >=20:
-            self.ClosePosition = True
+            self.GlobalClosePosition = True
         else:
-            self.ClosePosition = False
+            self.GlobalClosePosition = False
 
     def LoadGlobalSetting(self):  # BaseStrategy
         file = 'global.json'
@@ -263,7 +265,7 @@ class BaseStrategy():
                 self.base_price = state['base_price']
                 self.logical_holding = state['logical_holding']
                 self.SellCount = state.get('sell_count', 0)
-                self.DynaicIncreaseCount = state.get('dynaic_increase_count', 0)
+                self.DynamicIncreaseCount = state.get('dynamic_increase_count', 0)
                 self.LastBuyDate = state.get('last_buy_date', None)
                 self.LastSellDate = state.get('last_sell_date', None)
 
@@ -789,7 +791,7 @@ class LevelGridStrategy(BaseStrategy):
             self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
             self.days_above_ma250 = np.sum(self.all_prices['close'].values[-30:] > ma_250[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_ma250 < 1):
+            if prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
     def f(self, C):     # LevelGridStrategy
@@ -860,9 +862,12 @@ class LevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
+        if (self.GlobalClosePosition or self.ClosePosition) and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             self.Print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
+            # if self.ClosePosition:
+            #     self.SellCount = self.SellCount // 2
+            #     self.DynamicIncreaseCount = self.DynamicIncreaseCount // 2
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
@@ -882,7 +887,7 @@ class LevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False
-            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
+            if not self.GlobalClosePosition and not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
                 pre_buy_check = True
@@ -996,7 +1001,7 @@ class LevelGridStrategy(BaseStrategy):
                 needChange = False
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
-                    self.DynaicIncreaseCount = self.DynaicIncreaseCount + 1
+                    self.DynamicIncreaseCount = self.DynamicIncreaseCount + 1
                     needChange = True
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
@@ -1033,7 +1038,7 @@ class LevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
-            'dynaic_increase_count': self.DynaicIncreaseCount,
+            'dynamic_increase_count': self.DynamicIncreaseCount,
             'close_position_date': self.ClosePositionDate,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate
@@ -1512,7 +1517,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma250': days_above_ma250,
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
+        if prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
             self.ClosePosition = True
 
         available_cash = self.GetAvailableCash()
@@ -1524,9 +1529,12 @@ class PairLevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
+        if (self.GlobalClosePosition or self.ClosePosition) and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             self.Print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True, rsi)
+            # if self.ClosePosition:
+            #     self.SellCount = self.SellCount // 2
+            #     self.DynamicIncreaseCount = self.DynamicIncreaseCount // 2
             self.ClosePosition = False
         else:
             if self.sell_index < len(self.levels) and current_holding > 0:
@@ -1543,7 +1551,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False
-            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and days_above_sma > 10:
+            if not self.GlobalClosePosition and not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
                 pre_buy_check = True
@@ -1756,7 +1764,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
                     needChange = True
-                    self.DynaicIncreaseCount = self.DynaicIncreaseCount + 1
+                    self.DynamicIncreaseCount = self.DynamicIncreaseCount + 1
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
                     needChange = True
@@ -1777,7 +1785,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
-            'dynaic_increase_count': self.DynaicIncreaseCount,
+            'dynamic_increase_count': self.DynamicIncreaseCount,
             'close_position_date': self.ClosePositionDate,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate

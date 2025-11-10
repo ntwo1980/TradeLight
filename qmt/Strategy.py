@@ -26,6 +26,7 @@ class BaseStrategy():
         self.logical_holding = 0
         self.SellMultiplier = 1
         self.SellCount = 0
+        self.DynaicIncreaseCount = 0
         self.MaxAmount = MaxAmount
         self.ClosePositionSetting = closePosition
         self.ClosePosition = False
@@ -262,6 +263,7 @@ class BaseStrategy():
                 self.base_price = state['base_price']
                 self.logical_holding = state['logical_holding']
                 self.SellCount = state.get('sell_count', 0)
+                self.DynaicIncreaseCount = state.get('dynaic_increase_count', 0)
                 self.LastBuyDate = state.get('last_buy_date', None)
                 self.LastSellDate = state.get('last_sell_date', None)
 
@@ -994,6 +996,7 @@ class LevelGridStrategy(BaseStrategy):
                 needChange = False
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
+                    self.DynaicIncreaseCount = self.DynaicIncreaseCount + 1
                     needChange = True
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
@@ -1030,6 +1033,7 @@ class LevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
+            'dynaic_increase_count': self.DynaicIncreaseCount,
             'close_position_date': self.ClosePositionDate,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate
@@ -1752,6 +1756,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 if self.slope > 0 and self.current_price > self.base_price * 1.02:
                     self.base_price = self.base_price + self.current_price * 0.005
                     needChange = True
+                    self.DynaicIncreaseCount = self.DynaicIncreaseCount + 1
                 elif self.slope < 0 and self.current_price < self.base_price * 0.98:
                     self.base_price = self.base_price - self.current_price * 0.005
                     needChange = True
@@ -1772,6 +1777,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'sell_count': self.SellCount,
+            'dynaic_increase_count': self.DynaicIncreaseCount,
             'close_position_date': self.ClosePositionDate,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate

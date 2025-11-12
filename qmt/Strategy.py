@@ -486,9 +486,6 @@ class BaseStrategy():
         ignored = [
             'levelgrid_518880SH_a_buy_2200_1762124836',
             'levelgrid_513090SH_a_buy_9400_1762124835',
-            'levelgrid_513080SH_a_buy_11600_1762124835',
-            'levelgrid_159967SZ_a_buy_73300_1762124835',
-            'levelgrid_512400SH_a_buy_27500_1762124835'
         ]
 
         if self.WaitingList:
@@ -795,7 +792,7 @@ class LevelGridStrategy(BaseStrategy):
             self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
             self.days_above_ma250 = np.sum(self.all_prices['close'].values[-30:] > ma_250[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or self.days_above_ma250 < 1):
+            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.0035 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
     def f(self, C):     # LevelGridStrategy
@@ -812,7 +809,6 @@ class LevelGridStrategy(BaseStrategy):
         # if not self.IsBacktest and not self.IsTradingTime():
         #     return
 
-        # Get position
         holdings = self.GetPositions()
 
         current_holding = holdings.get(self.Stocks[0], 0)
@@ -866,7 +862,7 @@ class LevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:   # LevelGridStrategy
             self.Print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True)
             self.ClosePosition = False
@@ -887,7 +883,7 @@ class LevelGridStrategy(BaseStrategy):
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
                     self.SellExecuted = executed
 
-            pre_buy_check = False
+            pre_buy_check = False       # LevelGridStrategy
             if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
@@ -908,7 +904,7 @@ class LevelGridStrategy(BaseStrategy):
                 if self.current_price <= buy_threshold:
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
 
-        if executed:
+        if executed:    # LevelGridStrategy
             self.SaveStrategyState()
 
             if self.base_price is not None:
@@ -1796,6 +1792,11 @@ class PairLevelGridStrategy(BaseStrategy):
         }
 
         super().SaveStrategyState(file, data)
+
+class StockLevelGridStrategy(LevelGridStrategy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.levels = [4, 6, 8, 14, 22]
 
 class MomentumRotationStrategy(BaseStrategy):
     def __init__(self, strategyId='a', days=25, rank=1, **kwargs):

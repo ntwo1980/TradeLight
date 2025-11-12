@@ -40,7 +40,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = True
+        self.UseLocalHistoryData = False
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -139,7 +139,7 @@ class BaseStrategy():
 
     def GetBuyTradingAmount(self, limitByAsset = True):
         maxSellCount = self.FindMaxSellCount()
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -168,7 +168,8 @@ class BaseStrategy():
     def GetSellTradingAmount(self):
         maxSellCount = self.FindMaxSellCount()
 
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        # tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * self.SellMultiplier / 100 + 1)
 
         positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
@@ -965,6 +966,7 @@ class LevelGridStrategy(BaseStrategy):
                 self.ClosePositionDate = self.Today
                 if not self.IsGlobalClosePosition:
                     self.SellCount = self.SellCount // 2
+                    self.DynamicIncreaseCount = self.DynamicIncreaseCount // 2
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:
@@ -1702,6 +1704,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.ClosePositionDate = self.Today
                 if not self.IsGlobalClosePosition:
                     self.SellCount = self.SellCount // 2
+                    self.DynamicIncreaseCount = self.DynamicIncreaseCount // 2
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:

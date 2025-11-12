@@ -30,6 +30,7 @@ class BaseStrategy():
         self.MaxAmount = MaxAmount
         self.ClosePositionSetting = closePosition
         self.ClosePosition = False
+        self.IsGlobalClosePosition = False
         self.ClosePositionDate = None
         self.LastBuyDate = None
         self.LastSellDate = None
@@ -39,7 +40,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = False
+        self.UseLocalHistoryData = True
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -220,10 +221,13 @@ class BaseStrategy():
 
         if (month == 4 and day <= 20) or (month == 3 and day >=20):
             self.ClosePosition = True
-        elif month == 12 and day >=20:
+            self.IsGlobalClosePosition = True
+        elif (month == 12 and day >= 20) or (month == 1 and day <=20):
             self.ClosePosition = True
+            self.IsGlobalClosePosition = True
         else:
             self.ClosePosition = False
+            self.IsGlobalClosePosition = False
 
     def LoadGlobalSetting(self):  # BaseStrategy
         file = 'global.json'
@@ -959,6 +963,8 @@ class LevelGridStrategy(BaseStrategy):
             self.LastSellDate = self.Today
             if close_position:
                 self.ClosePositionDate = self.Today
+                if not self.IsGlobalClosePosition:
+                    self.SellCount = self.SellCount // 2
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:
@@ -1694,6 +1700,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.LastSellDate = self.Today
             if close_position:
                 self.ClosePositionDate = self.Today
+                if not self.IsGlobalClosePosition:
+                    self.SellCount = self.SellCount // 2
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:

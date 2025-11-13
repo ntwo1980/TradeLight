@@ -40,7 +40,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = False
+        self.UseLocalHistoryData = True
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -304,7 +304,7 @@ class BaseStrategy():
         now = datetime.datetime.now()
         now_time = now.strftime('%H%M%S')
 
-        return '093000' <= now_time <= '113000' or '130000' <= now_time <= '150000'
+        return '093200' <= now_time <= '113000' or '130000' <= now_time <= '150000'
 
     def GetAvailableCash(self): # BaseStrategy
         account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')

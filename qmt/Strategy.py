@@ -304,7 +304,7 @@ class BaseStrategy():
         now = datetime.datetime.now()
         now_time = now.strftime('%H%M%S')
 
-        return '093200' <= now_time <= '113000' or '130000' <= now_time <= '150000'
+        return '093100' <= now_time <= '113000' or '130000' <= now_time <= '150000'
 
     def GetAvailableCash(self): # BaseStrategy
         account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')

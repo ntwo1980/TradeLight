@@ -153,12 +153,12 @@ class PairLevelGridStrategy(BaseStrategy):
 
             old_stock = self.current_held
             new_stock = target_stock
-            price_old = current_prices[old_stock]
-            price_new = current_prices[target_stock]
+            price_old = self.LastPrices[old_stock]
+            price_new = self.LastPrices[target_stock]
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            self.SwitchPosition_Sell(context, self.current_held, current_holding, target_stock, new_base_price)
             if self.IsBacktest:
                 self.f(C)
         elif self.current_held:
@@ -170,19 +170,18 @@ class PairLevelGridStrategy(BaseStrategy):
     def SwitchPosition_Buy(self, context):    # PairLevelGridStrategy
         unit_to_buy = self.params['orderQty']
 
-        if self.ExecuteBuy(context,
-                self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], isSwitch = True):
-            self.base_price = self.LastPrices[self.pending_switch_to]
+        if self.ExecuteBuy(context, self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], isSwitch = True):
+            # self.base_price = self.LastPrices[self.pending_switch_to]
             self.pending_switch_to = None
             # self.SaveStrategyState()
 
-    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairLevelGridStrategy
+    def SwitchPosition_Sell(self, context, current_holding, new_stock, new_base_price):    # PairLevelGridStrategy
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        price_old = current_prices[old_stock]
-        self.Sell(C, old_stock, current_holding, price_old, strategy_name)
+        price_old = self.LastPrices[self.current_held]
+        self.Sell(context, self.current_held, current_holding, price_old, strategy_name)
         self.logical_holding = 0
         self.pending_switch_to = new_stock
         self.pending_switch_cash = current_holding * price_old
@@ -190,5 +189,5 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
         self.SaveStrategyState()
-        self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
+        self.Print(f"Closed position: {current_holding} shares of {self.current_held} @ {price_old:.3f}")
 

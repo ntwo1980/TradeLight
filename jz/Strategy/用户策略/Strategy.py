@@ -48,7 +48,7 @@ class BaseStrategy():
             else:
                 self.ATRs[code] = None
 
-            self.DailyPrices[code] = df
+            self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
             self.DailyPricesDate = self.api.TradeDate()
 
     def GetMinutePrices(self, context, codes):  # BaseStrategy
@@ -85,13 +85,12 @@ class BaseStrategy():
         self.LastPrices = last_prices
 
     def handle_data(self, context):   # BaseStrategy
-        pass
-        # self.print(self.LastTradeDate() + self.CurrentTime())
+        self.print(self.LastTradeDate() + self.CurrentTime())
 
     def Buy(self, context, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Buy(quantity, price, code)
+        self.api.Buy(quantity, price + PriceTick(code), code)
         # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}")
@@ -99,7 +98,7 @@ class BaseStrategy():
     def Sell(self, context, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Sell(quantity, price, code)
+        self.api.Sell(quantity, price + PriceTick(code), code)
         # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}")
@@ -135,40 +134,35 @@ class PairLevelGridStrategy(BaseStrategy):
         self.GetDailyPrices(context, self.codes)
         self.GetLastPrices(context, self.codes)
 
-        n = len(self.codes)
-        undervalued_score = {code: 0 for code in self.codes}
-        for i in range(n):
-            for j in range(i+1, n):
-                code_i = self.codes[i]
-                code_j = self.codes[j]
+        # === 仅处理两个股票的配对逻辑 ===
+        code_A, code_B = self.codes[0], self.codes[1]
+        price_A = self.LastPrices[code_A]
+        price_B = self.LastPrices[code_B]
 
-                code_i_daily = self.DailyPrices[code_i]['Close']
-                code_j_daily = self.DailyPrices[code_j]['Close']
+        close_A = self.DailyPrices[code_A]['Close']
+        close_B = self.DailyPrices[code_B]['Close']
 
-                # self.print({'code_i': code_i, 'code_i_len': len(code_i_daily), 'code_j': code_j, 'code_j_len': len(code_j_daily)})
+        if len(close_A) < 20 or len(close_B) < 20:
+            # 数据不足，维持现状或默认持有 A
+            target_code = self.current_held if self.current_held else code_A
+        else:
+            ratio_series = close_A[-20:] / close_B[-20:]
+            mean_ratio = np.mean(ratio_series)
+            current_ratio = price_A / price_B
 
-                if len(code_i_daily) < 20 or len(code_j_daily) < 20:
-                    continue
+            if current_ratio > mean_ratio * (1 + self.threshold_ratio):
+                target_code = code_B
+                self.print('Switching to B (B is undervalued)')
+            elif current_ratio < mean_ratio * (1 - self.threshold_ratio):
+                target_code = code_A
+                self.print('Switching to A (A is undervalued)')
+            else:
+                # 无显著偏离，维持当前持仓
+                target_code = self.current_held if self.current_held else code_A
 
-                code_i_daily = code_i_daily[-20:]
-                code_j_daily = code_j_daily[-20:]
-
-                ratio_series = code_i_daily / code_j_daily
-                mean_ratio = np.mean(ratio_series)
-
-                code_i_last = self.LastPrices[code_i]
-                code_j_last = self.LastPrices[code_j]
-                current_ratio = code_i_last / code_j_last
-
-                if current_ratio > mean_ratio * (1 + self.threshold_ratio):
-                    undervalued_score[code_j] += 1
-                elif current_ratio < mean_ratio * (1 - self.threshold_ratio):
-                    undervalued_score[code_i] += 1
-
-
-        target_code = max(undervalued_score, key=undervalued_score.get)
         self.print('target: ' + target_code)
 
+        # === 原有换仓/交易逻辑（完全不变）===
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(context)
         elif self.current_held and self.current_held != target_code and self.api.BuyPosition(self.current_held) > 0:
@@ -177,6 +171,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 'current_time': self.api.CurrentTime(),
                 'current_held': self.current_held,
                 'target_code': target_code,
+                'current_held_price': self.LastPrices[self.current_held],
+                'target_price': self.LastPrices[target_code],
             })
             self.print(f"Executing portfolio rebalancing: {self.current_held} → {target_code}")
 
@@ -193,9 +189,9 @@ class PairLevelGridStrategy(BaseStrategy):
             self.RunGridTrading(context, target_code)
         elif self.current_held:
             self.RunGridTrading(context, self.current_held)
-        # self.print(self.ATRs[target_code])
 
     def RunGridTrading(self, context, code):    # PairLevelGridStrategy
+        self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         current_price = self.LastPrices[code]
 
@@ -208,10 +204,13 @@ class PairLevelGridStrategy(BaseStrategy):
             'current_time': self.api.CurrentTime(),
             'code': code,
             'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
-            'current_price': current_price,
             'atr': self.atr,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
+            'base_price': base_price,
+            'current_price': current_price,
+            'buy_price': base_price - self.atr * self.buy_levels[self.buy_index],
+            'sell_price': base_price + self.atr * self.sell_levels[self.sell_index],
         })
 
         executed = False
@@ -222,34 +221,13 @@ class PairLevelGridStrategy(BaseStrategy):
 
             sell_threshold = base_price + diff
 
-            # self.print({
-            #     'direction': 'sell',
-            #     'code': code,
-            #     'base_price': base_price,
-            #     'diff': self.atr * level,
-            #     'current_price': current_price,
-            #     'buy_index': self.buy_index,
-            #     'sell_index': self.sell_index,
-            #     'sell_threshold': sell_threshold
-            # })
             if current_price >= sell_threshold:
                 executed = self.ExecuteSell(context, code, current_price, self.params['orderQty'])
 
         if self.buy_index < len(self.buy_levels):
-            level = self.sell_levels[self.buy_index]
+            level = self.buy_levels[self.buy_index]
             diff = self.atr * level
             buy_threshold = base_price - diff
-
-            # self.print({
-            #     'direction': 'buy',
-            #     'code': code,
-            #     'base_price': base_price,
-            #     'diff': self.atr * level,
-            #     'current_price': current_price,
-            #     'buy_index': self.buy_index,
-            #     'sell_index': self.sell_index,
-            #     'buy_threshold': buy_threshold
-            # })
 
             if current_price <= buy_threshold:
                 executed = self.ExecuteBuy(context, code, current_price, self.params['orderQty'])

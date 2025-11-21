@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 import talib
 
 class BaseStrategy():
@@ -10,6 +11,8 @@ class BaseStrategy():
         self.MinutePrices = {}
         self.LastPrices = {}
         self.base_price = 0
+        self.last_buy_date = None
+        self.last_sell_date = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.params = kwargs['params']
@@ -90,7 +93,7 @@ class BaseStrategy():
     def Buy(self, context, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Buy(quantity, price + PriceTick(code), code)
+        self.api.Buy(quantity, price + self.api.PriceTick(code), code)
         # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}")
@@ -98,7 +101,7 @@ class BaseStrategy():
     def Sell(self, context, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Sell(quantity, price + PriceTick(code), code)
+        self.api.Sell(quantity, price + self.api.PriceTick(code), code)
         # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}")
@@ -116,6 +119,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.pending_switch_to = None
         self.new_base_price = None
         self.current_held = None
+        self.logical_holding = 0
         self.codes = self.params['codes']
         self.buy_levels = [0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
         self.sell_levels = [0.8, 0.9, 1, 1, 2, 4, 6, 8, 14, 22]
@@ -269,8 +273,10 @@ class PairLevelGridStrategy(BaseStrategy):
         self.print('buy')
         self.api.Buy(quantity, price, code)
         self.current_held = code
-        # self.logical_holding += unit_to_buy
+        self.logical_holding += quantity
         self.base_price = price
+        # self.LastBuyDate = self.Today   # ToDo
+        self.last_buy_date = datetime.today().strftime('%Y%m%d')
         if not is_switch:
             self.buy_index += 1
             self.sell_index = 0
@@ -284,5 +290,6 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = price
         self.sell_index += 1
         self.buy_index = 0
+        self.last_sell_date = datetime.today().strftime('%Y%m%d')
 
         return True

@@ -51,6 +51,7 @@ def exit_callback(context):
 def api():
     api = types.SimpleNamespace(
         A_Available=A_Available，
+        PriceTick=PriceTick,
         LogDebug=LogDebug,
         LogInfo=LogInfo,
         LogWarn=LogWarn,

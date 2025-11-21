@@ -22,6 +22,7 @@ class BaseStrategy():
         self.IsBacktest = context.strategyStatus() != 'C'
 
         SetTriggerType(5)  # ToDo
+        SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
 
     def LastTradeDate(self):
@@ -96,6 +97,21 @@ class BaseStrategy():
         self.IsBacktest = context.strategyStatus() == 'H'
         self.print(self.LastTradeDate() + self.CurrentTime())
 
+        if context.triggerType() == 'N': 
+            if context.triggerData()['ServerType'] == 'T':# 交易
+                if context.triggerData()['EventType'] == 1:# 交易连接
+                    # 盘中重新启动实盘交易
+                    self.api.StartTrade()
+                    self.print('StartTrade')
+                else: # 交易断开
+                    # 盘中暂时停止实盘交易
+                    self.api.StopTrade()
+                    self.print('StopTrade')
+
+                    return False
+        
+        return True
+
     def GetBuyPosition(self, code):
         if self.IsBacktest:
             return self.api.BuyPosition(code)
@@ -151,7 +167,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.api.SetActual()
 
     def handle_data(self, context):     # PairLevelGridStrategy
-        super().handle_data(context)
+        if not super().handle_data(context):
+            return
 
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)

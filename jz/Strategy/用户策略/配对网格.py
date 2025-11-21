@@ -79,6 +79,9 @@ def api():
         Enum_ExitToday=Enum_ExitToday,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,
+        StartTrade=StartTrade,
+        StopTrade=StopTrade,
+
     )
 
     return api

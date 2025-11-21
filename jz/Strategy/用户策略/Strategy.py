@@ -5,6 +5,7 @@ import talib
 
 class BaseStrategy():
     def __init__(self, **kwargs):   # BaseStrategy
+        self.context = None
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
@@ -15,6 +16,7 @@ class BaseStrategy():
         self.last_sell_date = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
+        self.context = context
         self.params = kwargs['params']
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
@@ -26,7 +28,7 @@ class BaseStrategy():
     def CurrentTime(self):
         return str(self.api.Time()) if self.IsBacktest else str(self.api.CurrentTime())
 
-    def GetDailyPrices(self, context, codes):  # BaseStrategy
+    def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
             return self.DailyPrices
 
@@ -54,7 +56,7 @@ class BaseStrategy():
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
             self.DailyPricesDate = self.api.TradeDate()
 
-    def GetMinutePrices(self, context, codes):  # BaseStrategy
+    def GetMinutePrices(self, codes):  # BaseStrategy
         mintue_prices = {}
 
         for code in codes:
@@ -76,8 +78,8 @@ class BaseStrategy():
 
         return mintue_prices
 
-    def GetLastPrices(self, context, codes):  # BaseStrategy
-        mintue_prices = self.GetMinutePrices(context, codes)
+    def GetLastPrices(self, codes):  # BaseStrategy
+        mintue_prices = self.GetMinutePrices(codes)
         last_prices = {}
         for code in codes:
             if self.IsBacktest:
@@ -88,9 +90,11 @@ class BaseStrategy():
         self.LastPrices = last_prices
 
     def handle_data(self, context):   # BaseStrategy
+        self.context = context
+        self.IsBacktest = context.strategyStatus() != 'C'
         self.print(self.LastTradeDate() + self.CurrentTime())
 
-    def Buy(self, context, code, quantity, price):  # BaseStrategy
+    def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         self.api.Buy(quantity, price + self.api.PriceTick(code), code)
@@ -98,7 +102,7 @@ class BaseStrategy():
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}")
 
-    def Sell(self, context, code, quantity, price):  # BaseStrategy
+    def Sell(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         self.api.Sell(quantity, price + self.api.PriceTick(code), code)
@@ -128,15 +132,15 @@ class PairLevelGridStrategy(BaseStrategy):
 
         for code in self.codes:
             self.api.SetBarInterval(code, 'M', 1, 2000)
-            self.api.SetBarInterval(code, 'D', 1, 500)
+            self.api.SetBarInterval(code, 'D', 1, 30)
 
         self.api.SetActual()
 
     def handle_data(self, context):     # PairLevelGridStrategy
         super().handle_data(context)
 
-        self.GetDailyPrices(context, self.codes)
-        self.GetLastPrices(context, self.codes)
+        self.GetDailyPrices(self.codes)
+        self.GetLastPrices(self.codes)
 
         # === 仅处理两个股票的配对逻辑 ===
         code_A, code_B = self.codes[0], self.codes[1]
@@ -186,15 +190,15 @@ class PairLevelGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition_Sell(context, target_code, new_base_price)
+            self.SwitchPosition_Sell(target_code, new_base_price)
             # if self.IsBacktest:
             #     self.f(context)
         elif target_code:
-            self.RunGridTrading(context, target_code)
+            self.RunGridTradingtarget_code)
         elif self.current_held:
-            self.RunGridTrading(context, self.current_held)
+            self.RunGridTrading(self.current_held)
 
-    def RunGridTrading(self, context, code):    # PairLevelGridStrategy
+    def RunGridTrading(self, code):    # PairLevelGridStrategy
         self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         current_price = self.LastPrices[code]
@@ -226,7 +230,7 @@ class PairLevelGridStrategy(BaseStrategy):
             sell_threshold = base_price + diff
 
             if current_price >= sell_threshold:
-                executed = self.ExecuteSell(context, code, current_price, self.params['orderQty'])
+                executed = self.ExecuteSell(code, current_price, self.params['orderQty'])
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
@@ -234,7 +238,7 @@ class PairLevelGridStrategy(BaseStrategy):
             buy_threshold = base_price - diff
 
             if current_price <= buy_threshold:
-                executed = self.ExecuteBuy(context, code, current_price, self.params['orderQty'])
+                executed = self.ExecuteBuy(ccode, current_price, self.params['orderQty'])
 
         # if executed:
         #     self.SaveStrategyState()
@@ -246,10 +250,10 @@ class PairLevelGridStrategy(BaseStrategy):
         # if self.IsBacktest:
         #     self.g(C)
 
-    def SwitchPosition_Buy(self, context):    # PairLevelGridStrategy
+    def SwitchPosition_Buy(self):    # PairLevelGridStrategy
         unit_to_buy = self.params['orderQty']
 
-        if self.ExecuteBuy(context, self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], is_switch = True):
+        if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], is_switch = True):
 
             self.base_price = self.new_base_price
             self.pending_switch_to = None
@@ -257,10 +261,10 @@ class PairLevelGridStrategy(BaseStrategy):
 
             # self.SaveStrategyState()
 
-    def SwitchPosition_Sell(self, context, target_code, new_base_price):    # PairLevelGridStrategy
+    def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
         # strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        self.Sell(context, self.current_held, self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held])
+        self.Sell(self.current_held, self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held])
         # self.logical_holding = 0
         self.pending_switch_to = target_code
         self.current_held = None
@@ -269,7 +273,7 @@ class PairLevelGridStrategy(BaseStrategy):
         # self.SaveStrategyState()
         # self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
-    def ExecuteBuy(self, context, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
+    def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
         self.print('buy')
         self.api.Buy(quantity, price, code)
         self.current_held = code
@@ -283,7 +287,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return True
 
-    def ExecuteSell(self, context, code, price, quantity):    # PairLevelGridStrategy
+    def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         self.print('sell')
         self.api.Sell(quantity, price, code)
         # self.logical_holding -= unit_to_sell

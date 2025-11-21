@@ -41,8 +41,8 @@ def handle_data(context):
 
 # 历史回测阶段结束时执行该函数一次
 def hisover_callback(context):
-    pass
-
+    global strategy
+    strategy.hisover_callback(context)
 
 # 策略退出前执行该函数一次
 def exit_callback(context):

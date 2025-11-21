@@ -343,3 +343,10 @@ class PairLevelGridStrategy(BaseStrategy):
         self.last_sell_date = datetime.today().strftime('%Y%m%d')
 
         return True
+
+def hisover_callback(self, context):    
+    # 清空所有历史持仓
+    if self.api.BuyPosition() > 0:
+        self.api.Sell(self.api.BuyPosition(), self.api.Close()[-1])
+    if self.api.SellPosition() > 0:
+        self.api.BuyToCover(self.api.SellPosition(), self.api.Close()[-1])

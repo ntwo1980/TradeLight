@@ -20,6 +20,8 @@ class BaseStrategy():
         self.params = kwargs['params']
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
+
+        SetTriggerType(5)  # ToDo
         self.api.SetOrderWay(1)
 
     def LastTradeDate(self):
@@ -91,13 +93,22 @@ class BaseStrategy():
 
     def handle_data(self, context):   # BaseStrategy
         self.context = context
-        self.IsBacktest = context.strategyStatus() != 'C'
+        self.IsBacktest = context.strategyStatus() == 'H'
         self.print(self.LastTradeDate() + self.CurrentTime())
+
+    def GetBuyPosition(self, code):
+        if self.IsBacktest:
+            return self.api.BuyPosition(code)
+        else:
+            return self.api.A_BuyPosition(code)
 
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Buy(quantity, price + self.api.PriceTick(code), code)
+        if self.IsBacktest:
+            self.api.Buy(quantity, code)
+        else:
+            self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
         # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}")
@@ -105,7 +116,10 @@ class BaseStrategy():
     def Sell(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        self.api.Sell(quantity, price + self.api.PriceTick(code), code)
+        if self.IsBacktest:
+            self.api.Sell(quantity, code)
+        else:
+            self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
         # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}")
@@ -173,7 +187,7 @@ class PairLevelGridStrategy(BaseStrategy):
         # === 原有换仓/交易逻辑（完全不变）===
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(context)
-        elif self.current_held and self.current_held != target_code and self.api.BuyPosition(self.current_held) > 0:
+        elif self.current_held and self.current_held != target_code and self.GetBuyPosition(self.current_held) > 0:
             self.print({
                 'current_date': self.api.TradeDate(),
                 'current_time': self.api.CurrentTime(),
@@ -223,7 +237,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         executed = False
 
-        if self.sell_index < len(self.sell_levels) and self.api.BuyPosition(code) > 0:
+        if self.sell_index < len(self.sell_levels) and self.api.GetBuyPosition(code) > 0:
             level = self.sell_levels[self.sell_index]
             diff = self.atr * level
 
@@ -251,6 +265,9 @@ class PairLevelGridStrategy(BaseStrategy):
         #     self.g(C)
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
+        if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(self.pending_switch_to)) != '3':
+            return
+
         unit_to_buy = self.params['orderQty']
 
         if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], is_switch = True):
@@ -262,7 +279,9 @@ class PairLevelGridStrategy(BaseStrategy):
             # self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
-        """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(target_code)) != '3':
+            return
+
         # strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         self.Sell(self.current_held, self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held])
         # self.logical_holding = 0
@@ -275,6 +294,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
         self.print('buy')
+        if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
+            return False
+
         self.api.Buy(quantity, price, code)
         self.current_held = code
         self.logical_holding += quantity
@@ -289,6 +311,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         self.print('sell')
+        if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
+            return False
+
         self.api.Sell(quantity, price, code)
         # self.logical_holding -= unit_to_sell
         self.base_price = price

@@ -69,6 +69,16 @@ def api():
         Q_Last=Q_Last,
         Q_LastDate=Q_LastDate,
         SetOrderWay=SetOrderWay,
+        MarketPosition=MarketPosition,
+        A_TotalPosition=A_TotalPosition,
+        BuyPosition=BuyPosition,
+        SellPosition=SellPosition,
+        A_BuyPosition=A_BuyPosition,
+        A_SellPosition=A_SellPosition,
+        Enum_Buy=Enum_Buy,
+        Enum_ExitToday=Enum_ExitToday,
+        ExchangeName=ExchangeName,
+        ExchangeStatus=ExchangeStatus,
     )
 
     return api

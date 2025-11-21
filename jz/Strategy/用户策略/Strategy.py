@@ -21,8 +21,8 @@ class BaseStrategy():
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
 
-        SetTriggerType(5)  # ToDo
-        SetTriggerType(6) #连接状态触发
+        self.api.SetTriggerType(5)  # ToDo
+        self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
 
     def LastTradeDate(self):

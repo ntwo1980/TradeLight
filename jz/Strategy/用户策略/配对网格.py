@@ -81,7 +81,7 @@ def api():
         ExchangeStatus=ExchangeStatus,
         StartTrade=StartTrade,
         StopTrade=StopTrade,
-
+        IsInSession=IsInSession,
     )
 
     return api

@@ -21,6 +21,7 @@ class BaseStrategy():
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
 
+        # self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
         self.api.SetTriggerType(5)  # ToDo
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
@@ -169,6 +170,9 @@ class PairLevelGridStrategy(BaseStrategy):
     def handle_data(self, context):     # PairLevelGridStrategy
         if not super().handle_data(context):
             return
+
+        # if not self.api.IsInSession()  # ToDo
+        #     return
 
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)

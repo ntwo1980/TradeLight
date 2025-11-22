@@ -98,7 +98,7 @@ class BaseStrategy():
         self.IsBacktest = context.strategyStatus() == 'H'
         self.print(self.LastTradeDate() + self.CurrentTime())
 
-        if context.triggerType() == 'N': 
+        if context.triggerType() == 'N':
             if context.triggerData()['ServerType'] == 'T':# 交易
                 if context.triggerData()['EventType'] == 1:# 交易连接
                     # 盘中重新启动实盘交易
@@ -110,7 +110,7 @@ class BaseStrategy():
                     self.print('StopTrade')
 
                     return False
-        
+
         return True
 
     def GetBuyPosition(self, code):
@@ -123,7 +123,7 @@ class BaseStrategy():
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         if self.IsBacktest:
-            self.api.Buy(quantity, code)
+            self.api.Buy(quantity, price, code)
         else:
             self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
         # self.WaitingList.append(msg)
@@ -134,7 +134,7 @@ class BaseStrategy():
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         if self.IsBacktest:
-            self.api.Sell(quantity, code)
+            self.api.Sell(quantity, price, code)
         else:
             self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
         # self.WaitingList.append(msg)
@@ -207,7 +207,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         # === 原有换仓/交易逻辑（完全不变）===
         if self.pending_switch_to is not None:
-            self.SwitchPosition_Buy(context)
+            self.SwitchPosition_Buy()
         elif self.current_held and self.current_held != target_code and self.GetBuyPosition(self.current_held) > 0:
             self.print({
                 'current_date': self.api.TradeDate(),
@@ -229,7 +229,7 @@ class PairLevelGridStrategy(BaseStrategy):
             # if self.IsBacktest:
             #     self.f(context)
         elif target_code:
-            self.RunGridTradingtarget_code)
+            self.RunGridTrading(target_code)
         elif self.current_held:
             self.RunGridTrading(self.current_held)
 
@@ -258,7 +258,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         executed = False
 
-        if self.sell_index < len(self.sell_levels) and self.api.GetBuyPosition(code) > 0:
+        if self.sell_index < len(self.sell_levels) and self.GetBuyPosition(code) > 0:
             level = self.sell_levels[self.sell_index]
             diff = self.atr * level
 
@@ -273,7 +273,7 @@ class PairLevelGridStrategy(BaseStrategy):
             buy_threshold = base_price - diff
 
             if current_price <= buy_threshold:
-                executed = self.ExecuteBuy(ccode, current_price, self.params['orderQty'])
+                executed = self.ExecuteBuy(code, current_price, self.params['orderQty'])
 
         # if executed:
         #     self.SaveStrategyState()
@@ -318,7 +318,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 
-        self.api.Buy(quantity, price, code)
+        self.Buy(code, quantity, price)
         self.current_held = code
         self.logical_holding += quantity
         self.base_price = price
@@ -335,7 +335,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 
-        self.api.Sell(quantity, price, code)
+        self.Sell(code, quantity, price)
         # self.logical_holding -= unit_to_sell
         self.base_price = price
         self.sell_index += 1
@@ -344,9 +344,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return True
 
-def hisover_callback(self, context):    
-    # 清空所有历史持仓
-    if self.api.BuyPosition() > 0:
-        self.api.Sell(self.api.BuyPosition(), self.api.Close()[-1])
-    if self.api.SellPosition() > 0:
-        self.api.BuyToCover(self.api.SellPosition(), self.api.Close()[-1])
+    def hisover_callback(self, context):
+        # 清空所有历史持仓
+        if self.api.BuyPosition() > 0:
+            self.api.Sell(self.api.BuyPosition(), self.api.Close()[-1])
+        if self.api.SellPosition() > 0:
+            self.api.BuyToCover(self.api.SellPosition(), self.api.Close()[-1])

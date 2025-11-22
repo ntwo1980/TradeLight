@@ -50,13 +50,15 @@ def exit_callback(context):
 
 def api():
     api = types.SimpleNamespace(
-        A_Available=A_Available，
+        A_Available=A_Available,
         PriceTick=PriceTick,
         LogDebug=LogDebug,
         LogInfo=LogInfo,
         LogWarn=LogWarn,
         LogError=LogError,
         SetBarInterval=SetBarInterval,
+        Buy=Buy,
+        Sell=Sell,
         Open=Open,
         Close=Close,
         High=High,
@@ -82,6 +84,8 @@ def api():
         StartTrade=StartTrade,
         StopTrade=StopTrade,
         IsInSession=IsInSession,
+        SetTriggerType=SetTriggerType,
+        SetActual=SetActual,
     )
 
     return api

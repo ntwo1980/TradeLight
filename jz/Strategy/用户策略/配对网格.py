@@ -5,6 +5,7 @@ from Strategy import PairLevelGridStrategy
 # 策略参数字典
 g_params = {
     #'合约': 'DCE|Z|M|MAIN',
+    'name': '豆粕',
     'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
     'orderQty': 1,
     #'codes': ['ZCE|F|RM|601', 'DCE|F|M|2601'],

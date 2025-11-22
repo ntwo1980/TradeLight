@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import talib
+import json
+import os
 
 class BaseStrategy():
     def __init__(self, **kwargs):   # BaseStrategy
@@ -141,6 +143,39 @@ class BaseStrategy():
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}")
 
+    def get_state_file_name(self): # BaseStrategy
+        return f"D:\\data\\jizhi\\{self.name}.json"
+
+    def load_strategy_state(self):  # BaseStrategy
+        # if self.IsBacktest:
+        #     return
+
+        file = self.get_state_file_name()
+
+        if not os.path.exists(file):
+            return None
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+
+                return state
+        except Exception as e:
+            return None
+            self.Print(f"Error: Failed to load strategy state: {e}")
+
+    def save_strategy_state(self, data):   # BaseStrategy
+        if self.IsBacktest and False:
+            pass
+            # self.Print(json.dumps(data, ensure_ascii=False, indent=4))
+        else:
+            file = self.get_state_file_name()
+
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                self.Print(f"Error: Failed to save strategy state: {e}")
+
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)
 
@@ -157,8 +192,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.logical_holding = 0
         self.codes = self.params['codes']
-        self.buy_levels = [0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.8, 0.9, 1, 1, 2, 4, 6, 8, 14, 22]
+        self.name = self.params['name']
+        self.buy_levels = [0.5, 0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.5, 0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -167,6 +203,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.api.SetBarInterval(code, 'D', 1, 30)
 
         self.api.SetActual()
+        self.load_strategy_state()
 
     def choose_better(self, code_A, code_B, default_code, threshold_ratio):
         if default_code and default_code != code_A and default_code != code_B:
@@ -230,6 +267,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if self.IsBacktest and self.api.CurrentBar() == 1:
             self.Buy(target_code, 5, self.LastPrices[target_code])
+            self.current_held = target_code
+            self.logical_holding = 5
             return
 
         # === 原有换仓/交易逻辑（完全不变）===
@@ -275,12 +314,12 @@ class PairLevelGridStrategy(BaseStrategy):
             'code': code,
             'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
             'atr': self.atr,
+            'current_held': self.current_held,
+            'logical_holding': self.logical_holding,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
             'base_price': base_price,
             'current_price': current_price,
-            'buy_price': base_price - self.atr * self.buy_levels[self.buy_index],
-            'sell_price': base_price + self.atr * self.sell_levels[self.sell_index],
         })
 
         executed = False
@@ -302,8 +341,8 @@ class PairLevelGridStrategy(BaseStrategy):
             if current_price <= buy_threshold:
                 executed = self.ExecuteBuy(code, current_price, self.params['orderQty'])
 
-        # if executed:
-        #     self.SaveStrategyState()
+        if executed:
+            self.save_strategy_state()
         #
         #     if self.base_price is not None:
         #         self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
@@ -319,13 +358,12 @@ class PairLevelGridStrategy(BaseStrategy):
         unit_to_buy = self.params['orderQty']
 
         if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.pending_switch_quantity, is_switch = True):
-
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_quantity = 0
             self.new_base_price = None
 
-            # self.SaveStrategyState()
+            self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(target_code)) != '3':
@@ -339,17 +377,19 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
-        # self.SaveStrategyState()
+
+        self.save_strategy_state()
         # self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
-        self.print('buy')
+        self.print('buy111')
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 
         self.Buy(code, quantity, price)
         self.current_held = code
-        self.logical_holding += quantity
+        if not is_switch:
+            self.logical_holding += quantity
         self.base_price = price
         # self.LastBuyDate = self.Today   # ToDo
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
@@ -360,12 +400,12 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        self.print('sell')
+        self.print('sell111')
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 
         self.Sell(code, quantity, price)
-        # self.logical_holding -= unit_to_sell
+        self.logical_holding -= quantity
         self.base_price = price
         self.sell_index += 1
         self.buy_index = 0
@@ -373,9 +413,31 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return True
 
+    def load_strategy_state(self):  # PairLevelGridStrategy
+        if self.IsBacktest and False:
+            return
+
+        state = super().load_strategy_state()
+        if state is None:
+            self.save_strategy_state()
+        else:
+            self.current_held = state['current_held']
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+
+    def save_strategy_state(self):   # PairLevelGridStrategy
+        data = {
+            'current_held': self.current_held,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'buy_index': self.buy_index,
+            'sell_index': self.sell_index,
+        }
+
+        super().save_strategy_state(data)
+
     def hisover_callback(self, context):
-        # 清空所有历史持仓
-        if self.api.BuyPosition() > 0:
-            self.api.Sell(self.api.BuyPosition(), self.api.Close()[-1])
-        if self.api.SellPosition() > 0:
-            self.api.BuyToCover(self.api.SellPosition(), self.api.Close()[-1])
+        if self.api.BuyPosition(self.current_held) > 0:
+            self.api.Sell(self.api.BuyPosition(), self.LastPrices[self.current_held], self.current_held)
+        if self.api.SellPosition(self.current_held) > 0:
+            self.api.BuyToCover(self.api.SellPosition(), self.LastPrices[self.current_held], self.current_held)

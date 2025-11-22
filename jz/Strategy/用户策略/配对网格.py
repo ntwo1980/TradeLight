@@ -86,6 +86,7 @@ def api():
         IsInSession=IsInSession,
         SetTriggerType=SetTriggerType,
         SetActual=SetActual,
+        CurrentBar=CurrentBar
     )
 
     return api

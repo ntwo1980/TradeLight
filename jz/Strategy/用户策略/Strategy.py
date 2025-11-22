@@ -152,6 +152,7 @@ class PairLevelGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.threshold_ratio = 0.01
         self.pending_switch_to = None
+        self.pending_switch_quantity = 0
         self.new_base_price = None
         self.current_held = None
         self.logical_holding = 0
@@ -162,10 +163,39 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 2000)
+            self.api.SetBarInterval(code, 'M', 1, 4000)
             self.api.SetBarInterval(code, 'D', 1, 30)
 
         self.api.SetActual()
+
+    def choose_better(self, code_A, code_B, default_code, threshold_ratio):
+        if default_code and default_code != code_A and default_code != code_B:
+            default_code = None
+
+        price_A = self.LastPrices[code_A]
+        price_B = self.LastPrices[code_B]
+
+        close_A = self.DailyPrices[code_A]['Close']
+        close_B = self.DailyPrices[code_B]['Close']
+
+        if len(close_A) < 20 or len(close_B) < 20:
+            target_code = default_code if default_code else code_A
+        else:
+            ratio_series = close_A[-20:] / close_B[-20:]
+            mean_ratio = np.mean(ratio_series)
+            current_ratio = price_A / price_B
+
+            if current_ratio > mean_ratio * (1 + threshold_ratio):
+                target_code = code_B
+                self.print(f'B is undervalued({code_A}, {code_B})')
+            elif current_ratio < mean_ratio * (1 - threshold_ratio):
+                target_code = code_A
+                self.print(f'A is undervalued({code_A}, {code_B})')
+            else:
+                self.print(f'None is undervalued({code_A}, {code_B})')
+                target_code = default_code if default_code else code_A
+
+        return target_code
 
     def handle_data(self, context):     # PairLevelGridStrategy
         if not super().handle_data(context):
@@ -177,33 +207,30 @@ class PairLevelGridStrategy(BaseStrategy):
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)
 
-        # === 仅处理两个股票的配对逻辑 ===
-        code_A, code_B = self.codes[0], self.codes[1]
-        price_A = self.LastPrices[code_A]
-        price_B = self.LastPrices[code_B]
 
-        close_A = self.DailyPrices[code_A]['Close']
-        close_B = self.DailyPrices[code_B]['Close']
+        if len(self.codes) == 2:
+            target_code = self.choose_better(self.codes[0], self.codes[1], self.current_held, self.threshold_ratio)
+        elif len(self.codes) == 4:
+            code_A, code_B = self.codes[0], self.codes[1]
 
-        if len(close_A) < 20 or len(close_B) < 20:
-            # 数据不足，维持现状或默认持有 A
-            target_code = self.current_held if self.current_held else code_A
-        else:
-            ratio_series = close_A[-20:] / close_B[-20:]
-            mean_ratio = np.mean(ratio_series)
-            current_ratio = price_A / price_B
+            better1 = self.choose_better(self.codes[0], self.codes[1], None, 0)
+            better2 = self.choose_better(self.codes[2], self.codes[3], None, 0)
 
-            if current_ratio > mean_ratio * (1 + self.threshold_ratio):
-                target_code = code_B
-                self.print('Switching to B (B is undervalued)')
-            elif current_ratio < mean_ratio * (1 - self.threshold_ratio):
-                target_code = code_A
-                self.print('Switching to A (A is undervalued)')
+            more_better = self.choose_better(better1, better2, None, 0)
+            if self.current_held is None or more_better == self.current_held:
+                target_code = more_better
             else:
-                # 无显著偏离，维持当前持仓
-                target_code = self.current_held if self.current_held else code_A
+                target_code = self.choose_better(self.current_held, more_better, self.current_held, self.threshold_ratio)
+        else:
+            self.print('codes lenght should be 2 or 4')
+            return
 
         self.print('target: ' + target_code)
+
+
+        if self.IsBacktest and self.api.CurrentBar() == 1:
+            self.Buy(target_code, 5, self.LastPrices[target_code])
+            return
 
         # === 原有换仓/交易逻辑（完全不变）===
         if self.pending_switch_to is not None:
@@ -291,10 +318,11 @@ class PairLevelGridStrategy(BaseStrategy):
 
         unit_to_buy = self.params['orderQty']
 
-        if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.params['orderQty'], is_switch = True):
+        if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.pending_switch_quantity, is_switch = True):
 
             self.base_price = self.new_base_price
             self.pending_switch_to = None
+            self.pending_switch_quantity = 0
             self.new_base_price = None
 
             # self.SaveStrategyState()
@@ -304,7 +332,8 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         # strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-        self.Sell(self.current_held, self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held])
+        self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
+        self.Sell(self.current_held, self.pending_switch_quantity, self.LastPrices[self.current_held])
         # self.logical_holding = 0
         self.pending_switch_to = target_code
         self.current_held = None

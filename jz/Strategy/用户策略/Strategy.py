@@ -24,7 +24,7 @@ class BaseStrategy():
         self.IsBacktest = context.strategyStatus() != 'C'
 
         self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
-        # self.api.SetTriggerType(5)
+        self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
 
@@ -63,7 +63,7 @@ class BaseStrategy():
             self.DailyPricesDate = self.api.TradeDate()
 
     def GetMinutePrices(self, codes):  # BaseStrategy
-        mintue_prices = {}
+        minute_prices = {}
 
         for code in codes:
             close_prices = self.api.Close(code, 'M', 1)
@@ -80,17 +80,17 @@ class BaseStrategy():
                 'Vol': vol_prices
             })
 
-            mintue_prices[code] = df
+            minute_prices[code] = df
 
-        return mintue_prices
+        return minute_prices
 
     def GetLastPrices(self, codes):  # BaseStrategy
-        mintue_prices = self.GetMinutePrices(codes)
+        minute_prices = self.GetMinutePrices(codes)
         last_prices = {}
 
         for code in codes:
             if self.IsBacktest:
-                last_prices[code] = mintue_prices[code].iloc[-1]['Close']
+                last_prices[code] = minute_prices[code].iloc[-1]['Close']
             else:
                 last_prices[code] = self.api.Q_Last(code)
 
@@ -98,7 +98,7 @@ class BaseStrategy():
 
     def handle_data(self, context):   # BaseStrategy
         self.context = context
-        self.IsBacktest = context.strategyStatus() == 'H'
+        self.IsBacktest = context.strategyStatus() != 'C'
         self.print(self.LastTradeDate() + self.CurrentTime())
 
         if context.triggerType() == 'N':
@@ -239,12 +239,11 @@ class PairLevelGridStrategy(BaseStrategy):
         if not super().handle_data(context):
             return
 
-        if not self.api.IsInSession(self.codes[0]):
+        if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
             return
 
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)
-
 
         if len(self.codes) == 2:
             target_code = self.choose_better(self.codes[0], self.codes[1], self.current_held, self.threshold_ratio)
@@ -264,13 +263,12 @@ class PairLevelGridStrategy(BaseStrategy):
         self.print('target: ' + target_code)
 
 
-        if self.IsBacktest and self.api.CurrentBar() == 1:
+        if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
             self.Buy(target_code, 5, self.LastPrices[target_code])
             self.current_held = target_code
             self.logical_holding = 5
             return
 
-        # === 原有换仓/交易逻辑（完全不变）===
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy()
         elif self.current_held and self.current_held != target_code and self.GetBuyPosition(self.current_held) > 0:
@@ -370,7 +368,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
-        price = self.LastPrices[self.current_held] if self.IsBacktest else self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.pending_switch_to)
+        price = self.LastPrices[self.current_held] if self.IsBacktest else self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held)
         self.Sell(self.current_held, self.pending_switch_quantity, price)
         self.pending_switch_to = target_code
         self.current_held = None
@@ -420,6 +418,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.current_held = state['current_held']
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
+            self.buy_index = state['buy_index']
+            self.sell_index = state['sell_index']
 
     def save_strategy_state(self):   # PairLevelGridStrategy
         data = {
@@ -433,7 +433,8 @@ class PairLevelGridStrategy(BaseStrategy):
         super().save_strategy_state(data)
 
     def hisover_callback(self, context):
-        if self.api.BuyPosition(self.current_held) > 0:
-            self.api.Sell(self.api.BuyPosition(), self.LastPrices[self.current_held], self.current_held)
-        if self.api.SellPosition(self.current_held) > 0:
-            self.api.BuyToCover(self.api.SellPosition(), self.LastPrices[self.current_held], self.current_held)
+        if self.current_held is not None:
+            if self.api.BuyPosition(self.current_held) > 0:
+                self.api.Sell(self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)
+            if self.api.SellPosition(self.current_held) > 0:
+                self.api.BuyToCover(self.api.SellPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)

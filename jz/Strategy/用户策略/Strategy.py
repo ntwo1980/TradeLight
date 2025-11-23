@@ -23,8 +23,8 @@ class BaseStrategy():
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
 
-        # self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
-        self.api.SetTriggerType(5)  # ToDo
+        self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
+        # self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
 
@@ -87,6 +87,7 @@ class BaseStrategy():
     def GetLastPrices(self, codes):  # BaseStrategy
         mintue_prices = self.GetMinutePrices(codes)
         last_prices = {}
+
         for code in codes:
             if self.IsBacktest:
                 last_prices[code] = mintue_prices[code].iloc[-1]['Close']
@@ -238,8 +239,8 @@ class PairLevelGridStrategy(BaseStrategy):
         if not super().handle_data(context):
             return
 
-        # if not self.api.IsInSession()  # ToDo
-        #     return
+        if not self.api.IsInSession(self.codes[0]):
+            return
 
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)
@@ -248,16 +249,14 @@ class PairLevelGridStrategy(BaseStrategy):
         if len(self.codes) == 2:
             target_code = self.choose_better(self.codes[0], self.codes[1], self.current_held, self.threshold_ratio)
         elif len(self.codes) == 4:
-            code_A, code_B = self.codes[0], self.codes[1]
-
             better1 = self.choose_better(self.codes[0], self.codes[1], None, 0)
             better2 = self.choose_better(self.codes[2], self.codes[3], None, 0)
 
-            more_better = self.choose_better(better1, better2, None, 0)
-            if self.current_held is None or more_better == self.current_held:
-                target_code = more_better
+            best = self.choose_better(better1, better2, None, 0)
+            if self.current_held is None or best == self.current_held:
+                target_code = best
             else:
-                target_code = self.choose_better(self.current_held, more_better, self.current_held, self.threshold_ratio)
+                target_code = self.choose_better(self.current_held, best, self.current_held, self.threshold_ratio)
         else:
             self.print('codes lenght should be 2 or 4')
             return
@@ -356,8 +355,9 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         unit_to_buy = self.params['orderQty']
+        price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to)
 
-        if self.ExecuteBuy(self.pending_switch_to, self.LastPrices[self.pending_switch_to], self.pending_switch_quantity, is_switch = True):
+        if self.ExecuteBuy(self.pending_switch_to, price, self.pending_switch_quantity, is_switch = True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_quantity = 0
@@ -369,20 +369,17 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(target_code)) != '3':
             return
 
-        # strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
-        self.Sell(self.current_held, self.pending_switch_quantity, self.LastPrices[self.current_held])
-        # self.logical_holding = 0
+        price = self.LastPrices[self.current_held] if self.IsBacktest else self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.pending_switch_to)
+        self.Sell(self.current_held, self.pending_switch_quantity, price)
         self.pending_switch_to = target_code
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
 
         self.save_strategy_state()
-        # self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
-        self.print('buy111')
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 
@@ -400,7 +397,6 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        self.print('sell111')
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
             return False
 

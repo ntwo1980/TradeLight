@@ -353,7 +353,9 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         unit_to_buy = self.params['orderQty']
-        price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to)
+
+
+        price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
 
         if self.ExecuteBuy(self.pending_switch_to, price, self.pending_switch_quantity, is_switch = True):
             self.base_price = self.new_base_price
@@ -368,7 +370,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
-        price = self.LastPrices[self.current_held] if self.IsBacktest else self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held)
+        price = self.LastPrices[self.current_held] if self.IsBacktest else max(self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held), self.api.Q_LowLimit(self.current_held))
         self.Sell(self.current_held, self.pending_switch_quantity, price)
         self.pending_switch_to = target_code
         self.current_held = None

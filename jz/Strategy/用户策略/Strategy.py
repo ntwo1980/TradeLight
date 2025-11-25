@@ -108,11 +108,11 @@ class BaseStrategy():
                 if context.triggerData()['EventType'] == 1:# 交易连接
                     # 盘中重新启动实盘交易
                     self.api.StartTrade()
-                    self.print('StartTrade')
+                    self.print('Error: StartTrade')
                 else: # 交易断开
                     # 盘中暂时停止实盘交易
                     self.api.StopTrade()
-                    self.print('StopTrade')
+                    self.print('Error: StopTrade')
 
                     return False
 
@@ -133,7 +133,7 @@ class BaseStrategy():
             self.api.Buy(quantity, price, code)
         else:
             if self.send_order_count > self.max_send_order_count:
-                self.print('reach order limit')
+                self.print('Error: reach order limit')
                 return False
 
             retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
@@ -152,7 +152,7 @@ class BaseStrategy():
             self.api.Sell(quantity, price, code)
         else:
             if self.send_order_count > self.max_send_order_count:
-                self.print('reach order limit')
+                self.print('Error: reach order limit')
                 return False
 
             retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
@@ -179,8 +179,8 @@ class BaseStrategy():
 
                 return state
         except Exception as e:
-            return None
             self.Print(f"Error: Failed to load strategy state: {e}")
+            return None
 
     def save_strategy_state(self, data):   # BaseStrategy
         if self.IsBacktest and False:
@@ -258,7 +258,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
-            self.print(f'Not in session')
+            self.print(f'Error: Not in session')
             return
 
         self.GetDailyPrices(self.codes)
@@ -276,7 +276,7 @@ class PairLevelGridStrategy(BaseStrategy):
             else:
                 target_code = self.choose_better(self.current_held, best, self.current_held, self.threshold_ratio)
         else:
-            self.print('codes lenght should be 2 or 4')
+            self.print('Error: codes lenght should be 2 or 4')
             return
 
         self.print('target: ' + target_code)
@@ -369,7 +369,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(self.pending_switch_to)) != '3':
-            self.print(f'Exchange status error')
+            self.print(f'Error: Exchange status error')
             return
 
         unit_to_buy = self.params['orderQty']
@@ -387,7 +387,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(target_code)) != '3':
-            self.print(f'Exchange status error')
+            self.print(f'Error: Exchange status error')
             return
 
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
@@ -403,7 +403,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
-            self.print(f'Exchange status error')
+            self.print(f'Error: Exchange status error')
             return False
 
         if not self.Buy(code, quantity, price):
@@ -423,7 +423,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
-            self.print(f'Exchange status error')
+            self.print(f'Error: Exchange status error')
             return False
 
         if not self.Sell(code, quantity, price):

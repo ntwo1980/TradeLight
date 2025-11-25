@@ -125,24 +125,30 @@ class BaseStrategy():
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
+        retEnter = 0
+        EnterOrderID = 0
         if self.IsBacktest:
             self.api.Buy(quantity, price, code)
         else:
-            self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
+            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
         # self.WaitingList.append(msg)
 
-        self.print(f"Buy {quantity} {code}, price: {price:.3f}")
+        self.print(f"Buy {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        return retEnter == 0
 
     def Sell(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
+        retEnter = 0
+        EnterOrderID = 0
         if self.IsBacktest:
             self.api.Sell(quantity, price, code)
         else:
-            self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
+            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
         # self.WaitingList.append(msg)
 
-        self.print(f"Sell {quantity} {code}, price: {price:.3f}")
+        self.print(f"Sell {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        return retEnter == 0
 
     def get_state_file_name(self): # BaseStrategy
         return f"D:\\data\\jizhi\\{self.name}.json"
@@ -374,7 +380,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
         price = self.LastPrices[self.current_held] if self.IsBacktest else max(self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held), self.api.Q_LowLimit(self.current_held))
-        self.Sell(self.current_held, self.pending_switch_quantity, price)
+        if not self.Sell(self.current_held, self.pending_switch_quantity, price):
+            return
         self.pending_switch_to = target_code
         self.current_held = None
         self.base_price = None
@@ -387,7 +394,9 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print(f'Exchange status error')
             return False
 
-        self.Buy(code, quantity, price)
+        if not self.Buy(code, quantity, price):
+            return False
+
         self.current_held = code
         if not is_switch:
             self.logical_holding += quantity
@@ -405,7 +414,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print(f'Exchange status error')
             return False
 
-        self.Sell(code, quantity, price)
+        if not self.Sell(code, quantity, price):
+            return False
         self.logical_holding -= quantity
         self.base_price = price
         self.sell_index += 1

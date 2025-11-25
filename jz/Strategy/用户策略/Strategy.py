@@ -240,6 +240,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
+            self.print(f'Not in session')
             return
 
         self.GetDailyPrices(self.codes)
@@ -350,6 +351,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(self.pending_switch_to)) != '3':
+            self.print(f'Exchange status error')
             return
 
         unit_to_buy = self.params['orderQty']
@@ -367,6 +369,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(target_code)) != '3':
+            self.print(f'Exchange status error')
             return
 
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
@@ -381,6 +384,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
+            self.print(f'Exchange status error')
             return False
 
         self.Buy(code, quantity, price)
@@ -398,6 +402,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         if not self.IsBacktest and self.api.ExchangeStatus(self.api.ExchangeName(code)) != '3':
+            self.print(f'Exchange status error')
             return False
 
         self.Sell(code, quantity, price)

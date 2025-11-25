@@ -435,6 +435,10 @@ class PairLevelGridStrategy(BaseStrategy):
         super().save_strategy_state(data)
 
     def hisover_callback(self, context):
+        self.DailyPricesDate = None
+        self.DailyPrices = {}
+        self.ATRs = {}
+
         if self.current_held is not None:
             if self.api.BuyPosition(self.current_held) > 0:
                 self.api.Sell(self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)

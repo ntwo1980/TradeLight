@@ -16,6 +16,8 @@ class BaseStrategy():
         self.base_price = 0
         self.last_buy_date = None
         self.last_sell_date = None
+        self.send_order_count = 0
+        self.max_send_order_count = 100
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -130,7 +132,12 @@ class BaseStrategy():
         if self.IsBacktest:
             self.api.Buy(quantity, price, code)
         else:
+            if self.send_order_count > self.max_send_order_count:
+                self.print('reach order limit')
+                return False
+
             retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
+            self.send_order_count += 1
         # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
@@ -144,7 +151,12 @@ class BaseStrategy():
         if self.IsBacktest:
             self.api.Sell(quantity, price, code)
         else:
+            if self.send_order_count > self.max_send_order_count:
+                self.print('reach order limit')
+                return False
+
             retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
+            self.send_order_count += 1
         # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")

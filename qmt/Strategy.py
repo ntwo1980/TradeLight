@@ -1794,9 +1794,9 @@ class PairLevelGridStrategy(BaseStrategy):
         super().SaveStrategyState(file, data)
 
 class StockLevelGridStrategy(LevelGridStrategy):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.levels = [4, 6, 8, 14, 22]
+    def init(self, C):
+        super().init(C)
+        self.levels = [4, 6, 8, 14, 22]  # 再次设置
 
 class MomentumRotationStrategy(BaseStrategy):
     def __init__(self, strategyId='a', days=25, rank=1, **kwargs):

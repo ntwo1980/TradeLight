@@ -205,7 +205,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def initialize(self, context, **kwargs):     # PairLevelGridStrategy
         super().initialize(context, **kwargs)
-        self.threshold_ratio = 0.01
+        self.threshold_ratio = self.params['threshold']
         self.pending_switch_to = None
         self.pending_switch_quantity = 0
         self.new_base_price = None
@@ -219,8 +219,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
-            self.api.SetBarInterval(code, 'D', 1, 30)
+            self.api.SetBarInterval(code, 'M', 1, 10000)
+            self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
         self.load_strategy_state()

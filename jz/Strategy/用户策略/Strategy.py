@@ -18,6 +18,7 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 100
+        self.print_debug = False
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -183,7 +184,7 @@ class BaseStrategy():
             return None
 
     def save_strategy_state(self, data):   # BaseStrategy
-        if self.IsBacktest and False:
+        if self.IsBacktest:
             pass
             # self.Print(json.dumps(data, ensure_ascii=False, indent=4))
         else:
@@ -218,7 +219,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 4000)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 30)
 
         self.api.SetActual()
@@ -243,12 +244,15 @@ class PairLevelGridStrategy(BaseStrategy):
 
             if current_ratio > mean_ratio * (1 + threshold_ratio):
                 target_code = code_B
-                self.print(f'B is undervalued({code_A}, {code_B})')
+                if self.print_debug:
+                    self.print(f'B is undervalued({code_A}, {code_B})')
             elif current_ratio < mean_ratio * (1 - threshold_ratio):
                 target_code = code_A
-                self.print(f'A is undervalued({code_A}, {code_B})')
+                if self.print_debug:
+                    self.print(f'A is undervalued({code_A}, {code_B})')
             else:
-                self.print(f'None is undervalued({code_A}, {code_B})')
+                if self.print_debug:
+                    self.print(f'None is undervalued({code_A}, {code_B})')
                 target_code = default_code if default_code else code_A
 
         return target_code
@@ -258,7 +262,8 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
-            self.print(f'Error: Not in session')
+            if self.print_debug:
+                self.print(f'Error: Not in session')
             return
 
         self.GetDailyPrices(self.codes)
@@ -279,8 +284,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print('Error: codes lenght should be 2 or 4')
             return
 
-        self.print('target: ' + target_code)
-
+        if self.print_debug:
+            self.print('target: ' + target_code)
 
         if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
             self.Buy(target_code, 5, self.LastPrices[target_code])
@@ -316,7 +321,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.RunGridTrading(self.current_held)
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
-        self.print('RunGridTrading')
+        if self.print_debug:
+            self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         current_price = self.LastPrices[code]
 
@@ -324,19 +330,20 @@ class PairLevelGridStrategy(BaseStrategy):
         if base_price == 0:
             base_price = self.DailyPrices[code]['Close'].iloc[-1]
 
-        self.print({
-            'current_date': self.api.TradeDate(),
-            'current_time': self.api.CurrentTime(),
-            'code': code,
-            'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
-            'atr': self.atr,
-            'current_held': self.current_held,
-            'logical_holding': self.logical_holding,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index,
-            'base_price': base_price,
-            'current_price': current_price,
-        })
+        if self.print_debug:
+            self.print({
+                'current_date': self.api.TradeDate(),
+                'current_time': self.api.CurrentTime(),
+                'code': code,
+                'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
+                'atr': self.atr,
+                'current_held': self.current_held,
+                'logical_holding': self.logical_holding,
+                'buy_index': self.buy_index,
+                'sell_index': self.sell_index,
+                'base_price': base_price,
+                'current_price': current_price,
+            })
 
         executed = False
 
@@ -437,7 +444,7 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def load_strategy_state(self):  # PairLevelGridStrategy
-        if self.IsBacktest and False:
+        if self.IsBacktest:
             return
 
         state = super().load_strategy_state()

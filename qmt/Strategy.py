@@ -9,10 +9,11 @@ import math
 import bisect
 
 class BaseStrategy():
-    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
+        self.Priority = priority
         self.StrategyPrefix = strategyPrefix
         self.StrategyId = strategyId
         self.IsBacktest = True
@@ -40,7 +41,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = True
+        self.UseLocalHistoryData = False
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -194,7 +195,8 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        return self.GetBuyTradingAmount(False) * 3.5
+        tradingAmount = self.GetBuyTradingAmount(False)
+        return tradingAmount * 3.5 if self.Priority < 10 else tradingAmount * 5.5
 
     def Print(self, string, **kwargs):
         prefix = f"{self.StrategyPrefix}_{self.Stocks[0].replace('.', '')}_{self.StockNames[0]}_{self.StrategyId}"
@@ -566,8 +568,6 @@ class SimpleGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        available_cash = self.GetAvailableCash()
-
         if not self.CheckWaitingList(C):
             return
 
@@ -601,6 +601,7 @@ class SimpleGridStrategy(BaseStrategy):
         self.Print({
             'stock': self.Stocks[0],
             'stock_name': self.StockNames[0],
+            'priority': self.Priority,
             'yesterday': self.prices['close'].index[-1],
             'yesterday_price': self.yesterday_price,
             'current_price': self.current_price,
@@ -615,7 +616,7 @@ class SimpleGridStrategy(BaseStrategy):
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
         elif self.current_price <= base_price - self.grid_unit * 1.001:
-            executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
+            executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
         if executed:
             self.SaveStrategyState()
@@ -627,7 +628,11 @@ class SimpleGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash):   # SimpleGridStrategy
+    def ExecuteBuy(self, C, stock, current_price):   # SimpleGridStrategy
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
         buy_amount = self.GetBuyTradingAmount()
 
         unit_to_buy = int(buy_amount / current_price)
@@ -801,8 +806,6 @@ class LevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        available_cash = self.GetAvailableCash()
-
         if not self.CheckWaitingList(C):
             return
 
@@ -902,7 +905,7 @@ class LevelGridStrategy(BaseStrategy):
 
                 buy_threshold = base_price - diff * 1.001
                 if self.current_price <= buy_threshold:
-                    executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price, available_cash)
+                    executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
         if executed:    # LevelGridStrategy
             self.SaveStrategyState()
@@ -914,7 +917,11 @@ class LevelGridStrategy(BaseStrategy):
         if self.IsBacktest:
             self.g(C)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash):     # LevelGridStrategy
+    def ExecuteBuy(self, C, stock, current_price):     # LevelGridStrategy
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
         buy_amount = self.GetBuyTradingAmount()
 
         unit_to_buy = int(buy_amount / current_price)
@@ -1098,9 +1105,7 @@ class PairGridStrategy(BaseStrategy):
             return
 
         # 检查可用资金
-        available_cash = self.GetAvailableCash()
-
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale, isSwitch = True):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -1162,7 +1167,6 @@ class PairGridStrategy(BaseStrategy):
             'atr': self.atr,
         })
 
-        available_cash = self.GetAvailableCash()
         holdings = self.GetPositions()
         current_holding = holdings.get(stock, 0)
 
@@ -1172,7 +1176,7 @@ class PairGridStrategy(BaseStrategy):
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
         elif self.current_price <= base_price - grid_unit * 1.001:
-            executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
+            executed = self.ExecuteBuy(C, stock, self.current_price)
 
         if executed:
             self.SaveStrategyState()
@@ -1189,8 +1193,6 @@ class PairGridStrategy(BaseStrategy):
 
         if not self.IsBacktest and not self.IsTradingTime():
             return
-
-        available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList(C):
             return
@@ -1260,7 +1262,11 @@ class PairGridStrategy(BaseStrategy):
             self.RunGridTrading(C, target_stock)
 
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):    # PairGridStrategy
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None, isSwitch = False):    # PairGridStrategy
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
         if trading_amount is None:
             buy_amount = self.GetBuyTradingAmount()
         else:
@@ -1428,9 +1434,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         # 检查可用资金
-        available_cash = self.GetAvailableCash()
-
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount = cash_from_sale, isSwitch = True):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -1520,7 +1524,6 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
             self.ClosePosition = True
 
-        available_cash = self.GetAvailableCash()
         holdings = self.GetPositions()
         current_holding = holdings.get(stock, 0)
 
@@ -1563,7 +1566,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
                 buy_threshold = base_price - diff * 1.001
                 if self.current_price <= buy_threshold:
-                    executed = self.ExecuteBuy(C, stock, self.current_price, available_cash)
+                    executed = self.ExecuteBuy(C, stock, self.current_price)
 
         if executed:
             self.SaveStrategyState()
@@ -1580,8 +1583,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if not self.IsBacktest and not self.IsTradingTime():
             return
-
-        available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList(C):
             return
@@ -1648,7 +1649,11 @@ class PairLevelGridStrategy(BaseStrategy):
         elif target_stock:
             self.RunGridTrading(C, target_stock)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None, isSwitch = False):    # PairLevelGridStrategy
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None, isSwitch = False):    # PairLevelGridStrategy
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
         if trading_amount is None:
             buy_amount = self.GetBuyTradingAmount()
         else:
@@ -1891,9 +1896,7 @@ class MomentumRotationStrategy(BaseStrategy):
             return
 
         # 检查可用资金
-        available_cash = self.GetAvailableCash()
-
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, available_cash, trading_amount=cash_from_sale):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount=cash_from_sale):
             self.base_price = price_new
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -1904,8 +1907,6 @@ class MomentumRotationStrategy(BaseStrategy):
 
         if not self.IsBacktest and not self.IsTradingTime():
             return
-
-        available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList(C):
             return
@@ -1939,11 +1940,15 @@ class MomentumRotationStrategy(BaseStrategy):
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
         elif self.current_held is None:
-            self.ExecuteBuy(C, target, current_prices[target], available_cash)
+            self.ExecuteBuy(C, target, current_prices[target])
         elif self.current_held != target:
             self.SwitchPosition_Sell(C, self.current_held, self.logical_holding, target, current_prices)
 
-    def ExecuteBuy(self, C, stock, current_price, available_cash, trading_amount = None):    # MomentumRotationStrategy
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None):    # MomentumRotationStrategy
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
         if trading_amount is None:
             buy_amount = self.TradingAmount
         else:
@@ -2035,8 +2040,6 @@ class JointquantEmailStrategy(BaseStrategy):
 
         if not self.IsBacktest and not self.IsTradingTime():
             return
-
-        available_cash = self.GetAvailableCash()
 
         if not self.CheckWaitingList(C):
             return

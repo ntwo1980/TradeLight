@@ -4,15 +4,17 @@ from Strategy import PairLevelGridStrategy
 
 
 # 策略参数字典
-g_params['threshold'] = 0.02
+g_params['threshold'] = 0.025  # 0.025 20  豆粕-菜粕
+#g_params['threshold'] = 0.01  # 0.02 20  豆粕
 
 my_g_params = {
     #'合约': 'DCE|Z|M|MAIN',
     'name': '豆粕',
-    #'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
+    #'codes': ['DCE|F|M|2601', 'DCE|F|M|2605'],
+    'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
     #'codes': ['ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601'],
-    'codes': ['DCE|F|JD|2601', 'DCE|F|JD|2602'],
-    'orderQty': 1,
+    #'codes': ['DCE|F|JD|2601', 'DCE|F|JD|2602'],
+    'orderQty': 4,
     'threshold': g_params['threshold'],
     #'codes': ['ZCE|F|RM|601', 'DCE|F|M|2601'],
     #'轴价': 3200,
@@ -55,6 +57,7 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_SellPosition=A_SellPosition,
+        A_SendOrder=A_SendOrder,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,
         BuyPosition=BuyPosition,
@@ -62,7 +65,9 @@ def api():
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
         Enum_Buy=Enum_Buy,
+        Enum_Entry=Enum_Entry,
         Enum_ExitToday=Enum_ExitToday,
+        Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,
         High=High,
@@ -88,6 +93,7 @@ def api():
         SetBarInterval=SetBarInterval,
         SetOrderWay=SetOrderWay,
         SetTriggerType=SetTriggerType,
+        SetUserNo=SetUserNo,
         StartTrade=StartTrade,
         StopTrade=StopTrade,
         Time=Time,

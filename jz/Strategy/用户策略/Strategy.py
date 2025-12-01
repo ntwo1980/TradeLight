@@ -18,7 +18,9 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 100
-        self.print_debug = False
+        self.deal = False
+        self.is_state_loaded = False
+        self.print_debug = True
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -26,10 +28,12 @@ class BaseStrategy():
         self.api = kwargs['api']
         self.IsBacktest = context.strategyStatus() != 'C'
 
-        self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
+        #self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
+        #self.api.SetTriggerType(3, 1000) # 每隔1000毫秒触发一次
         self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
+        self.api.SetUserNo('Q20702017')
 
     def LastTradeDate(self):
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
@@ -39,7 +43,7 @@ class BaseStrategy():
 
     def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
-            return self.DailyPrices
+            return
 
         for code in codes:
             close_prices = self.api.Close(code, 'D', 1)
@@ -63,7 +67,7 @@ class BaseStrategy():
                 self.ATRs[code] = None
 
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
-            self.DailyPricesDate = self.api.TradeDate()
+            self.DailyPricesDate = self.LastTradeDate()
 
     def GetMinutePrices(self, codes):  # BaseStrategy
         minute_prices = {}
@@ -137,7 +141,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price)
+            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
@@ -156,7 +160,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price)
+            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price, code)
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
@@ -167,8 +171,11 @@ class BaseStrategy():
         return f"D:\\data\\jizhi\\{self.name}.json"
 
     def load_strategy_state(self):  # BaseStrategy
-        # if self.IsBacktest:
-        #     return
+        if self.IsBacktest:
+            return None
+
+        if self.is_state_loaded:
+            raise Exception("state has been loaded")
 
         file = self.get_state_file_name()
 
@@ -177,6 +184,7 @@ class BaseStrategy():
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
+                self.is_state_loaded= True
 
                 return state
         except Exception as e:
@@ -219,11 +227,10 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 10000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
-        self.load_strategy_state()
 
     def choose_better(self, code_A, code_B, default_code, threshold_ratio):
         if default_code and default_code != code_A and default_code != code_B:
@@ -266,6 +273,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.print(f'Error: Not in session')
             return
 
+        self.load_strategy_state()
+
         self.GetDailyPrices(self.codes)
         self.GetLastPrices(self.codes)
 
@@ -288,10 +297,15 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print('target: ' + target_code)
 
         if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
-            self.Buy(target_code, 5, self.LastPrices[target_code])
+            self.Buy(target_code, 15, self.LastPrices[target_code])
             self.current_held = target_code
-            self.logical_holding = 5
+            self.logical_holding = 15
             return
+        # elif not self.IsBacktest and not self.deal:
+        #     self.Buy(target_code, 4, self.LastPrices[target_code])
+        #     self.current_held = target_code
+        #     self.logical_holding += 4
+        #     self.deal = True
 
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy()
@@ -313,8 +327,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
             new_base_price = old_base_price * price_new / price_old
             self.SwitchPosition_Sell(target_code, new_base_price)
-            # if self.IsBacktest:
-            #     self.f(context)
         elif target_code:
             self.RunGridTrading(target_code)
         elif self.current_held:
@@ -339,6 +351,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'atr': self.atr,
                 'current_held': self.current_held,
                 'logical_holding': self.logical_holding,
+                'real_position': self.GetBuyPosition(self.current_held),
                 'buy_index': self.buy_index,
                 'sell_index': self.sell_index,
                 'base_price': base_price,
@@ -445,6 +458,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def load_strategy_state(self):  # PairLevelGridStrategy
         if self.IsBacktest:
+            return
+
+        if self.is_state_loaded:
             return
 
         state = super().load_strategy_state()

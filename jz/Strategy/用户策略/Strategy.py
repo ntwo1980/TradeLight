@@ -18,7 +18,7 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 100
-        self.max_position = 20
+        self.max_position = 30
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
@@ -226,8 +226,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.5, 0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.5, 0.7, 0.8, 0.9, 1, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.5, 0.7, 1, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.5, 0.7, 1, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -369,14 +369,18 @@ class PairLevelGridStrategy(BaseStrategy):
 
         executed = False
 
-        if self.sell_index < len(self.sell_levels) and self.GetBuyPosition(code) > 0:
-            level = self.sell_levels[self.sell_index]
-            diff = self.atr * level
+        if self.sell_index < len(self.sell_levels):
+            position = self.GetBuyPosition(code)
+            if position > 0:
+                level = self.sell_levels[self.sell_index]
+                diff = self.atr * level
 
-            sell_threshold = base_price + diff
+                sell_threshold = base_price + diff
 
-            if current_price >= sell_threshold:
-                executed = self.ExecuteSell(code, current_price, self.params['orderQty'])
+                if current_price >= sell_threshold:
+                    executed = self.ExecuteSell(code, current_price, self.params['orderQty'] if position >= self.params['orderQty'] else position)
+        else:
+            self.print(f'Error: sell_index error')
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
@@ -385,6 +389,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
             if current_price <= buy_threshold:
                 executed = self.ExecuteBuy(code, current_price, self.params['orderQty'])
+        else:
+            self.print(f'Error: buy_index error')
 
         if executed:
             self.save_strategy_state()
@@ -446,6 +452,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
         if not is_switch:
             self.buy_index += 1
+            if self.buy_index >= len(self.buy_levels):
+                self.buy_index = self.buy_index[len(self.buy_index) - 1]
             self.sell_index = 0
 
         return True
@@ -460,6 +468,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding -= quantity
         self.base_price = price
         self.sell_index += 1
+        if self.sell_index >= len(self.sell_levels):
+            self.sell_index = self.sell_levels[len(self.sell_levels) - 1]
         self.buy_index = 0
         self.last_sell_date = datetime.today().strftime('%Y%m%d')
 

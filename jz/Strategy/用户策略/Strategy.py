@@ -294,7 +294,7 @@ class PairLevelGridStrategy(BaseStrategy):
             better2 = self.choose_better(self.codes[2], self.codes[3], None, 0)
 
             best = self.choose_better(better1, better2, None, 0)
-            if self.current_held is None or best == self.current_held:
+            if self.current_held is None or best == self.current_held or self.current_held not in self.codes:
                 target_code = best
             else:
                 target_code = self.choose_better(self.current_held, best, self.current_held, self.threshold_ratio)

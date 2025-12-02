@@ -18,6 +18,7 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 100
+        self.max_position = 20
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
@@ -139,6 +140,10 @@ class BaseStrategy():
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
+                return False
+
+            if not self.IsBacktest and self.GetBuyPosition(code) > self.max_position:
+                self.print('Error: reach position limit')
                 return False
 
             retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
@@ -275,8 +280,12 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.load_strategy_state()
 
-        self.GetDailyPrices(self.codes)
-        self.GetLastPrices(self.codes)
+        codes = list(self.codes)
+        if self.current_held and self.current_held not in codes:
+            codes.append(self.current_held)
+
+        self.GetDailyPrices(codes)
+        self.GetLastPrices(codes)
 
         if len(self.codes) == 2:
             target_code = self.choose_better(self.codes[0], self.codes[1], self.current_held, self.threshold_ratio)

@@ -22,6 +22,7 @@ class BaseStrategy():
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
+        self.config_folder = f"D:\\data\\jizhi"
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -34,7 +35,17 @@ class BaseStrategy():
         self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
-        self.api.SetUserNo('Q20702017')
+        #self.api.SetUserNo('Q20702017')
+
+        file = f"{self.config_folder}\\config.json"
+
+        if not os.path.exists(file):
+            self.print('Error: No config file')
+        else:
+            with open(file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                self.api.SetUserNo(config['account'])
+                self.print(config['account'])
 
     def LastTradeDate(self):
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
@@ -173,7 +184,7 @@ class BaseStrategy():
         return retEnter == 0
 
     def get_state_file_name(self): # BaseStrategy
-        return f"D:\\data\\jizhi\\{self.name}.json"
+        return f"{self.config_folder}\\{self.name}.json"
 
     def load_strategy_state(self):  # BaseStrategy
         if self.IsBacktest:
@@ -226,8 +237,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.5, 0.7, 1, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.5, 0.7, 1, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 

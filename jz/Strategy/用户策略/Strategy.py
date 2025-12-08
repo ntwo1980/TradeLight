@@ -414,16 +414,7 @@ class PairLevelGridStrategy(BaseStrategy):
         #     self.g(C)
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
-        if not self.IsBacktest:
-            exchange_name = self.api.ExchangeName(code)
-            status = self.api.ExchangeStatus(exchange_name)
-
-            if status != '3':
-                self.print( f"Error: Exchange status error. status={status}, exchange={exchange_name}, code={code}")
-                return False
-
         unit_to_buy = self.params['orderQty']
-
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
 
@@ -436,14 +427,6 @@ class PairLevelGridStrategy(BaseStrategy):
             self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
-        if not self.IsBacktest:
-            exchange_name = self.api.ExchangeName(code)
-            status = self.api.ExchangeStatus(exchange_name)
-
-            if status != '3':
-                self.print( f"Error: Exchange status error. status={status}, exchange={exchange_name}, code={code}")
-                return False
-
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
         price = self.LastPrices[self.current_held] if self.IsBacktest else max(self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held), self.api.Q_LowLimit(self.current_held))
         if not self.Sell(self.current_held, self.pending_switch_quantity, price):
@@ -456,14 +439,6 @@ class PairLevelGridStrategy(BaseStrategy):
         self.save_strategy_state()
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
-        if not self.IsBacktest:
-            exchange_name = self.api.ExchangeName(code)
-            status = self.api.ExchangeStatus(exchange_name)
-
-            if status != '3':
-                self.print( f"Error: Exchange status error. status={status}, exchange={exchange_name}, code={code}")
-                return False
-
         if not self.Buy(code, quantity, price):
             return False
 
@@ -482,14 +457,6 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        if not self.IsBacktest:
-            exchange_name = self.api.ExchangeName(code)
-            status = self.api.ExchangeStatus(exchange_name)
-
-            if status != '3':
-                self.print( f"Error: Exchange status error. status={status}, exchange={exchange_name}, code={code}")
-                return False
-
         if not self.Sell(code, quantity, price):
             return False
         self.logical_holding -= quantity

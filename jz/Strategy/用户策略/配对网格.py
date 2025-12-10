@@ -57,7 +57,9 @@ def api():
     api = types.SimpleNamespace(
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
+        A_BuyPositionCanCover=A_BuyPositionCanCover,
         A_SellPosition=A_SellPosition,
+        A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,

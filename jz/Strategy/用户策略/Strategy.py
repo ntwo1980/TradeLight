@@ -139,7 +139,7 @@ class BaseStrategy():
         if self.IsBacktest:
             return self.api.BuyPosition(code)
         else:
-            return self.api.A_BuyPosition(code)
+            return self.api.A_BuyPositionCanCover(code)
 
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
@@ -362,24 +362,10 @@ class PairLevelGridStrategy(BaseStrategy):
         if base_price == 0:
             base_price = self.DailyPrices[code]['Close'].iloc[-1]
 
-        if self.print_debug:
-            self.print({
-                'current_date': self.api.TradeDate(),
-                'current_time': self.api.CurrentTime(),
-                'code': code,
-                'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
-                'atr': self.atr,
-                'current_held': self.current_held,
-                'logical_holding': self.logical_holding,
-                'real_position': self.GetBuyPosition(self.current_held),
-                'buy_index': self.buy_index,
-                'sell_index': self.sell_index,
-                'base_price': base_price,
-                'current_price': current_price,
-            })
-
         executed = False
 
+        sell_threshold = 0
+        buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
             position = self.GetBuyPosition(code)
             if position > 0:
@@ -405,6 +391,25 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if executed:
             self.save_strategy_state()
+
+        if self.print_debug:
+            self.print({
+                'base_price': base_price,
+                'buy_threshold': buy_threshold,
+                'sell_threshold': sell_threshold,
+                'current_price': current_price,
+                'current_date': self.api.TradeDate(),
+                'current_time': self.api.CurrentTime(),
+                'code': code,
+                'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
+                'atr': self.atr,
+                'current_held': self.current_held,
+                'logical_holding': self.logical_holding,
+                'real_position': self.GetBuyPosition(self.current_held),
+                'buy_index': self.buy_index,
+                'sell_index': self.sell_index,
+            })
+
         #
         #     if self.base_price is not None:
         #         self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")

@@ -1,20 +1,34 @@
 import talib
 import types
 from Strategy import PairLevelGridStrategy
+from Strategy import SpreadGridStrategy
 
 strategy = None
 strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = PairLevelGridStrategy()
+    # strategy = PairLevelGridStrategy()
+
+    # strategy.initialize(context,
+    #     params = {
+    #         'name': '豆粕',
+    #         'codes': ['ZCE|F|RM|605'],
+    #         'orderQty': 4,
+    #         'threshold': 0.025,
+    #     },
+    #     api = api()
+    # )
+
+    # strategis.append(strategy)
+
+    strategy = SpreadGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '豆粕',
-            'codes': ['ZCE|F|RM|605'],
-            'orderQty': 4,
-            'threshold': 0.025,
+            'name': '豆二_豆粕',
+            'codes': ['SPD|m|B-M|2605|2605', 'DCE|M|B&M|2605'],
+            'orderQty': 1,
         },
         api = api()
     )
@@ -46,6 +60,7 @@ def api():
         A_SendOrder=A_SendOrder,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,
+        BuyToCover=BuyToCover,
         BuyPosition=BuyPosition,
         Close=Close,
         CurrentBar=CurrentBar,
@@ -74,6 +89,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,
         SetBarInterval=SetBarInterval,

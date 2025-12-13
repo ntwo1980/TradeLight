@@ -153,7 +153,11 @@ class BaseStrategy():
         retEnter = 0
         EnterOrderID = 0
         if self.IsBacktest:
-            self.api.Buy(quantity, price, code)
+            sell_position = self.GetSellPosition(code)
+            if sell_position > 0:
+                self.api.BuyToCover(quantity, price, code)
+            else:
+                self.api.Buy(quantity, price, code)
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
@@ -184,7 +188,11 @@ class BaseStrategy():
         retEnter = 0
         EnterOrderID = 0
         if self.IsBacktest:
-            self.api.Sell(quantity, price, code)
+            buy_position = self.GetBuyPosition(code)
+            if buy_position > 0:
+                self.api.Sell(quantity, price, code)
+            else:
+                self.api.SellShort(quantity, price, code)
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
@@ -339,7 +347,7 @@ class PairLevelGridStrategy(BaseStrategy):
             else:
                 target_code = self.choose_better(self.current_held, best, self.current_held, self.threshold_ratio)
         else:
-            self.print('Error: codes lenght should be 2 or 4')
+            self.print('Error: codes length should be 1 or 2 or 4')
             return
 
         if self.print_debug:
@@ -532,3 +540,207 @@ class PairLevelGridStrategy(BaseStrategy):
                 self.api.Sell(self.api.BuyPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)
             if self.api.SellPosition(self.current_held) > 0:
                 self.api.BuyToCover(self.api.SellPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)
+
+class SpreadGridStrategy(BaseStrategy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def initialize(self, context, **kwargs):     # SpreadGridStrategy
+        super().initialize(context, **kwargs)
+        self.pending_switch_to = None
+        self.pending_switch_quantity = 0
+        self.current_held = None
+        self.logical_holding = 0
+        self.codes = self.params['codes']
+        self.name = self.params['name']
+        self.buy_levels = [0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_index = 0
+        self.sell_index = 0
+
+        for code in self.codes:
+            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'D', 1, 100)
+
+        self.api.SetActual()
+
+    def handle_data(self, context):     # SpreadGridStrategy
+        if not super().handle_data(context):
+            return
+
+        if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
+            if self.print_debug:
+                self.print(f'Error: Not in session')
+            return
+
+        self.load_strategy_state()
+
+        codes = list(self.codes)
+        if self.current_held and self.current_held not in codes:
+            codes.append(self.current_held)
+
+        self.GetDailyPrices([codes[0]])
+        self.GetLastPrices([codes[0]])
+
+        if len(self.codes) != 2:
+            self.print('Error: codes length should be 1 or 2 or 4')
+            return
+
+        self.RunGridTrading()
+
+    def RunGridTrading(self):    # SpreadGridStrategy
+        if self.print_debug:
+            self.print('RunGridTrading')
+        self.atr = self.ATRs[self.codes[0]]
+        current_price = self.LastPrices[self.codes[0]]
+
+        base_price = self.base_price
+        buy_position = self.GetBuyPosition(self.codes[1])
+        sell_position = self.GetSellPosition(self.codes[1])
+
+        if buy_position == 0 and sell_position == 0:
+            close_prices = self.DailyPrices[self.codes[0]]['Close']
+
+            base_price = sum(close_prices[-10:]) / 10
+
+        executed = False
+
+        sell_threshold = 0
+        buy_threshold = 0
+        if self.sell_index < len(self.sell_levels):
+            level = self.sell_levels[self.sell_index]
+            diff = self.atr * level
+            sell_threshold = base_price + diff
+
+            if current_price >= sell_threshold:
+                executed = self.ExecuteSell(self.codes[1], current_price, self.params['orderQty'])
+        else:
+            self.print(f'Error: sell_index error')
+
+        if self.buy_index < len(self.buy_levels):
+            level = self.buy_levels[self.buy_index]
+            diff = self.atr * level
+            buy_threshold = base_price - diff
+
+            if current_price <= buy_threshold:
+                executed = self.ExecuteBuy(self.codes[1], current_price, self.params['orderQty'])
+        else:
+            self.print(f'Error: buy_index error')
+
+        if executed:
+            self.save_strategy_state()
+
+        if self.print_debug:
+            self.print({
+                'base_price': base_price,
+                'buy_threshold': buy_threshold,
+                'sell_threshold': sell_threshold,
+                'current_price': current_price,
+                'current_date': self.api.TradeDate(),
+                'current_time': self.api.CurrentTime(),
+                'code': self.codes[0],
+                'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
+                'atr': self.atr,
+                'current_held': self.current_held,
+                'logical_holding': self.logical_holding,
+                'real_position': self.GetBuyPosition(self.current_held),
+                'buy_index': self.buy_index,
+                'sell_index': self.sell_index,
+            })
+
+    def SwitchPosition_Buy(self):    # SpreadGridStrategy
+        unit_to_buy = self.params['orderQty']
+
+        price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
+
+        if self.ExecuteBuy(self.pending_switch_to, price, self.pending_switch_quantity, is_switch = True):
+            self.base_price = self.new_base_price
+            self.pending_switch_to = None
+            self.pending_switch_quantity = 0
+            self.new_base_price = None
+
+            self.save_strategy_state()
+
+    def SwitchPosition_Sell(self, target_code, new_base_price):    # SpreadGridStrategy
+        self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
+        price = self.LastPrices[self.current_held] if self.IsBacktest else max(self.api.Q_BidPrice(self.current_held) - self.api.PriceTick(self.current_held), self.api.Q_LowLimit(self.current_held))
+        if not self.Sell(self.current_held, self.pending_switch_quantity, price):
+            return
+        self.pending_switch_to = target_code
+        self.current_held = None
+        self.base_price = None
+        self.new_base_price = new_base_price
+
+        self.save_strategy_state()
+
+    def ExecuteBuy(self, code, price, quantity, is_switch = False):    # SpreadGridStrategy
+        self.print('ExecuteBuy')
+        if not self.Buy(code, quantity, price):
+            return False
+
+        self.current_held = code
+        if not is_switch:
+            self.logical_holding += quantity
+        self.base_price = price
+        # self.LastBuyDate = self.Today   # ToDo
+        self.last_buy_date = datetime.today().strftime('%Y%m%d')
+        if not is_switch:
+            self.buy_index += 1
+            if self.buy_index >= len(self.buy_levels):
+                self.buy_index = self.buy_index[len(self.buy_index) - 1]
+            self.sell_index = 0
+
+        return True
+
+    def ExecuteSell(self, code, price, quantity):    # SpreadGridStrategy
+        self.print('ExecuteSell')
+        if not self.Sell(code, quantity, price):
+            return False
+        self.logical_holding -= quantity
+        self.base_price = price
+        self.sell_index += 1
+        if self.sell_index >= len(self.sell_levels):
+            self.sell_index = self.sell_levels[len(self.sell_levels) - 1]
+        self.buy_index = 0
+        self.last_sell_date = datetime.today().strftime('%Y%m%d')
+
+        return True
+
+    def load_strategy_state(self):  # SpreadGridStrategy
+        if self.IsBacktest:
+            return
+
+        if self.is_state_loaded:
+            return
+
+        state = super().load_strategy_state()
+        if state is None:
+            self.save_strategy_state()
+        else:
+            self.current_held = state['current_held']
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+            self.buy_index = state['buy_index']
+            self.sell_index = state['sell_index']
+
+    def save_strategy_state(self):   # SpreadGridStrategy
+        data = {
+            'current_held': self.current_held,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'buy_index': self.buy_index,
+            'sell_index': self.sell_index,
+        }
+
+        super().save_strategy_state(data)
+
+    def hisover_callback(self, context):
+        self.DailyPricesDate = None
+        self.DailyPrices = {}
+        self.ATRs = {}
+
+        if self.current_held is not None:
+            if self.api.BuyPosition(self.codes[1]) > 0:
+                self.api.SellShort(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
+            if self.api.SellPosition(self.current_held) > 0:
+                self.api.BuyToCover(self.api.SellPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])

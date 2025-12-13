@@ -2,52 +2,35 @@ import talib
 import types
 from Strategy import PairLevelGridStrategy
 
-
-# 策略参数字典
-g_params['threshold'] = 0.025  # 0.025 20  豆粕-菜粕
-#g_params['threshold'] = 0.01  # 0.02 20  豆粕
-
-my_g_params = {
-    #'合约': 'DCE|Z|M|MAIN',
-    'name': '豆粕',
-    'codes': ['ZCE|F|RM|605', 'DCE|F|M|2605'],
-    #'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
-    #'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
-    #'codes': ['ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601'],
-    #'codes': ['DCE|F|JD|2601', 'DCE|F|JD|2602'],
-    'orderQty': 4,
-    'threshold': g_params['threshold'],
-    #'codes': ['ZCE|F|RM|601', 'DCE|F|M|2601'],
-    #'轴价': 3200,
-    #'每格跳数': 5,
-    #'K线数量': 2000,
-    #'保证金': 1999,
-    #'手续费': 10
-}
 strategy = None
-
+strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    global strategy
     strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
-        params = my_g_params,
+        params = {
+            'name': '豆粕',
+            'codes': ['ZCE|F|RM|605'],
+            'orderQty': 4,
+            'threshold': 0.025,
+        },
         api = api()
     )
 
+    strategis.append(strategy)
+
+
 # 策略触发事件每次触发时都会执行该函数
 def handle_data(context):
-    global strategy
-    strategy.handle_data(context)
-
+    for s in strategis:
+        s.handle_data(context)
 
 # 历史回测阶段结束时执行该函数一次
 def hisover_callback(context):
-    global strategy
-    strategy.hisover_callback(context)
-
+    for s in strategis:
+        s.hisover_callback(context)
 
 # 策略退出前执行该函数一次
 def exit_callback(context):

@@ -243,7 +243,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -298,7 +298,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.GetDailyPrices(codes)
         self.GetLastPrices(codes)
 
-        if len(self.codes) == 2:
+        if len(self.codes) == 1:
+            target_code = self.codes[0]
+        elif len(self.codes) == 2:
             target_code = self.choose_better(self.codes[0], self.codes[1], self.current_held, self.threshold_ratio)
         elif len(self.codes) == 4:
             better1 = self.choose_better(self.codes[0], self.codes[1], None, 0)

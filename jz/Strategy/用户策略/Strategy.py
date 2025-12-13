@@ -153,7 +153,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            if not self.IsBacktest and self.GetBuyPosition(code) > self.max_position:
+            if self.GetBuyPosition(code) > self.max_position:
                 self.print('Error: reach position limit')
                 return False
 

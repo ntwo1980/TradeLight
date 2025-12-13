@@ -141,6 +141,12 @@ class BaseStrategy():
         else:
             return self.api.A_BuyPositionCanCover(code)
 
+    def GetSellPosition(self, code):
+        if self.IsBacktest:
+            return self.api.SellPosition(code)
+        else:
+            return self.api.A_SellPositionCanCover(code)
+
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
@@ -153,11 +159,19 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            if self.GetBuyPosition(code) > self.max_position:
-                self.print('Error: reach position limit')
+            buy_position = self.GetBuyPosition(code)
+            sell_position = self.GetSellPosition(code)
+
+            if buy_position - sell_position > self.max_position:
+                self.print('Error: reach buy position limit')
                 return False
 
-            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
+            if sell_position >= quantity:
+                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
+            else:
+                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
+                if not self.IsBacktest and retEnter == 0:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity - sell_position, price, code)
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
@@ -176,7 +190,20 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_ExitToday(), quantity, price, code)
+            buy_position = self.GetBuyPosition(code)
+            sell_position = self.GetSellPosition(code)
+
+            if sell_position - buy_position> self.max_position:
+                self.print('Error: reach sell position limit')
+                return False
+
+            if buy_position >= quantity:
+                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
+            else:
+                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
+                if not self.IsBacktest and retEnter == 0:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity - buy_position, price, code)
+
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
@@ -237,8 +264,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -410,14 +437,6 @@ class PairLevelGridStrategy(BaseStrategy):
                 'buy_index': self.buy_index,
                 'sell_index': self.sell_index,
             })
-
-        #
-        #     if self.base_price is not None:
-        #         self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
-        #     else:
-        #         self.Print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
-        # if self.IsBacktest:
-        #     self.g(C)
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
         unit_to_buy = self.params['orderQty']

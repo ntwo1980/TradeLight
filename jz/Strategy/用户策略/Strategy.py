@@ -222,9 +222,6 @@ class BaseStrategy():
         return f"{self.config_folder}\\{self.name}.json"
 
     def load_strategy_state(self):  # BaseStrategy
-        if self.IsBacktest:
-            return None
-
         if self.is_state_loaded:
             raise Exception("state has been loaded")
 
@@ -243,17 +240,13 @@ class BaseStrategy():
             return None
 
     def save_strategy_state(self, data):   # BaseStrategy
-        if self.IsBacktest:
-            pass
-            # self.Print(json.dumps(data, ensure_ascii=False, indent=4))
-        else:
-            file = self.get_state_file_name()
+        file = self.get_state_file_name()
 
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                self.Print(f"Error: Failed to save strategy state: {e}")
+        try:
+            with open(file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            self.Print(f"Error: Failed to save strategy state: {e}")
 
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)
@@ -425,7 +418,7 @@ class PairLevelGridStrategy(BaseStrategy):
         else:
             self.print(f'Error: buy_index error')
 
-        if executed:
+        if executed and not self.IsBacktest:
             self.save_strategy_state()
 
         if self.print_debug:
@@ -457,7 +450,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_quantity = 0
             self.new_base_price = None
 
-            self.save_strategy_state()
+            if executed and not self.IsBacktest:
+                self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
@@ -469,7 +463,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
 
-        self.save_strategy_state()
+        if executed and not self.IsBacktest:
+            self.save_strategy_state()
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
         if not self.Buy(code, quantity, price):
@@ -503,9 +498,6 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def load_strategy_state(self):  # PairLevelGridStrategy
-        if self.IsBacktest:
-            return
-
         if self.is_state_loaded:
             return
 
@@ -553,8 +545,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.8, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -627,7 +619,7 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             self.print(f'Error: buy_index error')
 
-        if executed:
+        if executed and not self.IsBacktest:
             self.save_strategy_state()
 
         if self.print_debug:
@@ -659,7 +651,8 @@ class SpreadGridStrategy(BaseStrategy):
             self.pending_switch_quantity = 0
             self.new_base_price = None
 
-            self.save_strategy_state()
+            if executed and not self.IsBacktest:
+                self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # SpreadGridStrategy
         self.pending_switch_quantity = self.api.BuyPosition(self.current_held)
@@ -671,7 +664,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
 
-        self.save_strategy_state()
+        if executed and not self.IsBacktest:
+            self.save_strategy_state()
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # SpreadGridStrategy
         self.print('ExecuteBuy')
@@ -707,9 +701,6 @@ class SpreadGridStrategy(BaseStrategy):
         return True
 
     def load_strategy_state(self):  # SpreadGridStrategy
-        if self.IsBacktest:
-            return
-
         if self.is_state_loaded:
             return
 

@@ -8,27 +8,14 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    # strategy = PairLevelGridStrategy()
-
-    # strategy.initialize(context,
-    #     params = {
-    #         'name': '豆粕',
-    #         'codes': ['ZCE|F|RM|605'],
-    #         'orderQty': 4,
-    #         'threshold': 0.025,
-    #     },
-    #     api = api()
-    # )
-
-    # strategis.append(strategy)
-
-    strategy = SpreadGridStrategy()
+    strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '豆二_豆粕',
-            'codes': ['SPD|m|B-M|2605|2605', 'DCE|M|B&M|2605'],
-            'orderQty': 1,
+            'name': '豆粕',
+            'codes': ['ZCE|F|RM|605'],
+            'orderQty': 4,
+            'threshold': 0.025,
         },
         api = api()
     )

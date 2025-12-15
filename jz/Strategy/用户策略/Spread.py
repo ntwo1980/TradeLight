@@ -53,6 +53,7 @@ def api():
         CurrentTime=CurrentTime,
         Enum_Buy=Enum_Buy,
         Enum_Entry=Enum_Entry,
+        Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,

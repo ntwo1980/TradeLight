@@ -173,8 +173,9 @@ class BaseStrategy():
             if sell_position >= quantity:
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
             else:
-                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
-                if not self.IsBacktest and retEnter == 0:
+                if sell_position > 0:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
+                if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity - sell_position, price, code)
             self.send_order_count += 1
         # self.WaitingList.append(msg)
@@ -208,8 +209,9 @@ class BaseStrategy():
             if buy_position >= quantity:
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
             else:
-                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
-                if not self.IsBacktest and retEnter == 0:
+                if buy_position > 0:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
+                if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity - buy_position, price, code)
 
             self.send_order_count += 1

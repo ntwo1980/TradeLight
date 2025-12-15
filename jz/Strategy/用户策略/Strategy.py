@@ -17,7 +17,7 @@ class BaseStrategy():
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0
-        self.max_send_order_count = 100
+        self.max_send_order_count = 6
         self.max_position = 30
         self.deal = False
         self.is_state_loaded = False
@@ -139,13 +139,15 @@ class BaseStrategy():
         if self.IsBacktest:
             return self.api.BuyPosition(code)
         else:
-            return self.api.A_BuyPositionCanCover(code)
+            # return self.api.A_BuyPositionCanCover(code)
+            return self.api.A_BuyPosition(code)
 
     def GetSellPosition(self, code):
         if self.IsBacktest:
             return self.api.SellPosition(code)
         else:
-            return self.api.A_SellPositionCanCover(code)
+            # return self.api.A_SellPositionCanCover(code)
+            return self.api.A_SellPosition(code)
 
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
@@ -163,8 +165,24 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            buy_position = self.GetBuyPosition(code)
-            sell_position = self.GetSellPosition(code)
+            if '|M|' in code:
+                buy_position = self.GetBuyPosition(self.codes[2])
+                sell_position = self.GetSellPosition(self.codes[2])
+
+                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                    if self.logical_holding >= 0:
+                        buy_position = self.logical_holding
+                    else:
+                        sell_position = abs(self.logical_holding)
+            else:
+                buy_position = self.GetBuyPosition(code)
+                sell_position = self.GetSellPosition(code)
+
+                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                    if self.logical_holding >= 0:
+                        buy_position = self.logical_holding
+                    else:
+                        self.print('Error: sell position is less than 0')
 
             if buy_position - sell_position > self.max_position:
                 self.print('Error: reach buy position limit')
@@ -199,8 +217,24 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            buy_position = self.GetBuyPosition(code)
-            sell_position = self.GetSellPosition(code)
+            if '|M|' in code:
+                buy_position = self.GetBuyPosition(self.codes[2])
+                sell_position = self.GetSellPosition(self.codes[2])
+
+                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                    if self.logical_holding >= 0:
+                        buy_position = self.logical_holding
+                    else:
+                        sell_position = abs(self.logical_holding)
+            else:
+                buy_position = self.GetBuyPosition(code)
+                sell_position = self.GetSellPosition(code)
+
+                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                    if self.logical_holding >= 0:
+                        buy_position = self.logical_holding
+                    else:
+                        self.print('Error: sell position is less than 0')
 
             if sell_position - buy_position> self.max_position:
                 self.print('Error: reach sell position limit')
@@ -425,20 +459,21 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if self.print_debug:
             self.print({
-                'base_price': base_price,
-                'buy_threshold': buy_threshold,
-                'sell_threshold': sell_threshold,
-                'current_price': current_price,
+                'b_price': base_price,
+                'r_b_position': self.GetBuyPosition(self.current_held),
+                'r_s_position': self.GetSellPosition(self.current_held),
+                'b_threshold': buy_threshold,
+                's_threshold': sell_threshold,
+                'l_holding': self.logical_holding,
+                'c_price': current_price,
+                'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
+                'b_index': self.buy_index,
+                's_index': self.sell_index,
+                'code': code,
                 'current_date': self.api.TradeDate(),
                 'current_time': self.api.CurrentTime(),
-                'code': code,
-                'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
                 'atr': self.atr,
                 'current_held': self.current_held,
-                'logical_holding': self.logical_holding,
-                'real_position': self.GetBuyPosition(self.current_held),
-                'buy_index': self.buy_index,
-                'sell_index': self.sell_index,
             })
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
@@ -528,6 +563,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
+        self.is_state_loaded = False
 
         if self.current_held is not None:
             if self.api.BuyPosition(self.current_held) > 0:
@@ -553,7 +589,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -576,8 +612,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.GetDailyPrices([codes[0]])
         self.GetLastPrices([codes[0]])
 
-        if len(self.codes) != 2:
-            self.print('Error: codes length should be 1 or 2 or 4')
+        if len(self.codes) != 4:
+            self.print('Error: codes length should be 4')
             return
 
         self.RunGridTrading()
@@ -589,10 +625,10 @@ class SpreadGridStrategy(BaseStrategy):
         current_price = self.LastPrices[self.codes[0]]
 
         base_price = self.base_price
-        buy_position = self.GetBuyPosition(self.codes[1])
-        sell_position = self.GetSellPosition(self.codes[1])
+        buy_position = self.GetBuyPosition(self.codes[2])
+        sell_position = self.GetSellPosition(self.codes[2])
 
-        if buy_position == 0 and sell_position == 0:
+        if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             close_prices = self.DailyPrices[self.codes[0]]['Close']
 
             base_price = sum(close_prices[-10:]) / 10
@@ -626,20 +662,21 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.print_debug:
             self.print({
-                'base_price': base_price,
-                'buy_threshold': buy_threshold,
-                'sell_threshold': sell_threshold,
-                'current_price': current_price,
+                'b_price': base_price,
+                'r_b_position': self.GetBuyPosition(self.codes[1]),
+                'r_s_position': self.GetSellPosition(self.codes[1]),
+                'b_threshold': buy_threshold,
+                's_threshold': sell_threshold,
+                'l_holding': self.logical_holding,
+                'c_price': current_price,
+                'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
+                'b_index': self.buy_index,
+                's_index': self.sell_index,
+                'code': self.codes[1],
                 'current_date': self.api.TradeDate(),
                 'current_time': self.api.CurrentTime(),
-                'code': self.codes[0],
-                'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
                 'atr': self.atr,
                 'current_held': self.current_held,
-                'logical_holding': self.logical_holding,
-                'real_position': self.GetBuyPosition(self.current_held),
-                'buy_index': self.buy_index,
-                'sell_index': self.sell_index,
             })
 
     def SwitchPosition_Buy(self):    # SpreadGridStrategy
@@ -707,6 +744,7 @@ class SpreadGridStrategy(BaseStrategy):
             return
 
         state = super().load_strategy_state()
+        self.print(state)
         if state is None:
             self.save_strategy_state()
         else:
@@ -731,6 +769,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
+        self.is_state_loaded = False
 
         if self.current_held is not None:
             if self.api.BuyPosition(self.codes[1]) > 0:

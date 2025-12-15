@@ -11,6 +11,7 @@ class BaseStrategy():
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
+        self.slopes = {}
         self.MinutePrices = {}
         self.LastPrices = {}
         self.base_price = 0
@@ -75,8 +76,16 @@ class BaseStrategy():
             if len(df) >= 4:
                 atr_values = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)
                 self.ATRs[code] = atr_values[-1]
+                x = np.arange(len(df['Close'].values[-20:]))
+                vals = df['Close'].values[-20:]
+                shift = vals.min() - 1e-6
+                y = np.log(vals - shift)
+                slope, intercept = np.polyfit(x, y, 1)
+                slope, intercept = np.polyfit(x, y, 1)
+                self.slopes[code] = slope
             else:
                 self.ATRs[code] = None
+                self.slopes[code] = None
 
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
             self.DailyPricesDate = self.LastTradeDate()
@@ -563,6 +572,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
+        self.slopes = {}
         self.is_state_loaded = False
 
         if self.current_held is not None:
@@ -622,6 +632,7 @@ class SpreadGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print('RunGridTrading')
         self.atr = self.ATRs[self.codes[0]]
+        self.slope = self.slopes[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]
 
         base_price = self.base_price
@@ -676,6 +687,7 @@ class SpreadGridStrategy(BaseStrategy):
                 'current_date': self.api.TradeDate(),
                 'current_time': self.api.CurrentTime(),
                 'atr': self.atr,
+                'slope': self.slope,
                 'current_held': self.current_held,
             })
 

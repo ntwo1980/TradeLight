@@ -184,7 +184,7 @@ class BaseStrategy():
                     else:
                         self.print('Error: sell position is less than 0')
 
-            if buy_position - sell_position > self.max_position:
+            if abs(buy_position - sell_position) > self.max_position:
                 self.print('Error: reach buy position limit')
                 return False
 
@@ -236,7 +236,7 @@ class BaseStrategy():
                     else:
                         self.print('Error: sell position is less than 0')
 
-            if sell_position - buy_position> self.max_position:
+            if abs(sell_position - buy_position) > self.max_position:
                 self.print('Error: reach sell position limit')
                 return False
 
@@ -272,7 +272,7 @@ class BaseStrategy():
 
                 return state
         except Exception as e:
-            self.Print(f"Error: Failed to load strategy state: {e}")
+            self.print(f"Error: Failed to load strategy state: {e}")
             return None
 
     def save_strategy_state(self, data):   # BaseStrategy
@@ -282,7 +282,7 @@ class BaseStrategy():
             with open(file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
-            self.Print(f"Error: Failed to save strategy state: {e}")
+            self.print(f"Error: Failed to save strategy state: {e}")
 
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)
@@ -487,7 +487,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_quantity = 0
             self.new_base_price = None
 
-            if executed and not self.IsBacktest:
+            if not self.IsBacktest:
                 self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # PairLevelGridStrategy
@@ -500,7 +500,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
 
-        if executed and not self.IsBacktest:
+        if not self.IsBacktest:
             self.save_strategy_state()
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # PairLevelGridStrategy
@@ -516,7 +516,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not is_switch:
             self.buy_index += 1
             if self.buy_index >= len(self.buy_levels):
-                self.buy_index = self.buy_index[len(self.buy_index) - 1]
+                self.buy_index = len(self.buy_levels) - 1
             self.sell_index = 0
 
         return True
@@ -528,7 +528,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.base_price = price
         self.sell_index += 1
         if self.sell_index >= len(self.sell_levels):
-            self.sell_index = self.sell_levels[len(self.sell_levels) - 1]
+            self.sell_index = len(self.sell_levels) - 1
         self.buy_index = 0
         self.last_sell_date = datetime.today().strftime('%Y%m%d')
 
@@ -690,7 +690,7 @@ class SpreadGridStrategy(BaseStrategy):
             self.pending_switch_quantity = 0
             self.new_base_price = None
 
-            if executed and not self.IsBacktest:
+            if not self.IsBacktest:
                 self.save_strategy_state()
 
     def SwitchPosition_Sell(self, target_code, new_base_price):    # SpreadGridStrategy
@@ -703,7 +703,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.base_price = None
         self.new_base_price = new_base_price
 
-        if executed and not self.IsBacktest:
+        if not self.IsBacktest:
             self.save_strategy_state()
 
     def ExecuteBuy(self, code, price, quantity, is_switch = False):    # SpreadGridStrategy
@@ -720,7 +720,7 @@ class SpreadGridStrategy(BaseStrategy):
         if not is_switch:
             self.buy_index += 1
             if self.buy_index >= len(self.buy_levels):
-                self.buy_index = self.buy_index[len(self.buy_index) - 1]
+                self.buy_index = len(self.buy_levels) - 1
             self.sell_index = 0
 
         return True
@@ -733,7 +733,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.base_price = price
         self.sell_index += 1
         if self.sell_index >= len(self.sell_levels):
-            self.sell_index = self.sell_levels[len(self.sell_levels) - 1]
+            self.sell_index = len(self.sell_levels) - 1
         self.buy_index = 0
         self.last_sell_date = datetime.today().strftime('%Y%m%d')
 

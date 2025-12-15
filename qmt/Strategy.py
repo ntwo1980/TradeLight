@@ -41,7 +41,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = False
+        self.UseLocalHistoryData = True
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -56,6 +56,7 @@ class BaseStrategy():
             '159691.SZ',    # 港股红利
             '159518.SZ',    # 标普油气
             '513350.SH',    # 标普油气
+            '513290.SH',    # 纳斯达克生物科技
             '159509.SZ',    # 纳指科技
             '513850.SH',    # 美国50
             '159577.SZ',    # 美国50
@@ -225,7 +226,7 @@ class BaseStrategy():
         if (month == 4 and day <= 20) or (month == 3 and day >=20):
             self.ClosePosition = True
             self.IsGlobalClosePosition = True
-        elif (month == 12 and day >= 20) or (month == 1 and day <=20):
+        elif (month == 12 and day >= 15) or (month == 1 and day <=15):
             self.ClosePosition = True
             self.IsGlobalClosePosition = True
         else:

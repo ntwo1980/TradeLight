@@ -1,3 +1,4 @@
+import requests
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -24,6 +25,8 @@ class BaseStrategy():
         self.is_state_loaded = False
         self.print_debug = True
         self.config_folder = f"D:\\data\\jizhi"
+        self.dingding_token = None
+        self.dingding_keyword = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -46,6 +49,8 @@ class BaseStrategy():
             with open(file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 self.api.SetUserNo(config['account'])
+                self.dingding_token = config['dingding_token']
+                self.dingding_keyword = config['dingding_keyword']
                 self.print(config['account'])
 
     def LastTradeDate(self):
@@ -208,6 +213,9 @@ class BaseStrategy():
         # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        if not self.IsBacktest:
+            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.3f}"
+            self.dingding(msg)
         return retEnter == 0
 
     def Sell(self, code, quantity, price):  # BaseStrategy
@@ -261,6 +269,10 @@ class BaseStrategy():
         # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+
+        if not self.IsBacktest:
+            msg = f"sell: {code}\nquantity: {quantity}\nprice: {price:.3f}"
+            self.dingding(msg)
         return retEnter == 0
 
     def get_state_file_name(self): # BaseStrategy
@@ -295,6 +307,27 @@ class BaseStrategy():
 
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)
+
+
+    def dingding(self, msg):
+        webhook_url = f"https://oapi.dingtalk.com/robot/send?access_token={self.dingding_token}"
+
+        message = {
+            "msgtype": "text",
+            "text": {
+                "content": f"{msg}. {self.dingding_keyword}",
+                "at": {
+                    "isAtAll": False
+                }
+            }
+        }
+
+        headers = {'Content-Type': 'application/json'}
+        try:
+            response = requests.post(webhook_url, data=json.dumps(message), headers=headers, timeout=5)
+        except Exception as e:
+            self.print(f"DingDing exception (ignored): {e}")
+
 
 class PairLevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
@@ -650,6 +683,8 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
+            if self.logical_holding < -3 * self.params['orderQty']:
+                level = level * 1.2
             diff = self.atr * level
             sell_threshold = base_price + diff
 
@@ -660,6 +695,8 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
+            if self.logical_holding > 3 * self.params['orderQty']:
+                level = level * 1.2
             diff = self.atr * level
             buy_threshold = base_price - diff
 

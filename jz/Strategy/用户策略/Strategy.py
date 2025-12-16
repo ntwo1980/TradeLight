@@ -674,8 +674,8 @@ class SpreadGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print({
                 'b_price': base_price,
-                'r_b_position': self.GetBuyPosition(self.codes[1]),
-                'r_s_position': self.GetSellPosition(self.codes[1]),
+                'r_b_position': self.GetBuyPosition(self.codes[2]),
+                'r_s_position': self.GetSellPosition(self.codes[2]),
                 'b_threshold': buy_threshold,
                 's_threshold': sell_threshold,
                 'l_holding': self.logical_holding,

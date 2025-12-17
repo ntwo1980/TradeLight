@@ -631,7 +631,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -688,7 +688,14 @@ class SpreadGridStrategy(BaseStrategy):
             sell_threshold = base_price + diff
 
             if current_price >= sell_threshold:
-                executed = self.ExecuteSell(self.codes[1], current_price, self.params['orderQty'])
+                sell = True
+                if self.logical_holding == self.params['orderQty'] and buy_position == self.params['orderQty']:
+                    close_prices = self.DailyPrices[self.codes[0]]['Close']
+                    base_price = sum(close_prices[-10:]) / 10
+                    if current_price < base_price - self.atr * self.buy_levels[0]:
+                        sell = False
+                if sell:
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.params['orderQty'])
         else:
             self.print(f'Error: sell_index error')
 
@@ -700,7 +707,15 @@ class SpreadGridStrategy(BaseStrategy):
             buy_threshold = base_price - diff
 
             if current_price <= buy_threshold:
-                executed = self.ExecuteBuy(self.codes[1], current_price, self.params['orderQty'])
+                buy = True
+                if self.logical_holding == -self.params['orderQty'] and sell_position == self.params['orderQty']:
+                    close_prices = self.DailyPrices[self.codes[0]]['Close']
+                    base_price = sum(close_prices[-10:]) / 10
+                    if current_price > base_price + self.atr * self.sell_levels[0]:
+                        buy = False
+
+                if buy:
+                    executed = self.ExecuteBuy(self.codes[1], current_price, self.params['orderQty'])
         else:
             self.print(f'Error: buy_index error')
 
@@ -821,6 +836,6 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.current_held is not None:
             if self.api.BuyPosition(self.codes[1]) > 0:
-                self.api.SellShort(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
-            if self.api.SellPosition(self.current_held) > 0:
+                self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
+            if self.api.SellPosition(self.codes[1]) > 0:
                 self.api.BuyToCover(self.api.SellPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])

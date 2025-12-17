@@ -86,7 +86,6 @@ class BaseStrategy():
                 shift = vals.min() - 1e-6
                 y = np.log(vals - shift)
                 slope, intercept = np.polyfit(x, y, 1)
-                slope, intercept = np.polyfit(x, y, 1)
                 self.slopes[code] = slope
             else:
                 self.ATRs[code] = None
@@ -212,9 +211,9 @@ class BaseStrategy():
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
-        self.print(f"Buy {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        self.print(f"Buy {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
-            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.3f}"
+            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -268,10 +267,10 @@ class BaseStrategy():
             self.send_order_count += 1
         # self.WaitingList.append(msg)
 
-        self.print(f"Sell {quantity} {code}, price: {price:.3f}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        self.print(f"Sell {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
 
         if not self.IsBacktest:
-            msg = f"sell: {code}\nquantity: {quantity}\nprice: {price:.3f}"
+            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -315,7 +314,7 @@ class BaseStrategy():
         message = {
             "msgtype": "text",
             "text": {
-                "content": f"{msg}. {self.dingding_keyword}",
+                "content": f"{msg}\n{self.dingding_keyword}",
                 "at": {
                     "isAtAll": False
                 }

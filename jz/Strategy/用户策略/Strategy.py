@@ -152,15 +152,15 @@ class BaseStrategy():
         if self.IsBacktest:
             return self.api.BuyPosition(code)
         else:
-            # return self.api.A_BuyPositionCanCover(code)
-            return self.api.A_BuyPosition(code)
+            return self.api.A_BuyPositionCanCover(code)
+            # return self.api.A_BuyPosition(code)
 
     def GetSellPosition(self, code):
         if self.IsBacktest:
             return self.api.SellPosition(code)
         else:
-            # return self.api.A_SellPositionCanCover(code)
-            return self.api.A_SellPosition(code)
+            return self.api.A_SellPositionCanCover(code)
+            # return self.api.A_SellPosition(code)
 
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())

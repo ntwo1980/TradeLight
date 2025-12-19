@@ -78,6 +78,8 @@ class BaseStrategy():
                 'Vol': vol_prices
             })
 
+
+            self.print(len(df))
             if len(df) >= 4:
                 atr_values = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)
                 self.ATRs[code] = atr_values[-1]
@@ -213,7 +215,7 @@ class BaseStrategy():
 
         self.print(f"Buy {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
-            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -270,7 +272,7 @@ class BaseStrategy():
         self.print(f"Sell {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
 
         if not self.IsBacktest:
-            msg = f"buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Sell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -631,7 +633,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

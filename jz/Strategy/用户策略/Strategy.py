@@ -78,8 +78,6 @@ class BaseStrategy():
                 'Vol': vol_prices
             })
 
-
-            self.print(len(df))
             if len(df) >= 4:
                 atr_values = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)
                 self.ATRs[code] = atr_values[-1]
@@ -180,7 +178,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            if '|M|' in code:
+            if '|M|' in code or '|S|' in code:
                 buy_position = self.GetBuyPosition(self.codes[2])
                 sell_position = self.GetSellPosition(self.codes[2])
 

@@ -27,6 +27,7 @@ class BaseStrategy():
         self.config_folder = f"D:\\data\\jizhi"
         self.dingding_token = None
         self.dingding_keyword = None
+        self.waiting_list = []
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -203,13 +204,18 @@ class BaseStrategy():
 
             if sell_position >= quantity:
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
+                if retEnter > 0:
+                    self.waiting_list.append(EnterOrderID)
             else:
                 if sell_position > 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
+                    if retEnter > 0:
+                        self.waiting_list.append(EnterOrderID)
                 if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity - sell_position, price, code)
+                    if retEnter > 0:
+                        self.waiting_list.append(EnterOrderID)
             self.send_order_count += 1
-        # self.WaitingList.append(msg)
 
         self.print(f"Buy {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
@@ -261,11 +267,14 @@ class BaseStrategy():
             else:
                 if buy_position > 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
+                    if retEnter > 0:
+                        self.waiting_list.append(EnterOrderID)
                 if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity - buy_position, price, code)
+                    if retEnter > 0:
+                        self.waiting_list.append(EnterOrderID)
 
             self.send_order_count += 1
-        # self.WaitingList.append(msg)
 
         self.print(f"Sell {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
 
@@ -273,6 +282,19 @@ class BaseStrategy():
             msg = f"Sell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
+
+    def existing_order(self):
+        tmp = []
+        for o in self.waiting_list:
+            status = self.api.A_OrderStatus(o)
+            if status != self.api.Enum_Filled() and status != self.api.Enum_Canceled():
+                tmp.append(o)
+                self.print(f"Order {o} status={status} existing")
+            else:
+                self.print(f"Order {o} status={status} removed from waiting list")
+
+        self.waiting_list = tmp
+        return len(self.waiting_list) > 0
 
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
@@ -348,7 +370,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -464,6 +486,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         current_price = self.LastPrices[code]
+        existing_order = self.existing_order()
 
         base_price = self.base_price
         if base_price == 0:
@@ -480,7 +503,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 diff = self.atr * level
                 sell_threshold = base_price + diff
 
-                if current_price >= sell_threshold:
+                if current_price >= sell_threshold and not existing_order:
                     executed = self.ExecuteSell(code, current_price, self.params['orderQty'] if position >= self.params['orderQty'] else position)
         else:
             self.print(f'Error: sell_index error')
@@ -490,7 +513,7 @@ class PairLevelGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            if current_price <= buy_threshold:
+            if current_price <= buy_threshold and not existing_order:
                 executed = self.ExecuteBuy(code, current_price, self.params['orderQty'])
         else:
             self.print(f'Error: buy_index error')
@@ -507,6 +530,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 's_threshold': sell_threshold,
                 'l_holding': self.logical_holding,
                 'c_price': current_price,
+                'e_order': existing_order,
                 'yesterday_price': self.DailyPrices[code]['Close'].iloc[-1],
                 'b_index': self.buy_index,
                 's_index': self.sell_index,
@@ -518,6 +542,8 @@ class PairLevelGridStrategy(BaseStrategy):
             })
 
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
+        if self.existing_order():
+            return
         unit_to_buy = self.params['orderQty']
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
@@ -631,7 +657,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -667,6 +693,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.slope = self.slopes[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]
 
+        existing_order = self.existing_order()
         base_price = self.base_price
         buy_position = self.GetBuyPosition(self.codes[2])
         sell_position = self.GetSellPosition(self.codes[2])
@@ -687,7 +714,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            if current_price >= sell_threshold:
+            if current_price >= sell_threshold and not existing_order:
                 sell = True
                 if self.logical_holding == self.params['orderQty'] and buy_position == self.params['orderQty']:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
@@ -706,7 +733,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            if current_price <= buy_threshold:
+            if current_price <= buy_threshold and not existing_order:
                 buy = True
                 if self.logical_holding == -self.params['orderQty'] and sell_position == self.params['orderQty']:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
@@ -731,6 +758,7 @@ class SpreadGridStrategy(BaseStrategy):
                 's_threshold': sell_threshold,
                 'l_holding': self.logical_holding,
                 'c_price': current_price,
+                'e_order': existing_order,
                 'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
                 'b_index': self.buy_index,
                 's_index': self.sell_index,
@@ -743,6 +771,8 @@ class SpreadGridStrategy(BaseStrategy):
             })
 
     def SwitchPosition_Buy(self):    # SpreadGridStrategy
+        if self.existing_order():
+            return
         unit_to_buy = self.params['orderQty']
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))

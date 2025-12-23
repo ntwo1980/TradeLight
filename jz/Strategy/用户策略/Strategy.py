@@ -179,7 +179,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            if '|M|' in code or '|S|' in code:
+            if self.is_spread_code(code):
                 buy_position = self.GetBuyPosition(self.codes[2])
                 sell_position = self.GetSellPosition(self.codes[2])
 
@@ -282,6 +282,9 @@ class BaseStrategy():
             msg = f"Name: {self.name}\nsell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
+
+    def is_spread_code(self, code):
+        return '|M|' in code or '|S|' in code
 
     def existing_order(self):
         tmp = []
@@ -657,7 +660,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

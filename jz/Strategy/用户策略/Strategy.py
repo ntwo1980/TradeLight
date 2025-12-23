@@ -219,7 +219,7 @@ class BaseStrategy():
 
         self.print(f"Buy {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
-            msg = f"Buy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Name: {self.name}\nbuy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -279,7 +279,7 @@ class BaseStrategy():
         self.print(f"Sell {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
 
         if not self.IsBacktest:
-            msg = f"Sell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Name: {self.name}\nsell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 

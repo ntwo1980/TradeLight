@@ -370,7 +370,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -657,7 +657,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -709,8 +709,10 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
-            if self.logical_holding < -3 * self.params['orderQty']:
+            if self.logical_holding < -6 * self.params['orderQty']:
                 level = level * 1.2
+            elif self.logical_holding < -3 * self.params['orderQty']:
+                level = level * 1.1
             diff = self.atr * level
             sell_threshold = base_price + diff
 
@@ -728,8 +730,10 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
-            if self.logical_holding > 3 * self.params['orderQty']:
+            if self.logical_holding > 6 * self.params['orderQty']:
                 level = level * 1.2
+            elif self.logical_holding > 3 * self.params['orderQty']:
+                level = level * 1.1
             diff = self.atr * level
             buy_threshold = base_price - diff
 

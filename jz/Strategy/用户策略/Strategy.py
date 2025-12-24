@@ -204,16 +204,16 @@ class BaseStrategy():
 
             if sell_position >= quantity:
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
-                if retEnter > 0:
+                if retEnter == 0:
                     self.waiting_list.append(EnterOrderID)
             else:
                 if sell_position > 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
-                    if retEnter > 0:
+                    if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
                 if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity - sell_position, price, code)
-                    if retEnter > 0:
+                    if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
             self.send_order_count += 1
 
@@ -267,11 +267,11 @@ class BaseStrategy():
             else:
                 if buy_position > 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
-                    if retEnter > 0:
+                    if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
                 if retEnter == 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity - buy_position, price, code)
-                    if retEnter > 0:
+                    if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
 
             self.send_order_count += 1
@@ -660,7 +660,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

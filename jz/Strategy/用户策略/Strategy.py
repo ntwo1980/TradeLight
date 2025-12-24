@@ -712,7 +712,7 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
-            if self.sell_index > 1:
+            if self.sell_index > 0:
                 if self.logical_holding < -6 * self.params['orderQty']:
                     level = level * 1.2
                 elif self.logical_holding < -3 * self.params['orderQty']:
@@ -734,7 +734,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
-            if self.buy_index > 1:
+            if self.buy_index > 0:
                 if self.logical_holding > 6 * self.params['orderQty']:
                     level = level * 1.2
                 elif self.logical_holding > 3 * self.params['orderQty']:

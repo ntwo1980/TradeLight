@@ -449,9 +449,9 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print('target: ' + target_code)
 
         if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
-            self.Buy(target_code, 15, self.LastPrices[target_code])
+            # self.Buy(target_code, 15, self.LastPrices[target_code])
             self.current_held = target_code
-            self.logical_holding = 15
+            # self.logical_holding = 15
             return
         # elif not self.IsBacktest and not self.deal:
         #     self.Buy(target_code, 4, self.LastPrices[target_code])
@@ -493,7 +493,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         base_price = self.base_price
         if base_price == 0:
-            base_price = self.DailyPrices[code]['Close'].iloc[-1]
+            base_price = self.DailyPrices[code]['Close'].iloc[-10:].min() + self.atr
 
         executed = False
 

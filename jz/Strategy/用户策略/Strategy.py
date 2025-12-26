@@ -496,15 +496,19 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + self.atr
-            if self.atr > 0:
-                order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
-                if order_qty < self.params['orderQty']:
-                    order_qty = self.params['orderQty']
-                elif order_qty > self.params['orderQty'] * 5:
-                    order_qty = self.params['orderQty'] * 5
+            up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-10:] > 0).sum()
+            if up_days >= 5:
+                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + self.atr
+                if self.atr > 0:
+                    order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
+                    if order_qty < self.params['orderQty']:
+                        order_qty = self.params['orderQty']
+                    elif order_qty > self.params['orderQty'] * 5:
+                        order_qty = self.params['orderQty'] * 5
+                else:
+                    order_qty = self.params['orderQty'] * 3
             else:
-                order_qty = self.params['orderQty'] * 3
+                base_price = self.DailyPrices[code]['Close'].iloc[-1] * 100
 
         executed = False
 
@@ -537,8 +541,8 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print({
                 'b_price': base_price,
-                'r_b_position': self.GetBuyPosition(self.current_held),
-                'r_s_position': self.GetSellPosition(self.current_held),
+                'r_b_position': self.GetBuyPosition(code),
+                'r_s_position': self.GetSellPosition(code),
                 'b_threshold': buy_threshold,
                 's_threshold': sell_threshold,
                 'l_holding': self.logical_holding,

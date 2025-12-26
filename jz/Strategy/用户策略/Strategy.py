@@ -492,22 +492,32 @@ class PairLevelGridStrategy(BaseStrategy):
         existing_order = self.existing_order()
 
         base_price = self.base_price
-        if base_price == 0:
-            base_price = self.DailyPrices[code]['Close'].iloc[-10:].min() + self.atr
+        order_qty = self.params['orderQty']
+        buy_position = self.GetBuyPosition(code)
+
+        if self.logical_holding == 0 and buy_position == 0:
+            base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + self.atr
+            if self.atr > 0:
+                order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
+                if order_qty < self.params['orderQty']:
+                    order_qty = self.params['orderQty']
+                elif order_qty > self.params['orderQty'] * 5:
+                    order_qty = self.params['orderQty'] * 5
+            else:
+                order_qty = self.params['orderQty'] * 3
 
         executed = False
 
         sell_threshold = 0
         buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
-            position = self.GetBuyPosition(code)
-            if position > 0:
+            if buy_position > 0:
                 level = self.sell_levels[self.sell_index]
                 diff = self.atr * level
                 sell_threshold = base_price + diff
 
                 if current_price >= sell_threshold and not existing_order:
-                    executed = self.ExecuteSell(code, current_price, self.params['orderQty'] if position >= self.params['orderQty'] else position)
+                    executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
         else:
             self.print(f'Error: sell_index error')
 
@@ -517,7 +527,7 @@ class PairLevelGridStrategy(BaseStrategy):
             buy_threshold = base_price - diff
 
             if current_price <= buy_threshold and not existing_order:
-                executed = self.ExecuteBuy(code, current_price, self.params['orderQty'])
+                executed = self.ExecuteBuy(code, current_price, order_qty)
         else:
             self.print(f'Error: buy_index error')
 

@@ -161,8 +161,8 @@ class BaseStrategy():
 
         # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
         #     tradingAmount = 10000
-        if maxSellCount > 5 and index < total / 2:
-            tradingAmount = tradingAmount / 2
+        if maxSellCount > 5 and index < total / 4:
+            tradingAmount = tradingAmount / 4
 
         # buy_index = getattr(self, 'buy_index', 0)
         return tradingAmount
@@ -185,8 +185,8 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if maxSellCount > 5 and index < total / 2:
-            tradingAmount = tradingAmount / 2
+        if maxSellCount > 5 and index < total / 4:
+            tradingAmount = tradingAmount / 4
 
         # sell_index = getattr(self, 'sell_index', 0)
 
@@ -226,9 +226,9 @@ class BaseStrategy():
         if (month == 4 and day <= 20) or (month == 3 and day >=20):
             self.ClosePosition = True
             self.IsGlobalClosePosition = True
-        elif (month == 12 and day >= 15) or (month == 1 and day <=15):
-            self.ClosePosition = True
-            self.IsGlobalClosePosition = True
+        # elif (month == 12 and day >= 15) or (month == 1 and day <=15):
+        #     self.ClosePosition = True
+        #     self.IsGlobalClosePosition = True
         else:
             self.ClosePosition = False
             self.IsGlobalClosePosition = False

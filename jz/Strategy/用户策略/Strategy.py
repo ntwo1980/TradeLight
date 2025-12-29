@@ -445,8 +445,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print('Error: codes length should be 1 or 2 or 4')
             return
 
-        if self.print_debug:
-            self.print('target: ' + target_code)
+        # if self.print_debug:
+        #     self.print('target: ' + target_code)
 
         if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
             # self.Buy(target_code, 15, self.LastPrices[target_code])
@@ -485,8 +485,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.RunGridTrading(self.current_held)
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
-        if self.print_debug:
-            self.print('RunGridTrading')
+        # if self.print_debug:
+        #     self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         current_price = self.LastPrices[code]
         existing_order = self.existing_order()
@@ -704,8 +704,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.RunGridTrading()
 
     def RunGridTrading(self):    # SpreadGridStrategy
-        if self.print_debug:
-            self.print('RunGridTrading')
+        # if self.print_debug:
+        #     self.print('RunGridTrading')
         self.atr = self.ATRs[self.codes[0]]
         self.slope = self.slopes[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]

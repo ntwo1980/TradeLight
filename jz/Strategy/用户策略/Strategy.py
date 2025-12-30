@@ -63,7 +63,6 @@ class BaseStrategy():
     def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
             return
-
         for code in codes:
             close_prices = self.api.Close(code, 'D', 1)
             open_prices = self.api.Open(code, 'D', 1)
@@ -132,7 +131,6 @@ class BaseStrategy():
     def handle_data(self, context):   # BaseStrategy
         self.context = context
         self.IsBacktest = context.strategyStatus() != 'C'
-        self.print(self.LastTradeDate() + self.CurrentTime())
 
         if context.triggerType() == 'N':
             if context.triggerData()['ServerType'] == 'T':# 交易
@@ -498,7 +496,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.logical_holding == 0 and buy_position == 0:
             up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-10:] > 0).sum()
             if up_days >= 5:
-                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + self.atr
+                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 1.5 * self.atr
                 if self.atr > 0:
                     order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
                     if order_qty < self.params['orderQty']:
@@ -508,7 +506,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 else:
                     order_qty = self.params['orderQty'] * 3
             else:
-                base_price = self.DailyPrices[code]['Close'].iloc[-1] * 100
+                base_price = self.DailyPrices[code]['Close'].iloc[-1] / 2
 
         executed = False
 

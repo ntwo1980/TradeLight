@@ -828,13 +828,17 @@ class SpreadGridStrategy(BaseStrategy):
             return False
 
         self.current_held = code
+        original_holding = self.logical_holding
         if not is_switch:
             self.logical_holding += quantity
         self.base_price = price
         # self.LastBuyDate = self.Today   # ToDo
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
         if not is_switch:
-            self.buy_index += 1
+            if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
+                self.buy_index = 0
+            else:
+                self.buy_index += 1
             if self.buy_index >= len(self.buy_levels):
                 self.buy_index = len(self.buy_levels) - 1
             self.sell_index = 0
@@ -845,9 +849,13 @@ class SpreadGridStrategy(BaseStrategy):
         self.print('ExecuteSell')
         if not self.Sell(code, quantity, price):
             return False
+        original_holding = self.logical_holding
         self.logical_holding -= quantity
         self.base_price = price
-        self.sell_index += 1
+        if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
+            self.sell_index = 0
+        else:
+            self.sell_index += 1
         if self.sell_index >= len(self.sell_levels):
             self.sell_index = len(self.sell_levels) - 1
         self.buy_index = 0

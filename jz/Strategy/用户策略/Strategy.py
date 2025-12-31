@@ -237,7 +237,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return False
 
-            if len(self.codes) > 0 and  '|M|' in code:
+            if len(self.codes) > 1 and  '|M|' in code:
                 buy_position = self.GetBuyPosition(self.codes[2])
                 sell_position = self.GetSellPosition(self.codes[2])
 

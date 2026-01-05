@@ -79,8 +79,15 @@ class BaseStrategy():
             })
 
             if len(df) >= 4:
-                atr_values = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)
-                self.ATRs[code] = atr_values[-1]
+                atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
+
+                self.print(atr)
+                atr_config = self.params.get('atr')
+                if atr_config is not None:
+                    if atr > atr_config * 1.3 or atr < atr_config * 0.7:
+                        atr = atr_config
+
+                self.ATRs[code] = atr
                 x = np.arange(len(df['Close'].values[-20:]))
                 vals = df['Close'].values[-20:]
                 shift = vals.min() - 1e-6

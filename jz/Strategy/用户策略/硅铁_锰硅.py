@@ -12,10 +12,10 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '玻璃_纯碱',
-            'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
+            'name': '硅铁_锰硅',
+            'codes': ['SPD|m|SF-SM|605|605', 'ZCE|M|SF&SM|605', 'ZCE|F|SF|605', 'ZCE|F|SM|605'],
             'orderQty': 2,
-            'atr': 20
+            'atr': 45
         },
         api = api()
     )

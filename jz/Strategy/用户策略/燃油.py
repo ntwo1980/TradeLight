@@ -8,14 +8,14 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = SpreadGridStrategy()
+    strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '玻璃_纯碱',
-            'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
-            'orderQty': 2,
-            'atr': 20
+            'name': '燃油',
+            'codes': ['SHFE|F|FU|2605'],
+            'orderQty': 1,
+            'threshold': 0.025,
         },
         api = api()
     )
@@ -42,10 +42,10 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
-        A_OrderStatus=A_OrderStatus,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
+        A_OrderStatus=A_OrderStatus,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,
         BuyToCover=BuyToCover,

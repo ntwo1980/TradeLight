@@ -12,10 +12,10 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '玻璃_纯碱',
-            'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
-            'orderQty': 2,
-            'atr': 20
+            'name': '豆一_豆粕',
+            'codes': ['SPD|m|A-M|2605|2605', 'DCE|M|A&M|2605', 'DCE|F|A|2605', 'DCE|F|M|2605'],
+            'orderQty': 1,
+            'atr': 45
         },
         api = api()
     )
@@ -42,10 +42,10 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
-        A_OrderStatus=A_OrderStatus,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
+        A_OrderStatus=A_OrderStatus,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,
         BuyToCover=BuyToCover,

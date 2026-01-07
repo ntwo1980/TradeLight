@@ -28,6 +28,7 @@ class BaseStrategy():
         self.dingding_token = None
         self.dingding_keyword = None
         self.waiting_list = []
+        self.pending_state_json = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -295,10 +296,15 @@ class BaseStrategy():
         tmp = []
         for o in self.waiting_list:
             status = self.api.A_OrderStatus(o)
-            if status != self.api.Enum_Filled() and status != self.api.Enum_Canceled():
+            if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
                 tmp.append(o)
                 self.print(f"Order {o} status={status} existing")
             else:
+                if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                    if self.pending_state_json is not None:
+                        self.save_strategy_state(self.pending_state_json)
+
+                self.pending_state_json = None
                 self.print(f"Order {o} status={status} removed from waiting list")
 
         self.waiting_list = tmp
@@ -541,7 +547,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.print(f'Error: buy_index error')
 
         if executed and not self.IsBacktest:
-            self.save_strategy_state()
+            self.save_strategy_state()        # PairLevelGridStrategy
 
         if self.print_debug:
             self.print({
@@ -646,7 +652,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'sell_index': self.sell_index,
         }
 
-        super().save_strategy_state(data)
+        self.pending_state_json = data
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None
@@ -679,7 +685,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -891,8 +897,7 @@ class SpreadGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
         }
-
-        super().save_strategy_state(data)
+        self.pending_state_json = data
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None

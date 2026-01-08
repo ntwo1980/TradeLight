@@ -15,6 +15,7 @@ def initialize(context):
             'name': 'PTA_对二甲苯',
             'codes': ['SPD|m|TA-PX|605|605', 'ZCE|M|TA&PX|605', 'ZCE|F|TA|605', 'ZCE|F|PX|605'],
             'orderQty': 2,
+            'firstPosition': True,
             'atr': 60
         },
         api = api()
@@ -59,6 +60,7 @@ def api():
         Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,

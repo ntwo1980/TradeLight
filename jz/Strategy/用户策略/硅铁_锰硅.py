@@ -15,6 +15,7 @@ def initialize(context):
             'name': '硅铁_锰硅',
             'codes': ['SPD|m|SF-SM|605|605', 'ZCE|M|SF&SM|605', 'ZCE|F|SF|605', 'ZCE|F|SM|605'],
             'orderQty': 2,
+            'firstPosition': True,
             'atr': 45
         },
         api = api()
@@ -59,6 +60,7 @@ def api():
         Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,

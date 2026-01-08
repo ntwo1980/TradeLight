@@ -8,14 +8,15 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = PairLevelGridStrategy()
+    strategy = SpreadGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '豆粕',
-            'codes': ['ZCE|F|RM|605'],
-            'orderQty': 4,
-            'threshold': 0.025,
+            'name': 'PVC_聚丙烯',
+            'codes': ['SPD|m|V-PP|2605|2605', 'DCE|M|V&PP|2605', 'DCE|F|V|2605', 'DCE|F|PP|2605'],
+            'orderQty': 2,
+            'firstPosition': False,
+            'atr': 60
         },
         api = api()
     )
@@ -59,6 +60,7 @@ def api():
         Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,

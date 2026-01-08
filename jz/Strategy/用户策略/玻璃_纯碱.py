@@ -14,7 +14,8 @@ def initialize(context):
         params = {
             'name': '玻璃_纯碱',
             'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
-            'orderQty': 2,
+            'orderQty': 1,
+            'firstPosition': True,
             'atr': 20
         },
         api = api()
@@ -59,6 +60,7 @@ def api():
         Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,

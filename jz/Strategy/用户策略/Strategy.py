@@ -186,8 +186,13 @@ class BaseStrategy():
                 return False
 
             if self.is_spread_code(code):
-                buy_position = self.GetBuyPosition(self.codes[2])
-                sell_position = self.GetSellPosition(self.codes[2])
+                if self.params['firstPosition']:
+                    buy_position = self.GetBuyPosition(self.codes[2])
+                    sell_position = self.GetSellPosition(self.codes[2])
+                else:
+                    buy_position = self.GetSellPosition(self.codes[3])
+                    sell_position = self.GetBuyPosition(self.codes[3])
+
 
                 if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
                     if self.logical_holding >= 0:
@@ -246,8 +251,12 @@ class BaseStrategy():
                 return False
 
             if len(self.codes) > 1 and  '|M|' in code:
-                buy_position = self.GetBuyPosition(self.codes[2])
-                sell_position = self.GetSellPosition(self.codes[2])
+                if self.params['firstPosition']:
+                    buy_position = self.GetBuyPosition(self.codes[2])
+                    sell_position = self.GetSellPosition(self.codes[2])
+                else:
+                    buy_position = self.GetSellPosition(self.codes[3])
+                    sell_position = self.GetBuyPosition(self.codes[3])
 
                 if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
                     if self.logical_holding >= 0:
@@ -685,7 +694,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -723,8 +732,12 @@ class SpreadGridStrategy(BaseStrategy):
 
         existing_order = self.existing_order()
         base_price = self.base_price
-        buy_position = self.GetBuyPosition(self.codes[2])
-        sell_position = self.GetSellPosition(self.codes[2])
+        if self.params['firstPosition']:
+            buy_position = self.GetBuyPosition(self.codes[2])
+            sell_position = self.GetSellPosition(self.codes[2])
+        else:
+            buy_position = self.GetSellPosition(self.codes[3])
+            sell_position = self.GetBuyPosition(self.codes[3])
 
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             close_prices = self.DailyPrices[self.codes[0]]['Close']
@@ -786,8 +799,8 @@ class SpreadGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print({
                 'b_price': base_price,
-                'r_b_position': self.GetBuyPosition(self.codes[2]),
-                'r_s_position': self.GetSellPosition(self.codes[2]),
+                'r_b_position': buy_position,
+                'r_s_position': sell_position,
                 'b_threshold': buy_threshold,
                 's_threshold': sell_threshold,
                 'l_holding': self.logical_holding,

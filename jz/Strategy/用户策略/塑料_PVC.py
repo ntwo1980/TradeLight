@@ -15,6 +15,7 @@ def initialize(context):
             'name': '塑料_PVC',
             'codes': ['SPD|m|L-V|2605|2605', 'DCE|M|L&V|2605', 'DCE|F|L|2605', 'DCE|F|V|2605'],
             'orderQty': 2,
+            'firstPosition': True,
             'atr': 80
         },
         api = api()
@@ -59,6 +60,7 @@ def api():
         Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
         Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,

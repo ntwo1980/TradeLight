@@ -82,7 +82,6 @@ class BaseStrategy():
             if len(df) >= 4:
                 atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
 
-                self.print(atr)
                 atr_config = self.params.get('atr')
                 if atr_config is not None:
                     if atr > atr_config * 1.3 or atr < atr_config * 0.7:
@@ -311,7 +310,7 @@ class BaseStrategy():
             else:
                 if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
                     if self.pending_state_json is not None:
-                        super().save_strategy_state(self.pending_state_json)
+                        self.save_strategy_state_data(self.pending_state_json)
 
                 self.pending_state_json = None
                 self.print(f"Order {o} status={status} removed from waiting list")
@@ -340,7 +339,7 @@ class BaseStrategy():
             self.print(f"Error: Failed to load strategy state: {e}")
             return None
 
-    def save_strategy_state(self, data):   # BaseStrategy
+    def save_strategy_state_data(self, data):   # BaseStrategy
         file = self.get_state_file_name()
 
         try:
@@ -644,7 +643,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         state = super().load_strategy_state()
         if state is None:
-            self.save_strategy_state()
+            self.save_strategy_state(True)
         else:
             self.current_held = state['current_held']
             self.base_price = state['base_price']
@@ -652,7 +651,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
 
-    def save_strategy_state(self):   # PairLevelGridStrategy
+    def save_strategy_state(self, save_file=False):   # PairLevelGridStrategy
         data = {
             'current_held': self.current_held,
             'base_price': self.base_price,
@@ -661,7 +660,10 @@ class PairLevelGridStrategy(BaseStrategy):
             'sell_index': self.sell_index,
         }
 
-        self.pending_state_json = data
+        if(save_file):
+            super().save_strategy_state_data(data)
+        else:
+            self.pending_state_json = data
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None
@@ -892,9 +894,9 @@ class SpreadGridStrategy(BaseStrategy):
             return
 
         state = super().load_strategy_state()
-        self.print(state)
+        # self.print(state)
         if state is None:
-            self.save_strategy_state()
+            self.save_strategy_state(True)
         else:
             self.current_held = state['current_held']
             self.base_price = state['base_price']
@@ -902,7 +904,7 @@ class SpreadGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
 
-    def save_strategy_state(self):   # SpreadGridStrategy
+    def save_strategy_state(self, save_file=False):   # SpreadGridStrategy
         data = {
             'current_held': self.current_held,
             'base_price': self.base_price,
@@ -910,7 +912,10 @@ class SpreadGridStrategy(BaseStrategy):
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
         }
-        self.pending_state_json = data
+        if(save_file):
+            super().save_strategy_state_data(data)
+        else:
+            self.pending_state_json = data
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None

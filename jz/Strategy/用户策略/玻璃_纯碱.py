@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': '玻璃_纯碱',
             'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
-            'orderQty': 1,
+            'orderQty': 2,
             'firstPosition': True,
             'atr': 20
         },

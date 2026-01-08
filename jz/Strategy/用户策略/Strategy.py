@@ -311,7 +311,7 @@ class BaseStrategy():
             else:
                 if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
                     if self.pending_state_json is not None:
-                        self.save_strategy_state(self.pending_state_json)
+                        super().save_strategy_state(self.pending_state_json)
 
                 self.pending_state_json = None
                 self.print(f"Order {o} status={status} removed from waiting list")

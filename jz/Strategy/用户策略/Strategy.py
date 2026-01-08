@@ -386,8 +386,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -744,7 +744,7 @@ class SpreadGridStrategy(BaseStrategy):
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             close_prices = self.DailyPrices[self.codes[0]]['Close']
 
-            base_price = sum(close_prices[-10:]) / 10
+            base_price = sum(close_prices[-20:]) / 20
 
         executed = False
 
@@ -764,7 +764,7 @@ class SpreadGridStrategy(BaseStrategy):
                 sell = True
                 if self.logical_holding == self.params['orderQty'] and buy_position == self.params['orderQty']:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
-                    base_price = sum(close_prices[-10:]) / 10
+                    base_price = sum(close_prices[-20:]) / 20
                     if current_price < base_price - self.atr * self.buy_levels[0]:
                         sell = False
                 if sell:
@@ -786,7 +786,7 @@ class SpreadGridStrategy(BaseStrategy):
                 buy = True
                 if self.logical_holding == -self.params['orderQty'] and sell_position == self.params['orderQty']:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
-                    base_price = sum(close_prices[-10:]) / 10
+                    base_price = sum(close_prices[-20:]) / 20
                     if current_price > base_price + self.atr * self.sell_levels[0]:
                         buy = False
 

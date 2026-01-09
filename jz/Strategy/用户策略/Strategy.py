@@ -29,6 +29,7 @@ class BaseStrategy():
         self.dingding_keyword = None
         self.waiting_list = []
         self.pending_state_json = None
+        self.idx = 0
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -151,6 +152,10 @@ class BaseStrategy():
                     self.print('Error: StopTrade')
 
                     return False
+
+        if self.idx < 500:
+            self.idx = self.idx + 1
+            return False
 
         return True
 
@@ -696,7 +701,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 1000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

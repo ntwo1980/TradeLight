@@ -153,7 +153,7 @@ class BaseStrategy():
 
                     return False
 
-        if self.idx < 500:
+        if self.idx < 30:
             self.idx = self.idx + 1
             return False
 
@@ -283,6 +283,8 @@ class BaseStrategy():
 
             if buy_position >= quantity:
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
+                if retEnter == 0:
+                    self.waiting_list.append(EnterOrderID)
             else:
                 if buy_position > 0:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
@@ -701,7 +703,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

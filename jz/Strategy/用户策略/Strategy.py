@@ -197,7 +197,6 @@ class BaseStrategy():
                     buy_position = self.GetSellPosition(self.codes[3])
                     sell_position = self.GetBuyPosition(self.codes[3])
 
-
                 if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
                     if self.logical_holding >= 0:
                         buy_position = self.logical_holding
@@ -226,8 +225,8 @@ class BaseStrategy():
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
-                if retEnter == 0:
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity - sell_position, price, code)
+                else:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
             self.send_order_count += 1
@@ -290,8 +289,8 @@ class BaseStrategy():
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
-                if retEnter == 0:
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity - buy_position, price, code)
+                else:
+                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
 

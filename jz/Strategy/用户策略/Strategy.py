@@ -19,7 +19,7 @@ class BaseStrategy():
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0
-        self.max_send_order_count = 6
+        self.max_send_order_count = 200
         self.max_position = 100
         self.deal = False
         self.is_state_loaded = False
@@ -766,12 +766,8 @@ class SpreadGridStrategy(BaseStrategy):
             if useLogicalHolding and self.logical_holding <= 0:
                 tmp_sell_position = -self.logical_holding
 
-            if tmp_sell_position > 9 * self.params['orderQty']:
-                atr = atr * 1.3
-            elif tmp_sell_position > 6 * self.params['orderQty']:
-                atr = atr * 1.2
-            elif tmp_sell_position > 3 * self.params['orderQty']:
-                atr = atr * 1.1
+            n = tmp_sell_position // self.params['orderQty']
+            atr = atr * (1 + 0.05 * n)
 
             diff = atr * level
             sell_threshold = base_price + diff
@@ -781,7 +777,7 @@ class SpreadGridStrategy(BaseStrategy):
                 if (useLogicalHolding and self.logical_holding == self.params['orderQty']) or (not self.IsBacktest and buy_position == self.params['orderQty']):
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
-                    if current_price < base_price - self.atr * self.buy_levels[0]:
+                    if current_price < base_price - atr * self.buy_levels[0]:
                         sell = False
                 if sell:
                     executed = self.ExecuteSell(self.codes[1], current_price, self.params['orderQty'])
@@ -795,12 +791,8 @@ class SpreadGridStrategy(BaseStrategy):
             if useLogicalHolding and self.logical_holding >= 0:
                 tmp_buy_position = self.logical_holding
 
-            if tmp_buy_position > 9 * self.params['orderQty']:
-                atr = atr * 1.2
-            elif tmp_buy_position > 6 * self.params['orderQty']:
-                atr = atr * 1.2
-            elif tmp_buy_position > 3 * self.params['orderQty']:
-                atr = atr * 1.1
+            n = tmp_buy_position // self.params['orderQty']
+            atr = atr * (1 + 0.05 * n)
 
             diff = atr * level
             buy_threshold = base_price - diff
@@ -809,7 +801,7 @@ class SpreadGridStrategy(BaseStrategy):
                 if (useLogicalHolding and self.logical_holding == self.params['orderQty']) or (not self.IsBacktest and sell_position == self.params['orderQty']):
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
-                    if current_price > base_price + self.atr * self.sell_levels[0]:
+                    if current_price > base_price + atr * self.sell_levels[0]:
                         buy = False
 
                 if buy:

@@ -13,9 +13,11 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': 'LPG',
-            'codes': ['DCE|F|PG|2602'],
+            'codes': ['DCE|F|PG|2603'],
             'orderQty': 1,
             'threshold': 0.025,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -81,6 +83,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

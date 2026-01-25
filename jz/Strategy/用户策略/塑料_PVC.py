@@ -16,7 +16,9 @@ def initialize(context):
             'codes': ['SPD|m|L-V|2605|2605', 'DCE|M|L&V|2605', 'DCE|F|L|2605', 'DCE|F|V|2605'],
             'orderQty': 2,
             'firstPosition': True,
-            'atr': 80
+            'atr': 80,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -82,6 +84,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

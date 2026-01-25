@@ -20,7 +20,7 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 6
-        self.max_position = 30
+        self.max_position = 100
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
@@ -30,6 +30,7 @@ class BaseStrategy():
         self.waiting_list = []
         self.pending_state_json = None
         self.idx = 0
+        self.max_logical_holding = 0
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -43,6 +44,7 @@ class BaseStrategy():
         self.api.SetTriggerType(6) #连接状态触发
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
+        #self.api.SetAFunUseForHis()
 
         file = f"{self.config_folder}\\config.json"
 
@@ -310,11 +312,11 @@ class BaseStrategy():
         tmp = []
         for o in self.waiting_list:
             status = self.api.A_OrderStatus(o)
-            if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
+            if self.params['suspendOnOrder'] and status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
                 tmp.append(o)
                 self.print(f"Order {o} status={status} existing")
             else:
-                if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart() or not self.params['suspendOnOrder']:
                     if self.pending_state_json is not None:
                         self.save_strategy_state_data(self.pending_state_json)
 
@@ -702,7 +704,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -747,7 +749,8 @@ class SpreadGridStrategy(BaseStrategy):
             buy_position = self.GetSellPosition(self.codes[3])
             sell_position = self.GetBuyPosition(self.codes[3])
 
-        if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
+        useLogicalHolding = self.params['useLogicalHolding'] or self.IsBacktest
+        if (useLogicalHolding and self.logical_holding == 0) or (not self.IsBacktest and buy_position == 0 and sell_position == 0):
             close_prices = self.DailyPrices[self.codes[0]]['Close']
 
             base_price = sum(close_prices[-20:]) / 20
@@ -758,17 +761,24 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
-            if self.sell_index > 0:
-                if self.logical_holding < -6 * self.params['orderQty']:
-                    level = level * 1.2
-                elif self.logical_holding < -3 * self.params['orderQty']:
-                    level = level * 1.1
-            diff = self.atr * level
+            atr = self.atr
+            tmp_sell_position = sell_position
+            if useLogicalHolding and self.logical_holding <= 0:
+                tmp_sell_position = -self.logical_holding
+
+            if tmp_sell_position > 9 * self.params['orderQty']:
+                atr = atr * 1.3
+            elif tmp_sell_position > 6 * self.params['orderQty']:
+                atr = atr * 1.2
+            elif tmp_sell_position > 3 * self.params['orderQty']:
+                atr = atr * 1.1
+
+            diff = atr * level
             sell_threshold = base_price + diff
 
             if current_price >= sell_threshold and not existing_order:
                 sell = True
-                if self.logical_holding == self.params['orderQty'] and buy_position == self.params['orderQty']:
+                if (useLogicalHolding and self.logical_holding == self.params['orderQty']) or (not self.IsBacktest and buy_position == self.params['orderQty']):
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price < base_price - self.atr * self.buy_levels[0]:
@@ -780,17 +790,23 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
-            if self.buy_index > 0:
-                if self.logical_holding > 6 * self.params['orderQty']:
-                    level = level * 1.2
-                elif self.logical_holding > 3 * self.params['orderQty']:
-                    level = level * 1.1
-            diff = self.atr * level
-            buy_threshold = base_price - diff
+            atr = self.atr
+            tmp_buy_position = buy_position
+            if useLogicalHolding and self.logical_holding >= 0:
+                tmp_buy_position = self.logical_holding
 
+            if tmp_buy_position > 9 * self.params['orderQty']:
+                atr = atr * 1.2
+            elif tmp_buy_position > 6 * self.params['orderQty']:
+                atr = atr * 1.2
+            elif tmp_buy_position > 3 * self.params['orderQty']:
+                atr = atr * 1.1
+
+            diff = atr * level
+            buy_threshold = base_price - diff
             if current_price <= buy_threshold and not existing_order:
                 buy = True
-                if self.logical_holding == -self.params['orderQty'] and sell_position == self.params['orderQty']:
+                if (useLogicalHolding and self.logical_holding == self.params['orderQty']) or (not self.IsBacktest and sell_position == self.params['orderQty']):
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price > base_price + self.atr * self.sell_levels[0]:
@@ -803,6 +819,9 @@ class SpreadGridStrategy(BaseStrategy):
 
         if executed and not self.IsBacktest:
             self.save_strategy_state()
+
+        if abs(self.logical_holding) > self.max_logical_holding:
+            self.max_logical_holding = abs(self.logical_holding)
 
         if self.print_debug:
             self.print({
@@ -934,3 +953,5 @@ class SpreadGridStrategy(BaseStrategy):
                 self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
             if self.api.SellPosition(self.codes[1]) > 0:
                 self.api.BuyToCover(self.api.SellPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
+
+        self.print('max position:' + str(self.max_logical_holding))

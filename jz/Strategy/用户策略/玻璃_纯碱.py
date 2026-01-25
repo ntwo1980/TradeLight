@@ -14,9 +14,11 @@ def initialize(context):
         params = {
             'name': '玻璃_纯碱',
             'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
-            'orderQty': 2,
+            'orderQty': 1,
             'firstPosition': True,
-            'atr': 20
+            'atr': 5,
+            'useLogicalHolding': False,
+            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -82,6 +84,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

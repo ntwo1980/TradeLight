@@ -524,9 +524,9 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.logical_holding == 0 and buy_position == 0:
             up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-10:] > 0).sum()
             if up_days >= 5:
-                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 1 * self.atr
+                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
                 if self.atr > 0:
-                    order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
+                    order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() - self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
                     if order_qty < orderQty:
                         order_qty = orderQty
                     elif order_qty > orderQty * 5:

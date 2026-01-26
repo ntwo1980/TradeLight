@@ -190,7 +190,7 @@ class BaseStrategy():
                 return False
 
             if self.is_spread_code(code):
-                if self.params['firstPosition']:
+                if self.params.get('firstPosition', True):
                     buy_position = self.GetBuyPosition(self.codes[2])
                     sell_position = self.GetSellPosition(self.codes[2])
                 else:
@@ -254,7 +254,7 @@ class BaseStrategy():
                 return False
 
             if len(self.codes) > 1 and  '|M|' in code:
-                if self.params['firstPosition']:
+                if self.params.get('firstPosition', True):
                     buy_position = self.GetBuyPosition(self.codes[2])
                     sell_position = self.GetSellPosition(self.codes[2])
                 else:
@@ -398,7 +398,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -517,7 +517,8 @@ class PairLevelGridStrategy(BaseStrategy):
         existing_order = self.existing_order()
 
         base_price = self.base_price
-        order_qty = self.params['orderQty']
+        orderQty = self.params.get('orderQty', 1)
+        order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
@@ -526,12 +527,12 @@ class PairLevelGridStrategy(BaseStrategy):
                 base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 1 * self.atr
                 if self.atr > 0:
                     order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() / self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
-                    if order_qty < self.params['orderQty']:
-                        order_qty = self.params['orderQty']
-                    elif order_qty > self.params['orderQty'] * 5:
-                        order_qty = self.params['orderQty'] * 5
+                    if order_qty < orderQty:
+                        order_qty = orderQty
+                    elif order_qty > orderQty * 5:
+                        order_qty = orderQty * 5
                 else:
-                    order_qty = self.params['orderQty'] * 3
+                    order_qty = orderQty * 3
             else:
                 base_price = self.DailyPrices[code]['Close'].iloc[-1] / 2
 
@@ -586,7 +587,8 @@ class PairLevelGridStrategy(BaseStrategy):
     def SwitchPosition_Buy(self):    # PairLevelGridStrategy
         if self.existing_order():
             return
-        unit_to_buy = self.params['orderQty']
+
+        unit_to_buy = self.params.get('orderQty', 1)
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
 
@@ -702,7 +704,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -740,7 +742,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         existing_order = self.existing_order()
         base_price = self.base_price
-        if self.params['firstPosition']:
+        if self.params.get('firstPosition', True):
             buy_position = self.GetBuyPosition(self.codes[2])
             sell_position = self.GetSellPosition(self.codes[2])
         else:
@@ -756,56 +758,57 @@ class SpreadGridStrategy(BaseStrategy):
 
         sell_threshold = 0
         buy_threshold = 0
+        orderQty = self.params.get('orderQty', 1)
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
             if self.sell_index > 0:
-                if self.logical_holding < -12 * self.params['orderQty']:
+                if self.logical_holding < -12 * orderQty:
                     level = level * 1.4
-                elif self.logical_holding < -9 * self.params['orderQty']:
+                elif self.logical_holding < -9 * orderQty:
                     level = level * 1.3
-                elif self.logical_holding < -6 * self.params['orderQty']:
+                elif self.logical_holding < -6 * orderQty:
                     level = level * 1.2
-                elif self.logical_holding < -3 * self.params['orderQty']:
+                elif self.logical_holding < -3 * orderQty:
                     level = level * 1.1
             diff = self.atr * level
             sell_threshold = base_price + diff
 
             if current_price >= sell_threshold and not existing_order:
                 sell = True
-                if self.logical_holding == self.params['orderQty'] and buy_position == self.params['orderQty']:
+                if self.logical_holding == orderQty and buy_position == orderQty:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price < base_price - self.atr * self.buy_levels[0]:
                         sell = False
                 if sell:
-                    executed = self.ExecuteSell(self.codes[1], current_price, self.params['orderQty'])
+                    executed = self.ExecuteSell(self.codes[1], current_price, orderQty)
         else:
             self.print(f'Error: sell_index error')
 
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
             if self.buy_index > 0:
-                if self.logical_holding > 12 * self.params['orderQty']:
+                if self.logical_holding > 12 * orderQty:
                     level = level * 1.4
-                elif self.logical_holding > 9 * self.params['orderQty']:
+                elif self.logical_holding > 9 * orderQty:
                     level = level * 1.3
-                elif self.logical_holding > 6 * self.params['orderQty']:
+                elif self.logical_holding > 6 * orderQty:
                     level = level * 1.2
-                elif self.logical_holding > 3 * self.params['orderQty']:
+                elif self.logical_holding > 3 * orderQty:
                     level = level * 1.1
             diff = self.atr * level
             buy_threshold = base_price - diff
 
             if current_price <= buy_threshold and not existing_order:
                 buy = True
-                if self.logical_holding == -self.params['orderQty'] and sell_position == self.params['orderQty']:
+                if self.logical_holding == -orderQty and sell_position == orderQty:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price > base_price + self.atr * self.sell_levels[0]:
                         buy = False
 
                 if buy:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, self.params['orderQty'])
+                    executed = self.ExecuteBuy(self.codes[1], current_price, orderQty)
         else:
             self.print(f'Error: buy_index error')
 
@@ -836,7 +839,7 @@ class SpreadGridStrategy(BaseStrategy):
     def SwitchPosition_Buy(self):    # SpreadGridStrategy
         if self.existing_order():
             return
-        unit_to_buy = self.params['orderQty']
+        unit_to_buy = self.params.get('orderQty', 1)
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
 

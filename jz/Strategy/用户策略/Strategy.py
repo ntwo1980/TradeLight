@@ -312,16 +312,22 @@ class BaseStrategy():
         tmp = []
         for o in self.waiting_list:
             status = self.api.A_OrderStatus(o)
-            if self.params['suspendOnOrder'] and status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
-                tmp.append(o)
-                self.print(f"Order {o} status={status} existing")
-            else:
-                if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart() or not self.params['suspendOnOrder']:
-                    if self.pending_state_json is not None:
-                        self.save_strategy_state_data(self.pending_state_json)
+            if self.params['suspendOnOrder']:
+                if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
+                    tmp.append(o)
+                    self.print(f"Order {o} status={status} existing")
+                else:
+                    if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                        if self.pending_state_json is not None:
+                            self.save_strategy_state_data(self.pending_state_json)
 
-                self.pending_state_json = None
+                    self.pending_state_json = None
+                    self.print(f"Order {o} status={status} removed from waiting list")
+            else:
+                self.save_strategy_state_data(self.pending_state_json)
+
                 self.print(f"Order {o} status={status} removed from waiting list")
+
 
         self.waiting_list = tmp
         return len(self.waiting_list) > 0

@@ -155,7 +155,7 @@ class BaseStrategy():
 
                     return False
 
-        if self.idx < 30:
+        if not self.IsBacktest and self.idx < 20:
             self.idx = self.idx + 1
             return False
 

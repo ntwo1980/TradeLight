@@ -15,8 +15,6 @@ def initialize(context):
             'name': '苯乙烯',
             'codes': ['SPD|s|EB|2602|2603', 'DCE|S|EB|2602|2603', 'DCE|F|EB|2602', 'DCE|F|EB|2602'],
             'orderQty': 1,
-            'useLogicalHolding': True,
-            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -82,7 +80,6 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
-        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

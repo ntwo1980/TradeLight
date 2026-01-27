@@ -29,6 +29,7 @@ class BaseStrategy():
         self.waiting_list = []
         self.pending_state_json = None
         self.idx = 0
+        self.max_logical_holding = 0
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -152,7 +153,7 @@ class BaseStrategy():
 
                     return False
 
-        if not self.IsBacktest and self.idx < 20:
+        if not self.IsBacktest and self.idx < 10:
             self.idx = self.idx + 1
             return False
 
@@ -402,7 +403,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -708,7 +709,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -766,14 +767,17 @@ class SpreadGridStrategy(BaseStrategy):
         if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
             if self.sell_index > 0:
-                if self.logical_holding < -12 * orderQty:
+                if self.logical_holding < -10 * orderQty:
+                    level = level * 1.5
+                elif self.logical_holding < -8 * orderQty:
                     level = level * 1.4
-                elif self.logical_holding < -9 * orderQty:
-                    level = level * 1.3
                 elif self.logical_holding < -6 * orderQty:
+                    level = level * 1.3
+                elif self.logical_holding < -4 * orderQty:
                     level = level * 1.2
-                elif self.logical_holding < -3 * orderQty:
+                elif self.logical_holding < -2 * orderQty:
                     level = level * 1.1
+            # self.print((self.sell_index, self.sell_levels[self.sell_index], level))
             diff = self.atr * level
             sell_threshold = base_price + diff
 
@@ -792,13 +796,15 @@ class SpreadGridStrategy(BaseStrategy):
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
             if self.buy_index > 0:
-                if self.logical_holding > 12 * orderQty:
+                if self.logical_holding > 10 * orderQty:
+                    level = level * 1.5
+                elif self.logical_holding > 8 * orderQty:
                     level = level * 1.4
-                elif self.logical_holding > 9 * orderQty:
-                    level = level * 1.3
                 elif self.logical_holding > 6 * orderQty:
+                    level = level * 1.3
+                elif self.logical_holding > 4 * orderQty:
                     level = level * 1.2
-                elif self.logical_holding > 3 * orderQty:
+                elif self.logical_holding > 2 * orderQty:
                     level = level * 1.1
             diff = self.atr * level
             buy_threshold = base_price - diff
@@ -818,6 +824,9 @@ class SpreadGridStrategy(BaseStrategy):
 
         if executed and not self.IsBacktest:
             self.save_strategy_state()
+
+        if abs(self.logical_holding) > self.max_logical_holding:
+            self.max_logical_holding = abs(self.logical_holding)
 
         if self.print_debug:
             self.print({
@@ -949,3 +958,5 @@ class SpreadGridStrategy(BaseStrategy):
                 self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
             if self.api.SellPosition(self.codes[1]) > 0:
                 self.api.BuyToCover(self.api.SellPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
+
+        self.print('max position:' + str(self.max_logical_holding))

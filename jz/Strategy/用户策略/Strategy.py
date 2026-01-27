@@ -20,7 +20,6 @@ class BaseStrategy():
         self.last_sell_date = None
         self.send_order_count = 0
         self.max_send_order_count = 6
-        self.max_position = 30
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
@@ -212,7 +211,10 @@ class BaseStrategy():
                     else:
                         self.print('Error: sell position is less than 0')
 
-            if abs(buy_position - sell_position) > self.max_position:
+            orderQty = self.params.get('orderQty', 1)
+            maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
+
+            if abs(buy_position - sell_position) > orderQty * maxPositionMultiplier:
                 self.print('Error: reach buy position limit')
                 return False
 
@@ -276,7 +278,9 @@ class BaseStrategy():
                     else:
                         self.print('Error: sell position is less than 0')
 
-            if abs(sell_position - buy_position) > self.max_position:
+            orderQty = self.params.get('orderQty', 1)
+            maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
+            if abs(sell_position - buy_position) > orderQty * maxPositionMultiplier:
                 self.print('Error: reach sell position limit')
                 return False
 

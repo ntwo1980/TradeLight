@@ -789,7 +789,13 @@ class SpreadGridStrategy(BaseStrategy):
                     if current_price < base_price - self.atr * self.buy_levels[0]:
                         sell = False
                 if sell:
-                    executed = self.ExecuteSell(self.codes[1], current_price, orderQty)
+                    orderQuantity = orderQty
+                    if orderQty == 1 and self.logical_holding <= -4:
+                        orderQuantity = 2
+                    if orderQty > 1 and self.logical_holding < -2 * orderQty:
+                        orderQuantity = orderQuantity + 1
+
+                    executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
         else:
             self.print(f'Error: sell_index error')
 
@@ -818,7 +824,13 @@ class SpreadGridStrategy(BaseStrategy):
                         buy = False
 
                 if buy:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, orderQty)
+                    orderQuantity = orderQty
+                    if orderQty == 1 and self.logical_holding >= 4:
+                        orderQuantity = 2
+                    if orderQty > 1 and self.logical_holding > 2 * orderQty:
+                        orderQuantity = orderQuantity + 1
+
+                    executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
         else:
             self.print(f'Error: buy_index error')
 

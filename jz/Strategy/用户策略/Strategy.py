@@ -790,9 +790,9 @@ class SpreadGridStrategy(BaseStrategy):
                         sell = False
                 if sell:
                     orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding <= -4:
+                    if orderQty == 1 and self.logical_holding >= 4:
                         orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding < -2 * orderQty:
+                    if orderQty > 1 and self.logical_holding > 2 * orderQty:
                         orderQuantity = orderQuantity + 1
 
                     executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
@@ -825,9 +825,9 @@ class SpreadGridStrategy(BaseStrategy):
 
                 if buy:
                     orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding >= 4:
+                    if orderQty == 1 and self.logical_holding <= -4:
                         orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding > 2 * orderQty:
+                    if orderQty > 1 and self.logical_holding < -2 * orderQty:
                         orderQuantity = orderQuantity + 1
 
                     executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)

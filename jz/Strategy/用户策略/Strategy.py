@@ -178,6 +178,7 @@ class BaseStrategy():
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         retEnter = 0
         EnterOrderID = 0
+        direction = '开'
         if self.IsBacktest:
             sell_position = self.GetSellPosition(code)
             if sell_position > 0:
@@ -218,13 +219,14 @@ class BaseStrategy():
             if abs(buy_position - sell_position) > orderQty * maxPositionMultiplier:
                 self.print('Error: reach buy position limit')
                 return False
-
             if sell_position >= quantity:
+                direction = '平'
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
                 if retEnter == 0:
                     self.waiting_list.append(EnterOrderID)
             else:
                 if sell_position > 0:
+                    direction = '平'
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
@@ -234,9 +236,9 @@ class BaseStrategy():
                         self.waiting_list.append(EnterOrderID)
             self.send_order_count += 1
 
-        self.print(f"Buy {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        self.print(f"Buy{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
-            msg = f"Name: {self.name}\nbuy: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Name: {self.name}\nbuy{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 
@@ -245,6 +247,7 @@ class BaseStrategy():
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         retEnter = 0
         EnterOrderID = 0
+        direction = '开'
         if self.IsBacktest:
             buy_position = self.GetBuyPosition(code)
             if buy_position > 0:
@@ -286,11 +289,13 @@ class BaseStrategy():
                 return False
 
             if buy_position >= quantity:
+                direction = '平'
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
                 if retEnter == 0:
                     self.waiting_list.append(EnterOrderID)
             else:
                 if buy_position > 0:
+                    direction = '平'
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
@@ -301,10 +306,10 @@ class BaseStrategy():
 
             self.send_order_count += 1
 
-        self.print(f"Sell {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        self.print(f"Sell{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
 
         if not self.IsBacktest:
-            msg = f"Name: {self.name}\nsell: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = f"Name: {self.name}\nsell{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
         return retEnter == 0
 

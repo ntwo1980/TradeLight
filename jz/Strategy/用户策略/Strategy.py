@@ -532,8 +532,8 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-10:] > 0).sum()
-            if up_days >= 5:
+            up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-5:] > 0).sum()
+            if up_days >= 2 and self.DailyPrices[code]['Close'].iloc[-1] > self.DailyPrices[code]['Close'].iloc[-2]:
                 base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
                 if self.atr > 0:
                     order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() - self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
@@ -573,6 +573,9 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if executed and not self.IsBacktest:
             self.save_strategy_state()        # PairLevelGridStrategy
+
+        if abs(self.logical_holding) > self.max_logical_holding:
+            self.max_logical_holding = abs(self.logical_holding)
 
         if self.print_debug:
             self.print({
@@ -696,6 +699,8 @@ class PairLevelGridStrategy(BaseStrategy):
             if self.api.SellPosition(self.current_held) > 0:
                 self.api.BuyToCover(self.api.SellPosition(self.current_held), self.LastPrices[self.current_held], self.current_held)
 
+        self.print('max position:' + str(self.max_logical_holding))
+
 class SpreadGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -708,8 +713,12 @@ class SpreadGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        # self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        # self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.6, 0.6, 0.6, 0.7, 0.7,  0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.6, 0.6, 0.6, 0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        # self.buy_levels = [0.5, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        # self.sell_levels = [0.5, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 

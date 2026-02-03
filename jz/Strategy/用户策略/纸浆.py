@@ -8,15 +8,15 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = SpreadGridStrategy()
+    strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '豆一_豆粕',
-            'codes': ['SPD|m|A-M|2605|2605', 'DCE|M|A&M|2605', 'DCE|F|A|2605', 'DCE|F|M|2605'],
-            'orderQty': 2,
-            'firstPosition': True,
-            'atr': 50
+            'name': '纸浆',
+            'codes': ['SHFE|F|SP|2605'],
+            'orderQty': 1,
+            'limit': 5200,
+            'threshold': 0.025,
         },
         api = api()
     )

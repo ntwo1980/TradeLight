@@ -15,6 +15,7 @@ def initialize(context):
             'name': '燃油',
             'codes': ['SHFE|F|FU|2605'],
             'orderQty': 1,
+            'limit': 2500,
             'threshold': 0.025,
         },
         api = api()

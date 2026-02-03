@@ -16,7 +16,7 @@ def initialize(context):
             'codes': ['SPD|m|FG-SA|605|605', 'ZCE|M|FG&SA|605', 'ZCE|F|FG|605', 'ZCE|F|SA|605'],
             'orderQty': 3,
             'firstPosition': True,
-            'atr': 20
+            'atr': 19
         },
         api = api()
     )

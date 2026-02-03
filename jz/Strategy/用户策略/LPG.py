@@ -13,8 +13,9 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': 'LPG',
-            'codes': ['DCE|F|PG|2602'],
+            'codes': ['DCE|F|PG|2604'],
             'orderQty': 1,
+            'limit': 4100,
             'threshold': 0.025,
         },
         api = api()

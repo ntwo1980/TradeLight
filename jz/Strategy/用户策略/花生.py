@@ -13,8 +13,9 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '花生',
-            'codes': ['ZCE|F|PK|603'],
+            'codes': ['ZCE|F|PK|605'],
             'orderQty': 1,
+            'limit': 7900,
             'threshold': 0.025,
         },
         api = api()

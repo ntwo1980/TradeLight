@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': '硅铁_锰硅',
             'codes': ['SPD|m|SF-SM|605|605', 'ZCE|M|SF&SM|605', 'ZCE|F|SF|605', 'ZCE|F|SM|605'],
-            'orderQty': 2,
+            'orderQty': 3,
             'firstPosition': True,
             'atr': 45
         },

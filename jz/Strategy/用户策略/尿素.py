@@ -14,7 +14,8 @@ def initialize(context):
         params = {
             'name': '尿素',
             'codes': ['ZCE|F|UR|605'],
-            'orderQty': 2,
+            'orderQty': 1,
+            'limit': 1700,
             'threshold': 0.025,
         },
         api = api()

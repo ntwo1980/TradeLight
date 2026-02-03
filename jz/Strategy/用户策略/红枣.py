@@ -12,10 +12,10 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '豆粕',
-            'codes': ['DCE|F|M|2605'],
-            'orderQty': 5,
-            'limit': 2700,
+            'name': '红枣',
+            'codes': ['ZCE|F|CJ|605'],
+            'orderQty': 1,
+            'limit': 8800,
             'threshold': 0.025,
         },
         api = api()

@@ -1,38 +1,50 @@
 import talib
 import types
 from Strategy import PairLevelGridStrategy
-from Strategy import SpreadGridStrategy
 
+
+# 策略参数字典
+g_params['threshold'] = 0.01
+
+my_g_params = {
+    #'合约': 'DCE|Z|M|MAIN',
+    'name': '豆粕',
+    #'codes': ['DCE|F|M|2601', 'DCE|F|M|2605', 'ZCE|F|RM|601', 'ZCE|F|RM|605'],
+    #'codes': ['ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601', 'ZCE|F|RM|601'],
+    'codes': ['DCE|F|JD|2601', 'DCE|F|JD|2602'],
+    'orderQty': 1,
+    'threshold': g_params['threshold'],
+    #'codes': ['ZCE|F|RM|601', 'DCE|F|M|2601'],
+    #'轴价': 3200,
+    #'每格跳数': 5,
+    #'K线数量': 2000,
+    #'保证金': 1999,
+    #'手续费': 10
+}
 strategy = None
-strategis = []
+
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
+    global strategy
     strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
-        params = {
-            'name': '豆粕',
-            'codes': ['DCE|F|M|2605'],
-            'orderQty': 5,
-            'limit': 2700,
-            'threshold': 0.025,
-        },
+        params = my_g_params,
         api = api()
     )
 
-    strategis.append(strategy)
-
-
 # 策略触发事件每次触发时都会执行该函数
 def handle_data(context):
-    for s in strategis:
-        s.handle_data(context)
+    global strategy
+    strategy.handle_data(context)
+
 
 # 历史回测阶段结束时执行该函数一次
 def hisover_callback(context):
-    for s in strategis:
-        s.hisover_callback(context)
+    global strategy
+    strategy.hisover_callback(context)
+
 
 # 策略退出前执行该函数一次
 def exit_callback(context):
@@ -42,26 +54,15 @@ def api():
     api = types.SimpleNamespace(
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
-        A_BuyPositionCanCover=A_BuyPositionCanCover,
         A_SellPosition=A_SellPosition,
-        A_SellPositionCanCover=A_SellPositionCanCover,
-        A_SendOrder=A_SendOrder,
-        A_OrderStatus=A_OrderStatus,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,
-        BuyToCover=BuyToCover,
         BuyPosition=BuyPosition,
         Close=Close,
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
         Enum_Buy=Enum_Buy,
-        Enum_Canceled=Enum_Canceled,
-        Enum_Entry=Enum_Entry,
-        Enum_Exit=Enum_Exit,
         Enum_ExitToday=Enum_ExitToday,
-        Enum_Filled=Enum_Filled,
-        Enum_FillPart=Enum_FillPart,
-        Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,
         High=High,
@@ -82,13 +83,11 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
-        SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,
         SetBarInterval=SetBarInterval,
         SetOrderWay=SetOrderWay,
         SetTriggerType=SetTriggerType,
-        SetUserNo=SetUserNo,
         StartTrade=StartTrade,
         StopTrade=StopTrade,
         Time=Time,

@@ -557,6 +557,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 sell_threshold = base_price + diff
 
                 if current_price >= sell_threshold and not existing_order:
+                    if buy_position > 3 * order_qty:
+                        order_qty = order_qty + 1
                     executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
         else:
             self.print(f'Error: sell_index error')
@@ -806,8 +808,9 @@ class SpreadGridStrategy(BaseStrategy):
                     orderQuantity = orderQty
                     if orderQty == 1 and self.logical_holding >= 4:
                         orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                        orderQuantity = orderQuantity + 1
+                    if orderQty > 1:
+                        increments = self.logical_holding // (3 * orderQty)
+                        orderQuantity = orderQuantity + increments
 
                     executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
         else:
@@ -842,7 +845,8 @@ class SpreadGridStrategy(BaseStrategy):
                     if orderQty == 1 and self.logical_holding <= -4:
                         orderQuantity = 2
                     if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                        orderQuantity = orderQuantity + 1
+                        increments = abs(self.logical_holding) // (3 * orderQty)
+                        orderQuantity = orderQuantity + max(increments, 1)
 
                     executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
         else:

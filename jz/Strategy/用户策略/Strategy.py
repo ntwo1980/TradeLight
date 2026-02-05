@@ -557,7 +557,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 sell_threshold = base_price + diff
 
                 if current_price >= sell_threshold and not existing_order:
-                    if buy_position > 3 * order_qty:
+                    if buy_position > 5 * order_qty:
                         order_qty = order_qty + 1
                     executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
         else:

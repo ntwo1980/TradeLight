@@ -808,7 +808,7 @@ class SpreadGridStrategy(BaseStrategy):
                     orderQuantity = orderQty
                     if orderQty == 1 and self.logical_holding >= 4:
                         orderQuantity = 2
-                    if orderQty > 1:
+                    if orderQty > 1 and self.logical_holding > 3 * orderQty:
                         increments = self.logical_holding // (3 * orderQty)
                         orderQuantity = orderQuantity + increments
 

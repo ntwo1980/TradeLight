@@ -30,6 +30,7 @@ class BaseStrategy():
         self.pending_state_json = None
         self.idx = 0
         self.max_logical_holding = 0
+        self.trade_quantity = 0
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -179,6 +180,8 @@ class BaseStrategy():
         retEnter = 0
         EnterOrderID = 0
         direction = '开'
+
+        self.trade_quantity = quantity
         if self.IsBacktest:
             sell_position = self.GetSellPosition(code)
             if sell_position > 0:
@@ -227,6 +230,7 @@ class BaseStrategy():
             else:
                 if sell_position > 0:
                     direction = '平'
+                    self.trade_quantity = sell_position
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
@@ -248,6 +252,7 @@ class BaseStrategy():
         retEnter = 0
         EnterOrderID = 0
         direction = '开'
+        self.trade_quantity = quantity
         if self.IsBacktest:
             buy_position = self.GetBuyPosition(code)
             if buy_position > 0:
@@ -296,6 +301,7 @@ class BaseStrategy():
             else:
                 if buy_position > 0:
                     direction = '平'
+                    self.trade_quantity = buy_position
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
                     if retEnter == 0:
                         self.waiting_list.append(EnterOrderID)
@@ -635,7 +641,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.current_held = code
         if not is_switch:
-            self.logical_holding += quantity
+            self.logical_holding += self.trade_quantity
         self.base_price = price
         # self.LastBuyDate = self.Today   # ToDo
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
@@ -650,7 +656,7 @@ class PairLevelGridStrategy(BaseStrategy):
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         if not self.Sell(code, quantity, price):
             return False
-        self.logical_holding -= quantity
+        self.logical_holding -= self.trade_quantity
         self.base_price = price
         self.sell_index += 1
         if self.sell_index >= len(self.sell_levels):
@@ -916,7 +922,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.current_held = code
         original_holding = self.logical_holding
         if not is_switch:
-            self.logical_holding += quantity
+            self.logical_holding += self.trade_quantity
         self.base_price = price
         # self.LastBuyDate = self.Today   # ToDo
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
@@ -936,7 +942,7 @@ class SpreadGridStrategy(BaseStrategy):
         if not self.Sell(code, quantity, price):
             return False
         original_holding = self.logical_holding
-        self.logical_holding -= quantity
+        self.logical_holding -= self.trade_quantity
         self.base_price = price
         if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
             self.sell_index = 0

@@ -782,7 +782,7 @@ class SpreadGridStrategy(BaseStrategy):
         sell_threshold = 0
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
-        if abs(self.logical_holding) / orderQty >= 10 and not existing_order:
+        if abs(self.logical_holding) / orderQty >= 7 and not existing_order:
             reduce_qty = max(int(abs(self.logical_holding) // 2), 1)
             if self.logical_holding > 0:
                 executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty)
@@ -791,17 +791,17 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             if self.sell_index < len(self.sell_levels):
                 level = self.sell_levels[self.sell_index]
-                if self.sell_index > 0:
-                    if self.logical_holding < -10 * orderQty:
-                        level = level * 1.5
-                    elif self.logical_holding < -8 * orderQty:
-                        level = level * 1.4
-                    elif self.logical_holding < -6 * orderQty:
-                        level = level * 1.3
-                    elif self.logical_holding < -4 * orderQty:
-                        level = level * 1.2
-                    elif self.logical_holding < -2 * orderQty:
-                        level = level * 1.1
+                # if self.sell_index > 0:
+                #     if self.logical_holding < -10 * orderQty:
+                #         level = level * 1.5
+                #     elif self.logical_holding < -8 * orderQty:
+                #         level = level * 1.4
+                #     elif self.logical_holding < -6 * orderQty:
+                #         level = level * 1.3
+                #     elif self.logical_holding < -4 * orderQty:
+                #         level = level * 1.2
+                #     elif self.logical_holding < -2 * orderQty:
+                #         level = level * 1.1
                 # self.print((self.sell_index, self.sell_levels[self.sell_index], level))
                 diff = self.atr * level
                 sell_threshold = base_price + diff
@@ -827,17 +827,17 @@ class SpreadGridStrategy(BaseStrategy):
 
             if self.buy_index < len(self.buy_levels) and not executed:
                 level = self.buy_levels[self.buy_index]
-                if self.buy_index > 0:
-                    if self.logical_holding > 10 * orderQty:
-                        level = level * 1.5
-                    elif self.logical_holding > 8 * orderQty:
-                        level = level * 1.4
-                    elif self.logical_holding > 6 * orderQty:
-                        level = level * 1.3
-                    elif self.logical_holding > 4 * orderQty:
-                        level = level * 1.2
-                    elif self.logical_holding > 2 * orderQty:
-                        level = level * 1.1
+                # if self.buy_index > 0:
+                #     if self.logical_holding > 10 * orderQty:
+                #         level = level * 1.5
+                #     elif self.logical_holding > 8 * orderQty:
+                #         level = level * 1.4
+                #     elif self.logical_holding > 6 * orderQty:
+                #         level = level * 1.3
+                #     elif self.logical_holding > 4 * orderQty:
+                #         level = level * 1.2
+                #     elif self.logical_holding > 2 * orderQty:
+                #         level = level * 1.1
                 diff = self.atr * level
                 buy_threshold = base_price - diff
 

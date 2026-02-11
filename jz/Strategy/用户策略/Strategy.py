@@ -407,8 +407,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 
@@ -721,12 +721,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
-        # self.buy_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        # self.sell_levels = [0.7, 0.7, 0.7, 0.8, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.buy_levels = [0.6, 0.6, 0.6, 0.7, 0.7,  0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.6, 0.6, 0.6, 0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        # self.buy_levels = [0.5, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        # self.sell_levels = [0.5, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = [0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.sell_levels = [0.7, 0.7, 0.8, 0.9, 1, 1.5, 2, 4, 6, 8, 14, 22]
         self.buy_index = 0
         self.sell_index = 0
 

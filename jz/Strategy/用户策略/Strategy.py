@@ -782,84 +782,64 @@ class SpreadGridStrategy(BaseStrategy):
         sell_threshold = 0
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
-        if abs(self.logical_holding) / orderQty >= 7 and not existing_order:
-            reduce_qty = max(int(abs(self.logical_holding) // 2), 1)
-            if self.logical_holding > 0:
-                executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty)
-            else:
-                executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty)
-        else:
-            if self.sell_index < len(self.sell_levels):
-                level = self.sell_levels[self.sell_index]
-                # if self.sell_index > 0:
-                #     if self.logical_holding < -10 * orderQty:
-                #         level = level * 1.5
-                #     elif self.logical_holding < -8 * orderQty:
-                #         level = level * 1.4
-                #     elif self.logical_holding < -6 * orderQty:
-                #         level = level * 1.3
-                #     elif self.logical_holding < -4 * orderQty:
-                #         level = level * 1.2
-                #     elif self.logical_holding < -2 * orderQty:
-                #         level = level * 1.1
-                # self.print((self.sell_index, self.sell_levels[self.sell_index], level))
-                diff = self.atr * level
-                sell_threshold = base_price + diff
+        if self.sell_index < len(self.sell_levels):
+            level = self.sell_levels[self.sell_index]
+            diff = self.atr * level
+            sell_threshold = base_price + diff
 
-                if current_price >= sell_threshold and not existing_order:
-                    sell = True
-                    if self.logical_holding == orderQty and buy_position == orderQty:
-                        close_prices = self.DailyPrices[self.codes[0]]['Close']
-                        base_price = sum(close_prices[-20:]) / 20
-                        if current_price < base_price - self.atr * self.buy_levels[0]:
-                            sell = False
-                    if sell:
-                        orderQuantity = orderQty
-                        if orderQty == 1 and self.logical_holding >= 4:
-                            orderQuantity = 2
-                        if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                            increments = self.logical_holding // (3 * orderQty)
-                            orderQuantity = orderQuantity + increments
+            if current_price >= sell_threshold and not existing_order:
+                sell = True
+                if self.logical_holding == orderQty and buy_position == orderQty:
+                    close_prices = self.DailyPrices[self.codes[0]]['Close']
+                    base_price = sum(close_prices[-20:]) / 20
+                    if current_price < base_price - self.atr * self.buy_levels[0]:
+                        sell = False
+                if sell:
+                    orderQuantity = orderQty
+                    if orderQty == 1 and self.logical_holding >= 4:
+                        orderQuantity = 2
+                    if orderQty > 1 and self.logical_holding > 3 * orderQty:
+                        increments = self.logical_holding // (3 * orderQty)
+                        orderQuantity = orderQuantity + increments
 
+                    if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
+                        reduce_qty = max(int((abs(self.logical_holding) + orderQuantity) // 2), 1)
+                        reduce_qty = min(reduce_qty, abs(self.logical_holding))
+                        executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty)
+                    else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
-            else:
-                self.print(f'Error: sell_index error')
+        else:
+            self.print(f'Error: sell_index error')
 
-            if self.buy_index < len(self.buy_levels) and not executed:
-                level = self.buy_levels[self.buy_index]
-                # if self.buy_index > 0:
-                #     if self.logical_holding > 10 * orderQty:
-                #         level = level * 1.5
-                #     elif self.logical_holding > 8 * orderQty:
-                #         level = level * 1.4
-                #     elif self.logical_holding > 6 * orderQty:
-                #         level = level * 1.3
-                #     elif self.logical_holding > 4 * orderQty:
-                #         level = level * 1.2
-                #     elif self.logical_holding > 2 * orderQty:
-                #         level = level * 1.1
-                diff = self.atr * level
-                buy_threshold = base_price - diff
+        if self.buy_index < len(self.buy_levels) and not executed:
+            level = self.buy_levels[self.buy_index]
+            diff = self.atr * level
+            buy_threshold = base_price - diff
 
-                if current_price <= buy_threshold and not existing_order:
-                    buy = True
-                    if self.logical_holding == -orderQty and sell_position == orderQty:
-                        close_prices = self.DailyPrices[self.codes[0]]['Close']
-                        base_price = sum(close_prices[-20:]) / 20
-                        if current_price > base_price + self.atr * self.sell_levels[0]:
-                            buy = False
+            if current_price <= buy_threshold and not existing_order:
+                buy = True
+                if self.logical_holding == -orderQty and sell_position == orderQty:
+                    close_prices = self.DailyPrices[self.codes[0]]['Close']
+                    base_price = sum(close_prices[-20:]) / 20
+                    if current_price > base_price + self.atr * self.sell_levels[0]:
+                        buy = False
 
-                    if buy:
-                        orderQuantity = orderQty
-                        if orderQty == 1 and self.logical_holding <= -4:
-                            orderQuantity = 2
-                        if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                            increments = abs(self.logical_holding) // (3 * orderQty)
-                            orderQuantity = orderQuantity + max(increments, 1)
+                if buy:
+                    orderQuantity = orderQty
+                    if orderQty == 1 and self.logical_holding <= -4:
+                        orderQuantity = 2
+                    if orderQty > 1 and self.logical_holding < -3 * orderQty:
+                        increments = abs(self.logical_holding) // (3 * orderQty)
+                        orderQuantity = orderQuantity + max(increments, 1)
 
+                    if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
+                        reduce_qty = max(int((self.logical_holding + orderQuantity) // 2), 1)
+                        reduce_qty = min(reduce_qty, self.logical_holding)
+                        executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty)
+                    else:
                         executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
-            else:
-                self.print(f'Error: buy_index error')
+        else:
+            self.print(f'Error: buy_index error')
 
         if executed and not self.IsBacktest:
             self.save_strategy_state()

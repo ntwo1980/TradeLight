@@ -42,7 +42,7 @@ class BaseStrategy():
         #self.api.SetTriggerType(3, 1000) # 每隔1000毫秒触发一次
         self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
-        self.api.SetTriggerType(4, ['145900']) 
+        self.api.SetTriggerType(4, ['145900'])
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
 
@@ -535,6 +535,7 @@ class PairLevelGridStrategy(BaseStrategy):
         # if self.print_debug:
         #     self.print('RunGridTrading')
         self.atr = self.ATRs[code]
+        self.slope = self.slopes[code]
         current_price = self.LastPrices[code]
         existing_order = self.existing_order()
 
@@ -609,6 +610,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'current_date': self.api.TradeDate(),
                 'current_time': self.api.CurrentTime(),
                 'atr': self.atr,
+                'slope': self.slope,
                 'current_held': self.current_held,
             })
 

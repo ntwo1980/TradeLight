@@ -42,6 +42,7 @@ class BaseStrategy():
         #self.api.SetTriggerType(3, 1000) # 每隔1000毫秒触发一次
         self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
+        self.api.SetTriggerType(4, ['145900']) 
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
 
@@ -153,12 +154,18 @@ class BaseStrategy():
                     self.print('Error: StopTrade')
 
                     return False
+        elif context.triggerType() == "T":
+            self.after_market_close(context)
+            return False
 
         if not self.IsBacktest and self.idx < 10:
             self.idx = self.idx + 1
             return False
 
         return True
+
+    def after_market_close(self, context):
+        pass
 
     def GetBuyPosition(self, code):
         if self.IsBacktest:

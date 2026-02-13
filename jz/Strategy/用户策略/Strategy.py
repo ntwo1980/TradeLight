@@ -796,7 +796,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            if current_price >= sell_threshold and not existing_order:
+            if current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
                 if self.logical_holding == orderQty and buy_position == orderQty:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']
@@ -825,7 +825,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            if current_price <= buy_threshold and not existing_order:
+            if current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True
                 if self.logical_holding == -orderQty and sell_position == orderQty:
                     close_prices = self.DailyPrices[self.codes[0]]['Close']

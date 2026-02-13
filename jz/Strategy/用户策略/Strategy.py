@@ -819,9 +819,7 @@ class SpreadGridStrategy(BaseStrategy):
                         orderQuantity = orderQuantity + increments
 
                     if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
-                        reduce_qty = max(int((abs(self.logical_holding) + orderQuantity) // 2), 1)
-                        reduce_qty = min(reduce_qty, abs(self.logical_holding))
-                        executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty, False, False)
+                        executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0:
                         sma_20 = talib.SMA(close_prices, timeperiod=10)
                         if 7 <= days_above_ma <= 13:
@@ -852,9 +850,7 @@ class SpreadGridStrategy(BaseStrategy):
                         orderQuantity = orderQuantity + max(increments, 1)
 
                     if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
-                        reduce_qty = max(int((self.logical_holding + orderQuantity) // 2), 1)
-                        reduce_qty = min(reduce_qty, self.logical_holding)
-                        executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty, False)
+                        executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0:
                         if 7 <= days_above_ma <= 13:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)

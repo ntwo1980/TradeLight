@@ -822,7 +822,6 @@ class SpreadGridStrategy(BaseStrategy):
                         reduce_qty = min(reduce_qty, abs(self.logical_holding))
                         executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty, False, False)
                     elif self.logical_holding == 0:
-                        self.print(type(close_prices))
                         if self.r_squared < 0.01 or abs(current_price - close_prices.iloc[-20]) < 2 * self.atr:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:

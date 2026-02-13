@@ -13,6 +13,7 @@ class BaseStrategy():
         self.DailyPrices = {}
         self.ATRs = {}
         self.slopes = {}
+        self.r_squareds = {}
         self.MinutePrices = {}
         self.LastPrices = {}
         self.base_price = 0
@@ -97,9 +98,11 @@ class BaseStrategy():
                 y = np.log(vals - shift)
                 slope, intercept = np.polyfit(x, y, 1)
                 self.slopes[code] = slope
+                self.r_squareds[code] = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
             else:
                 self.ATRs[code] = None
                 self.slopes[code] = None
+                self.r_squareds[code] = None
 
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
             self.DailyPricesDate = self.LastTradeDate()
@@ -536,6 +539,7 @@ class PairLevelGridStrategy(BaseStrategy):
         #     self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         self.slope = self.slopes[code]
+        self.r_squared = self.r_squareds[code]
         current_price = self.LastPrices[code]
         existing_order = self.existing_order()
 
@@ -611,6 +615,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'current_time': self.api.CurrentTime(),
                 'atr': self.atr,
                 'slope': self.slope,
+                'r_squared': self.r_squared,
                 'current_held': self.current_held,
             })
 
@@ -770,6 +775,7 @@ class SpreadGridStrategy(BaseStrategy):
         #     self.print('RunGridTrading')
         self.atr = self.ATRs[self.codes[0]]
         self.slope = self.slopes[self.codes[0]]
+        self.r_squared = self.r_squareds[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]
 
         existing_order = self.existing_order()
@@ -874,6 +880,7 @@ class SpreadGridStrategy(BaseStrategy):
                 'current_time': self.api.CurrentTime(),
                 'atr': self.atr,
                 'slope': self.slope,
+                'r_squared': self.r_squared,
                 'current_held': self.current_held,
             })
 

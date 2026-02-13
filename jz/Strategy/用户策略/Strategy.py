@@ -791,7 +791,7 @@ class SpreadGridStrategy(BaseStrategy):
         sell_threshold = 0
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
-        if self.sell_index < len(self.sell_levels):
+        if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
             level = self.sell_levels[self.sell_index]
             diff = self.atr * level
             sell_threshold = base_price + diff
@@ -814,13 +814,13 @@ class SpreadGridStrategy(BaseStrategy):
                     if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
                         reduce_qty = max(int((abs(self.logical_holding) + orderQuantity) // 2), 1)
                         reduce_qty = min(reduce_qty, abs(self.logical_holding))
-                        executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty)
+                        executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty, False, False)
                     else:
-                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
+                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
         else:
             self.print(f'Error: sell_index error')
 
-        if self.buy_index < len(self.buy_levels) and not executed:
+        if self.buy_index < len(self.buy_levels) and not executed:   # SpreadGridStrategy
             level = self.buy_levels[self.buy_index]
             diff = self.atr * level
             buy_threshold = base_price - diff
@@ -844,9 +844,9 @@ class SpreadGridStrategy(BaseStrategy):
                     if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
                         reduce_qty = max(int((self.logical_holding + orderQuantity) // 2), 1)
                         reduce_qty = min(reduce_qty, self.logical_holding)
-                        executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty)
+                        executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty, False)
                     else:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
+                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
         else:
             self.print(f'Error: buy_index error')
 
@@ -884,7 +884,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         price = self.LastPrices[self.pending_switch_to] if self.IsBacktest else min(self.api.Q_AskPrice(self.pending_switch_to) + self.api.PriceTick(self.pending_switch_to), self.api.Q_UpperLimit(self.pending_switch_to))
 
-        if self.ExecuteBuy(self.pending_switch_to, price, self.pending_switch_quantity, is_switch = True):
+        if self.ExecuteBuy(self.pending_switch_to, price, self.pending_switch_quantity, True, True):
             self.base_price = self.new_base_price
             self.pending_switch_to = None
             self.pending_switch_quantity = 0
@@ -906,7 +906,7 @@ class SpreadGridStrategy(BaseStrategy):
         if not self.IsBacktest:
             self.save_strategy_state()
 
-    def ExecuteBuy(self, code, price, quantity, is_switch = False):    # SpreadGridStrategy
+    def ExecuteBuy(self, code, price, quantity, is_switch, change_index):    # SpreadGridStrategy
         self.print('ExecuteBuy')
         if not self.Buy(code, quantity, price):
             return False
@@ -918,7 +918,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.base_price = price
         # self.LastBuyDate = self.Today   # ToDo
         self.last_buy_date = datetime.today().strftime('%Y%m%d')
-        if not is_switch:
+        if not is_switch and change_index:
             if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
                 self.buy_index = 0
             else:
@@ -929,20 +929,21 @@ class SpreadGridStrategy(BaseStrategy):
 
         return True
 
-    def ExecuteSell(self, code, price, quantity):    # SpreadGridStrategy
+    def ExecuteSell(self, code, price, quantity, change_index):    # SpreadGridStrategy
         self.print('ExecuteSell')
         if not self.Sell(code, quantity, price):
             return False
         original_holding = self.logical_holding
         self.logical_holding -= self.trade_quantity
         self.base_price = price
-        if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
-            self.sell_index = 0
-        else:
-            self.sell_index += 1
-        if self.sell_index >= len(self.sell_levels):
-            self.sell_index = len(self.sell_levels) - 1
-        self.buy_index = 0
+        if change_index:
+            if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
+                self.sell_index = 0
+            else:
+                self.sell_index += 1
+            if self.sell_index >= len(self.sell_levels):
+                self.sell_index = len(self.sell_levels) - 1
+            self.buy_index = 0
         self.last_sell_date = datetime.today().strftime('%Y%m%d')
 
         return True

@@ -423,7 +423,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -588,7 +588,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
             if current_price <= buy_threshold and not existing_order:
                 executed = self.ExecuteBuy(code, current_price, order_qty)
-        else:
+        elif not executed:
             self.print(f'Error: buy_index error')
 
         if executed and not self.IsBacktest:
@@ -687,7 +687,7 @@ class PairLevelGridStrategy(BaseStrategy):
         state = super().load_strategy_state()
         if state is None:
             self.save_strategy_state(True)
-        else:
+        elif not self.IsBacktest:
             self.current_held = state['current_held']
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
@@ -741,7 +741,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -787,9 +787,11 @@ class SpreadGridStrategy(BaseStrategy):
             buy_position = self.GetSellPosition(self.codes[3])
             sell_position = self.GetBuyPosition(self.codes[3])
 
-        if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
-            close_prices = self.DailyPrices[self.codes[0]]['Close']
+        close_prices = self.DailyPrices[self.codes[0]]['Close']
+        ma_20 = talib.MA(close_prices, timeperiod=20)
+        days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
 
+        if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             base_price = sum(close_prices[-20:]) / 20
 
         executed = False
@@ -805,7 +807,6 @@ class SpreadGridStrategy(BaseStrategy):
             if current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
                 if self.logical_holding == orderQty and buy_position == orderQty:
-                    close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price < base_price - self.atr * self.buy_levels[0]:
                         sell = False
@@ -822,7 +823,8 @@ class SpreadGridStrategy(BaseStrategy):
                         reduce_qty = min(reduce_qty, abs(self.logical_holding))
                         executed = self.ExecuteBuy(self.codes[1], current_price, reduce_qty, False, False)
                     elif self.logical_holding == 0:
-                        if self.r_squared < 0.01 or abs(current_price - close_prices.iloc[-20]) < 2 * self.atr:
+                        sma_20 = talib.SMA(close_prices, timeperiod=10)
+                        if 7 <= days_above_ma <= 13:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
@@ -837,7 +839,6 @@ class SpreadGridStrategy(BaseStrategy):
             if current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True
                 if self.logical_holding == -orderQty and sell_position == orderQty:
-                    close_prices = self.DailyPrices[self.codes[0]]['Close']
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price > base_price + self.atr * self.sell_levels[0]:
                         buy = False
@@ -855,11 +856,11 @@ class SpreadGridStrategy(BaseStrategy):
                         reduce_qty = min(reduce_qty, self.logical_holding)
                         executed = self.ExecuteSell(self.codes[1], current_price, reduce_qty, False)
                     elif self.logical_holding == 0:
-                        if self.r_squared < 0.01 or abs(current_price - close_prices.iloc[-20]) < 2 * self.atr:
+                        if 7 <= days_above_ma <= 13:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:
                         executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
-        else:
+        elif not executed:
             self.print(f'Error: buy_index error')
 
         if executed and not self.IsBacktest:
@@ -887,6 +888,7 @@ class SpreadGridStrategy(BaseStrategy):
                 'atr': self.atr,
                 'slope': self.slope,
                 'r_squared': self.r_squared,
+                'days_above_ma': days_above_ma,
                 'current_held': self.current_held,
             })
 
@@ -969,7 +971,7 @@ class SpreadGridStrategy(BaseStrategy):
         # self.print(state)
         if state is None:
             self.save_strategy_state(True)
-        else:
+        elif not self.IsBacktest:
             self.current_held = state['current_held']
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']

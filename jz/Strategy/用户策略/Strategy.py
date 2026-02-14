@@ -535,8 +535,6 @@ class PairLevelGridStrategy(BaseStrategy):
             self.RunGridTrading(self.current_held)
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
-        # if self.print_debug:
-        #     self.print('RunGridTrading')
         self.atr = self.ATRs[code]
         self.slope = self.slopes[code]
         self.r_squared = self.r_squareds[code]
@@ -550,8 +548,10 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            up_days = (self.DailyPrices[code]['Close'].pct_change().iloc[-5:] > 0).sum()
-            if up_days >= 2 and (limit is None or current_price < limit):
+            ma_20 = talib.MA(self.DailyPrices[code]['Close'], timeperiod=20)
+            days_above_ma = np.sum(self.DailyPrices[code]['Close'][-20:] > ma_20[-20:])
+            if 7 <= days_above_ma <= 13 and (limit is None or current_price < limit):
+            # if up_days >= 2 and (limit is None or current_price < limit):
                 base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
                 if self.atr > 0:
                     order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() - self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
@@ -771,8 +771,6 @@ class SpreadGridStrategy(BaseStrategy):
         self.RunGridTrading()
 
     def RunGridTrading(self):    # SpreadGridStrategy
-        # if self.print_debug:
-        #     self.print('RunGridTrading')
         self.atr = self.ATRs[self.codes[0]]
         self.slope = self.slopes[self.codes[0]]
         self.r_squared = self.r_squareds[self.codes[0]]
@@ -821,7 +819,6 @@ class SpreadGridStrategy(BaseStrategy):
                     if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0:
-                        sma_20 = talib.SMA(close_prices, timeperiod=10)
                         if 7 <= days_above_ma <= 13:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:

@@ -64,6 +64,12 @@ class BaseStrategy():
             '513520.SH',    # 日经
             '159561.SZ',    # 德国
             '513030.SH',    # 德国
+            '512890.SH',    # 红利低波100
+            '515100.SH',    # 红利低波100
+        }
+        self.AlwaysBuyStocks = {
+            '512890.SH',    # 红利低波100
+            '515100.SH',    # 红利低波100
         }
         if not hasattr(self.Universe, 'Strategies'):
             self.Universe.Strategies = {}
@@ -101,45 +107,7 @@ class BaseStrategy():
 
         return cash / totalAsset
 
-    def GetBuyTradingAmount1(self, limitByAsset = True):
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-
-        positions = self.GetPositions()
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
-        totalAsset = self.GetTotalAsset() - self.RetainAmount
-        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-        if tradingAmount > totalAsset / 20:
-            tradingAmount = totalAsset / 20
-
-        # if limitByAsset and cash / totalAsset < 0.1:
-        #     tradingAmount = 10000
-
-        buy_index = getattr(self, 'buy_index', 0)
-
-        return tradingAmount if buy_index < 2 else tradingAmount / 2
-
-    def GetSellTradingAmount1(self):
-        tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-
-        positions = self.GetPositions()
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
-        totalAsset = self.GetTotalAsset() - self.RetainAmount
-        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
-        if tradingAmount > totalAsset / 20:
-            tradingAmount = totalAsset / 20
-
-        # if cash / totalAsset > 0.3:
-        #     tradingAmount = 10000
-
-        sell_index = getattr(self, 'sell_index', 0)
-        return tradingAmount if buy_index < 2 else tradingAmount / 2
-        # return tradingAmount
-
-    def GetBuyTradingAmount(self, limitByAsset = True):
+    def GetBuyTradingAmount(self, stock, limitByAsset = True):
         maxSellCount = self.FindMaxSellCount()
         tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * self.SellMultiplier / 100 + 1)
 
@@ -161,13 +129,13 @@ class BaseStrategy():
 
         # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
         #     tradingAmount = 10000
-        if maxSellCount > 5 and index < total / 4:
+        if maxSellCount > 5 and index < total / 4 and stock not in self.AlwaysBuyStocks:
             tradingAmount = tradingAmount / 4
 
         # buy_index = getattr(self, 'buy_index', 0)
         return tradingAmount
 
-    def GetSellTradingAmount(self):
+    def GetSellTradingAmount(self, stock):
         maxSellCount = self.FindMaxSellCount()
 
         # tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
@@ -185,18 +153,18 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if maxSellCount > 5 and index < total / 4:
+        if maxSellCount > 5 and index < total / 4 and stock not in self.AlwaysBuyStocks:
             tradingAmount = tradingAmount / 4
 
         # sell_index = getattr(self, 'sell_index', 0)
 
         return tradingAmount
 
-    def GetMaxAmount(self):
+    def GetMaxAmount(self, stock):
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        tradingAmount = self.GetBuyTradingAmount(False)
+        tradingAmount = self.GetBuyTradingAmount(False, stock)
         return tradingAmount * 3.5 if self.Priority < 10 else tradingAmount * 5.5
 
     def Print(self, string, **kwargs):
@@ -634,12 +602,12 @@ class SimpleGridStrategy(BaseStrategy):
         if self.Priority < 10:
             available_cash -= self.RetainAmount
 
-        buy_amount = self.GetBuyTradingAmount()
+        buy_amount = self.GetBuyTradingAmount(stock)
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
@@ -652,7 +620,7 @@ class SimpleGridStrategy(BaseStrategy):
             return False
 
     def ExecuteSell(self, C, stock, current_price, current_holding):   # SimpleGridStrategy
-        sell_amount = self.GetSellTradingAmount()
+        sell_amount = self.GetSellTradingAmount(stock)
 
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100
@@ -798,7 +766,7 @@ class LevelGridStrategy(BaseStrategy):
             self.days_above_ma120 = np.sum(self.all_prices['close'].values[-30:] > ma_120[-30:])
             self.days_above_ma250 = np.sum(self.all_prices['close'].values[-30:] > ma_250[-30:])
 
-            if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.0035 or self.days_above_ma250 < 1):
+            if not self.ClosePosition  and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.0035 or self.days_above_ma250 < 1):
                 self.ClosePosition = True
 
     def f(self, C):     # LevelGridStrategy
@@ -888,7 +856,7 @@ class LevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False       # LevelGridStrategy
-            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
+            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.Stocks[0] not in self.AlwaysBuyStocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
                 pre_buy_check = True
@@ -923,12 +891,12 @@ class LevelGridStrategy(BaseStrategy):
         if self.Priority < 10:
             available_cash -= self.RetainAmount
 
-        buy_amount = self.GetBuyTradingAmount()
+        buy_amount = self.GetBuyTradingAmount(stock)
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
@@ -946,7 +914,7 @@ class LevelGridStrategy(BaseStrategy):
         if close_position:
             unit_to_sell = current_holding
         else:
-            sell_amount = self.GetSellTradingAmount()
+            sell_amount = self.GetSellTradingAmount(stock)
 
             unit_to_sell = int(sell_amount / current_price)
             unit_to_sell = (unit_to_sell // 100) * 100
@@ -1269,14 +1237,14 @@ class PairGridStrategy(BaseStrategy):
             available_cash -= self.RetainAmount
 
         if trading_amount is None:
-            buy_amount = self.GetBuyTradingAmount()
+            buy_amount = self.GetBuyTradingAmount(stock)
         else:
             buy_amount = trading_amount
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount()):
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock)):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock
@@ -1290,7 +1258,7 @@ class PairGridStrategy(BaseStrategy):
             return False
 
     def ExecuteSell(self, C, stock, current_price, current_holding):    # PairGridStrategy
-        sell_amount = self.GetSellTradingAmount()
+        sell_amount = self.GetSellTradingAmount(stock)
 
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100
@@ -1533,7 +1501,7 @@ class PairLevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and stock not in self.AlwaysBuyStocks and current_holding > 0:
             self.Print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True, rsi)
             self.ClosePosition = False
@@ -1552,6 +1520,8 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False
+            if self.Stocks[0] in self.AlwaysBuyStocks:
+                pre_buy_check = True
             if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
@@ -1656,13 +1626,13 @@ class PairLevelGridStrategy(BaseStrategy):
             available_cash -= self.RetainAmount
 
         if trading_amount is None:
-            buy_amount = self.GetBuyTradingAmount()
+            buy_amount = self.GetBuyTradingAmount(stock)
         else:
             buy_amount = trading_amount
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount()):
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock)):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock
@@ -1682,7 +1652,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if close_position:
             unit_to_sell = current_holding
         else:
-            sell_amount = self.GetSellTradingAmount()
+            sell_amount = self.GetSellTradingAmount(stock)
 
             unit_to_sell = int(sell_amount / current_price)
             unit_to_sell = (unit_to_sell // 100) * 100
@@ -1958,7 +1928,7 @@ class MomentumRotationStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount():
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock

@@ -14,7 +14,7 @@ levelGridStrategySettings = [
     {'stocks': ["513090.SH"], 'stockNames':['香港证券']},
     {'stocks': ["159552.SZ"], 'stockNames':['中证2000增强']},
     #{'stocks': ["515100.SH"], 'stockNames':['红利低波100']},
-    {'stocks': ["515400.SH"], 'stockNames':['大数据']},
+    #{'stocks': ["515400.SH"], 'stockNames':['大数据']},
     #{'stocks': ["159869.SZ"], 'stockNames':['游戏']},
     {'stocks': ["159687.SZ"], 'stockNames':['亚太精选']},
     #{'stocks': ["159605.SZ"], 'stockNames':['中概互联网格']},
@@ -26,10 +26,10 @@ levelGridStrategySettings = [
     #{'stocks': ["512400.SH"], 'stockNames':['有色金属']},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游']},
     #{'stocks': ["515220.SH"], 'stockNames':['煤炭']},
-    {'stocks': ["159967.SZ"], 'stockNames':['创业板成长']},
+    #{'stocks': ["159967.SZ"], 'stockNames':['创业板成长']},
     #{'stocks': ["518880.SH"], 'stockNames':['黄金']},
     #{'stocks': ["159866.SZ"], 'stockNames':['日经']},
-    {'stocks': ["159825.SZ"], 'stockNames':['农业']},
+    #{'stocks': ["159825.SZ"], 'stockNames':['农业']},
     #{'stocks': ["561910.SH"], 'stockNames':['电池']},
 ]
 
@@ -59,6 +59,8 @@ pairLevelGridStrategies = [
     {'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
     {'stocks': ["513050.SH", "159605.SZ"], 'stockNames':['中概互联', '中概互联']},
     {'stocks': ["512890.SH", "515100.SH"], 'stockNames':['红利低波100', '红利低波100']},
+    #{'stocks': ["516000.SH", "515400.SH"], 'stockNames':['大数据', '大数据']},
+    {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长']},
     #{'stocks': ["159561.SZ", "513030.SH"], 'stockNames':['德国', '德国']},
 ]
 
@@ -176,6 +178,9 @@ def f(C):
 def g(C):
     for s in strategies:
         s.g(C)
+
+
+
 
 
 

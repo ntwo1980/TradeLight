@@ -41,7 +41,7 @@ class BaseStrategy():
         self.Cancel = cancel_func
         self.TimetagToDatetime = timetag_to_datetime_func
         self.DownloadHistoryData = download_history_data_func
-        self.UseLocalHistoryData = True
+        self.UseLocalHistoryData = False
         self.State = None
         self.PriceDate = None
         self.Prices = None
@@ -64,10 +64,6 @@ class BaseStrategy():
             '513520.SH',    # 日经
             '159561.SZ',    # 德国
             '513030.SH',    # 德国
-            '512890.SH',    # 红利低波100
-            '515100.SH',    # 红利低波100
-        }
-        self.AlwaysBuyStocks = {
             '512890.SH',    # 红利低波100
             '515100.SH',    # 红利低波100
         }
@@ -129,7 +125,7 @@ class BaseStrategy():
 
         # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
         #     tradingAmount = 10000
-        if maxSellCount > 5 and index < total / 4 and stock not in self.AlwaysBuyStocks:
+        if maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
 
         # buy_index = getattr(self, 'buy_index', 0)
@@ -153,7 +149,7 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if maxSellCount > 5 and index < total / 4 and stock not in self.AlwaysBuyStocks:
+        if maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
 
         # sell_index = getattr(self, 'sell_index', 0)
@@ -856,7 +852,7 @@ class LevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False       # LevelGridStrategy
-            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.Stocks[0] not in self.AlwaysBuyStocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
+            if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and self.days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):
                 pre_buy_check = True
@@ -1501,7 +1497,7 @@ class PairLevelGridStrategy(BaseStrategy):
         good_up = self.r_squared > 0.8 and self.slope > 0
         bad_down = self.r_squared > 0.8 and self.slope < 0
 
-        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and stock not in self.AlwaysBuyStocks and current_holding > 0:
+        if self.ClosePosition and self.Stocks[0] not in self.NotClosePositionStocks and current_holding > 0:
             self.Print('Close Position')
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding, True, rsi)
             self.ClosePosition = False
@@ -1520,8 +1516,6 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.SellExecuted = executed
 
             pre_buy_check = False
-            if self.Stocks[0] in self.AlwaysBuyStocks:
-                pre_buy_check = True
             if not self.ClosePosition and self.Stocks[0] not in self.simple_stocks and self.buy_index < len(self.levels) and self.slope > -0.002 and days_above_sma > 10:
                 pre_buy_check = True
             elif self.Stocks[0] in self.simple_stocks and self.buy_index < len(self.levels):

@@ -125,7 +125,7 @@ class BaseStrategy():
 
         # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
         #     tradingAmount = 10000
-        if maxSellCount > 5 and index < total / 4:
+        if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
 
         # buy_index = getattr(self, 'buy_index', 0)
@@ -149,7 +149,7 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if maxSellCount > 5 and index < total / 4:
+        if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
 
         # sell_index = getattr(self, 'sell_index', 0)
@@ -380,7 +380,8 @@ class BaseStrategy():
                 prices[stock] = self.GetLocalHistoricalPrice(C, stock, fields, count)
             else:
                 prices[stock] = C.get_market_data_ex(fields, [stock], period=period, count=count, end_time=self.Yesterday, dividend_type='front')[stock]
-
+                if not self.IsBacktest:
+                    self.Print(prices[stock].tail(1))
         for stock in stocks:
             if stock not in prices:
                 self.Print(f"Error: Failed to get historical prices for {stock}")
@@ -733,7 +734,6 @@ class LevelGridStrategy(BaseStrategy):
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
             prices250 = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=290)[stock]
-            # print(prices250)
             prices120 = prices250.tail(160)
             prices = prices250.tail(60)
 

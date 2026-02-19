@@ -45,7 +45,7 @@ stockLevelGridStrategies = [
 
 pairLevelGridStrategies = [
     {'stocks': ["515070.SH", "159819.SZ"], 'stockNames':['人工智能', '人工智能']},
-    {'stocks': ["159518.SZ", "513350.SH"], 'stockNames':['标普油气', '标普油气'], 'priority': 10},
+    {'stocks': ["513350.SH", "159518.SZ"], 'stockNames':['标普油气', '标普油气'], 'priority': 10, 'threshold_ratio':0.02},
     {'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},
     {'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},
     {'stocks': ["159570.SZ", "159567.SZ"], 'stockNames':['创新药', '创新药']},
@@ -59,8 +59,11 @@ pairLevelGridStrategies = [
     {'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
     {'stocks': ["513050.SH", "159605.SZ"], 'stockNames':['中概互联', '中概互联']},
     {'stocks': ["512890.SH", "515100.SH"], 'stockNames':['红利低波100', '红利低波100']},
+    {'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
     #{'stocks': ["516000.SH", "515400.SH"], 'stockNames':['大数据', '大数据']},
-    {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长']},
+    {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},
+    {'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
+    {'stocks': ["588080.SH", "159915.SZ"], 'stockNames':['科创板', '科创板'], 'threshold_ratio':0.02},
     #{'stocks': ["159561.SZ", "513030.SH"], 'stockNames':['德国', '德国']},
 ]
 

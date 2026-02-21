@@ -9,7 +9,7 @@ import math
 import bisect
 
 class BaseStrategy():
-    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, TradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, tradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
@@ -21,7 +21,7 @@ class BaseStrategy():
         self.Yesterday = None
         self.Account = "testS"
         self.AccountType = "STOCK"
-        self.TradingAmount = TradingAmount
+        self.TradingAmount = tradingAmount
         self.RetainAmount = 0
         self.base_price = None
         self.logical_holding = 0
@@ -92,7 +92,7 @@ class BaseStrategy():
     def FindMaxSellCount(self):
         sell_counts = [s.SellCount for s in self.Universe.Strategies.values() if not isinstance(s, SimpleGridStrategy) ]
 
-        return max(sell_counts)
+        return max(sell_counts) if len(sell_counts) > 0 else 0
 
     def GetCashPercent(self):
         positions = self.GetPositions()[0]
@@ -198,12 +198,13 @@ class BaseStrategy():
         #     return
 
         if not os.path.exists(file):
-            self.TradingAmount = 30000
+            self.TradingAmount = 40000
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
 
-                self.TradingAmount = state.get('trading_amount', 30000)
+                if self.TradingAmount is None:
+                    self.TradingAmount = state.get('trading_amount', 40000)
                 self.SellMultiplier = state.get('sell_multiplier', 1)
                 self.RetainAmount = state.get('retain_amount', 0)
         except Exception as e:

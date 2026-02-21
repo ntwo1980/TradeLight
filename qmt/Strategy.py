@@ -1058,6 +1058,7 @@ class PairGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
+            self.Priority = self.OldPriority
             self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairGridStrategy
@@ -1073,6 +1074,8 @@ class PairGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
+        self.OldPriority = self.Priority
+        self.Priority = 99
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
@@ -1387,6 +1390,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
+            self.Priority = self.OldPriority
             self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairLevelGridStrategy
@@ -1402,6 +1406,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
+        self.OldPriority = self.Priority
+        self.Priority = 99
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
@@ -1829,6 +1835,8 @@ class MomentumRotationStrategy(BaseStrategy):
         self.current_held = None
         self.pending_switch_to = new_stock
         self.pending_switch_cash = current_holding * price_old
+        self.OldPriority = self.Priority
+        self.Priority = 99
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def SwitchPosition_Buy(self, C, current_prices):    # MomentumRotationStrategy
@@ -1848,6 +1856,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.base_price = price_new
             self.pending_switch_to = None
             self.pending_switch_cash = 0
+            self.Priority = self.OldPriority
             self.SaveStrategyState(self.current_held, self.base_price, self.logical_holding)
 
     def f(self, C):    # MomentumRotationStrategy

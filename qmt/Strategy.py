@@ -95,7 +95,7 @@ class BaseStrategy():
         return max(sell_counts)
 
     def GetCashPercent(self):
-        positions = self.GetPositions()
+        positions = self.GetPositions()[0]
         yhrl = positions.get('511880.SH', 0)
         cash = self.GetAvailableCash() + yhrl
 
@@ -105,9 +105,14 @@ class BaseStrategy():
 
     def GetBuyTradingAmount(self, stock, limitByAsset = True):
         maxSellCount = self.FindMaxSellCount()
-        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * self.SellMultiplier / 100 + 1)
+        positions = self.GetPositions()[0]
+        all_positions = self.GetPositions()[1]
+        position = all_positions.get(stock, 0)
+        sell_multiplier = self.SellMultiplier
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
+        if position > tradingAmount / 2 and limitByAsset:
+            tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * 1 / 100 + 1)
 
-        positions = self.GetPositions()
         yhrl = positions.get('511880.SH', 0)
         cash = self.GetAvailableCash() + yhrl
 
@@ -115,44 +120,33 @@ class BaseStrategy():
         index = self.FindSellCountIndex()
         total = len(self.Universe.Strategies)
 
-        # for s in sorted(self.Universe.StrategyList, key=lambda x: -x.SellCount, reverse=True):
-        #     print({'sc': s.SellCount})
-
-        # print({'SellCount': self.SellCount, 'Index:': index})
-
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        # if limitByAsset and maxSellCount > 5 and cash / totalAsset < 0.1 and index < total / 2:
-        #     tradingAmount = 10000
         if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
 
-        # buy_index = getattr(self, 'buy_index', 0)
         return tradingAmount
 
     def GetSellTradingAmount(self, stock):
         maxSellCount = self.FindMaxSellCount()
 
-        # tradingAmount = self.TradingAmount * (self.SellCount * self.SellMultiplier / 100 + 1)
-        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * self.SellMultiplier / 100 + 1)
+        sell_multiplier = 1
+        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
 
-        positions = self.GetPositions()
+        positions = self.GetPositions()[0]
         yhrl = positions.get('511880.SH', 0)
         cash = self.GetAvailableCash() + yhrl
 
         totalAsset = self.GetTotalAsset() - self.RetainAmount
         index = self.FindSellCountIndex()
         total = len(self.Universe.Strategies)
-        # tradingAmount = totalAsset * (self.SellCount * self.SellMultiplier / 100 + 1) / 25
 
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
         if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
             tradingAmount = tradingAmount / 4
-
-        # sell_index = getattr(self, 'sell_index', 0)
 
         return tradingAmount
 
@@ -160,7 +154,7 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        tradingAmount = self.GetBuyTradingAmount(False, stock)
+        tradingAmount = self.GetBuyTradingAmount(stock, False)
         return tradingAmount * 3.5 if self.Priority < 10 else tradingAmount * 5.5
 
     def Print(self, string, **kwargs):
@@ -295,20 +289,13 @@ class BaseStrategy():
     def GetPositions(self): # BaseStrategy
         positions = self.GetTradeDetailData(self.Account, self.AccountType, 'position')
         holdings = {}
+        all_holdings = {}
         for pos in positions:
             key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
             holdings[key] = pos.m_nCanUseVolume  # Available quantity for selling
+            all_holdings[key] = pos.m_nVolume
 
-        return holdings
-
-    def GetAllPositions(self): # BaseStrategy
-        positions = self.GetTradeDetailData(self.Account, self.AccountType, 'position')
-        holdings = {}
-        for pos in positions:
-            key = pos.m_strInstrumentID + '.' + pos.m_strExchangeID
-            holdings[key] = pos.m_nVolume
-
-        return holdings
+        return (holdings, all_holdings)
 
     def RebuildWaitingListFromOpenOrders(self): # BaseStrategy
         if self.IsBacktest:
@@ -538,7 +525,7 @@ class SimpleGridStrategy(BaseStrategy):
             return
 
         # Get position
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         current_holding = holdings.get(self.Stocks[0], 0)
 
@@ -664,7 +651,7 @@ class SimpleGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-        positions = self.GetAllPositions()
+        positions = self.GetPositions()[1]
         position = positions.get(self.Stocks[0], 0)
 
         if position != self.logical_holding:
@@ -777,7 +764,7 @@ class LevelGridStrategy(BaseStrategy):
         # if not self.IsBacktest and not self.IsTradingTime():
         #     return
 
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         current_holding = holdings.get(self.Stocks[0], 0)
 
@@ -923,8 +910,6 @@ class LevelGridStrategy(BaseStrategy):
             unit_to_sell = self.logical_holding
 
         if unit_to_sell > 0:    # Ensure at least 100 shares
-            # if not close_position and unit_to_sell == self.logical_holding and self.rsi > 60:
-            #     return False
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
             self.logical_holding -= unit_to_sell
@@ -938,12 +923,10 @@ class LevelGridStrategy(BaseStrategy):
             else:
                 self.SellCount += 1
             if self.logical_holding > 0:
-                # self.base_price = current_price
                 self.sell_index += 1
                 self.buy_index = 0
 
             else:
-                # self.base_price = None
                 self.sell_index = 0
                 self.buy_index = 0
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
@@ -988,7 +971,7 @@ class LevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-        positions = self.GetAllPositions()
+        positions = self.GetPositions()[1]
         position = positions.get(self.Stocks[0], 0)
 
         if position != self.logical_holding:
@@ -1132,7 +1115,7 @@ class PairGridStrategy(BaseStrategy):
             'atr': self.atr,
         })
 
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
         current_holding = holdings.get(stock, 0)
 
         executed = False
@@ -1163,7 +1146,7 @@ class PairGridStrategy(BaseStrategy):
             return
 
         # Get position
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         current_holding = holdings.get(self.current_held, 0)
 
@@ -1305,7 +1288,7 @@ class PairGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-        positions = self.GetAllPositions()
+        positions = self.GetPositions()[1]
         position = positions.get(self.current_held, 0)
 
         if position != self.logical_holding:
@@ -1489,7 +1472,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
             self.ClosePosition = True
 
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
         current_holding = holdings.get(stock, 0)
 
         executed = False
@@ -1553,7 +1536,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return
 
         # Get position
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         current_holding = holdings.get(self.current_held, 0)
 
@@ -1705,7 +1688,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
             self.SaveStrategyState()
 
-        positions = self.GetAllPositions()
+        positions = self.GetPositions()[1]
         position = positions.get(self.current_held, 0)
 
         if position != self.logical_holding:
@@ -1877,7 +1860,7 @@ class MomentumRotationStrategy(BaseStrategy):
             return
 
         # Get position
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         current_holding = holdings.get(self.current_held, 0)
 
@@ -2010,7 +1993,7 @@ class JointquantEmailStrategy(BaseStrategy):
             return
 
         # Get position
-        holdings = self.GetPositions()
+        holdings = self.GetPositions()[0]
 
         file = f'D:/software/君弘君智交易系统/bin.x64/joinquant_{self.Stocks[0]}.json'
         if not os.path.exists(file):

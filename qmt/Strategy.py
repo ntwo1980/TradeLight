@@ -1709,6 +1709,8 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.current_held = None
                     self.base_price = None
 
+        return  # intended, skip following
+
         if self.logical_holding > 0 and self.base_price is not None:
             original_base_price = self.base_price
             if abs(self.base_price - self.current_price) > self.atr * 4:

@@ -199,6 +199,7 @@ class BaseStrategy():
 
         if not os.path.exists(file):
             self.TradingAmount = 40000
+            return
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
@@ -237,8 +238,8 @@ class BaseStrategy():
 
                 return state
         except Exception as e:
-            return None
             self.Print(f"Error: Failed to load strategy state: {e}")
+            return None
 
     def SaveStrategyState(self, file, data):   # BaseStrategy
         if self.IsBacktest:
@@ -897,6 +898,7 @@ class LevelGridStrategy(BaseStrategy):
     def ExecuteSell(self, C, stock, current_price, current_holding, close_position = False):     # LevelGridStrategy
         if close_position:
             unit_to_sell = current_holding
+            sell_amount = current_holding * current_price
         else:
             sell_amount = self.GetSellTradingAmount(stock)
 
@@ -1626,7 +1628,7 @@ class PairLevelGridStrategy(BaseStrategy):
             if not isSwitch:
                 self.buy_index += 1
                 self.sell_index = 0
-            print(f"Updated base price to: {self.base_price:.3f}")
+            self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
         else:
             self.Print(f"Error: Insufficient cash or calculated shares is zero, cannot buy")
@@ -1706,10 +1708,6 @@ class PairLevelGridStrategy(BaseStrategy):
                 if position == 0:
                     self.current_held = None
                     self.base_price = None
-
-        return
-
-        stock = self.Stocks[0]
 
         if self.logical_holding > 0 and self.base_price is not None:
             original_base_price = self.base_price
@@ -2016,6 +2014,7 @@ class JointquantEmailStrategy(BaseStrategy):
                 held_stocks = state['held_stocks']
         except Exception as e:
             self.Print(f"Error: Failed to load strategy state: {e}")
+            return
 
         held_stocks = [s.replace('XSHE', 'SZ') for s in held_stocks]
         held_stocks = [s.replace('XSHG', 'SH') for s in held_stocks]

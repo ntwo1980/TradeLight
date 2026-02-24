@@ -1055,6 +1055,7 @@ class PairGridStrategy(BaseStrategy):
             self.Print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
+        self.SellExecuted = False
         # 检查可用资金
         if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
@@ -1079,6 +1080,7 @@ class PairGridStrategy(BaseStrategy):
         self.new_base_price = new_base_price
         self.OldPriority = self.Priority
         self.Priority = 99
+        self.SellExecuted = True
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
@@ -1387,6 +1389,7 @@ class PairLevelGridStrategy(BaseStrategy):
             self.Print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
+        self.SellExecuted = False
         # 检查可用资金
         if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
@@ -1411,6 +1414,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.new_base_price = new_base_price
         self.OldPriority = self.Priority
         self.Priority = 99
+        self.SellExecuted = True
         self.SaveStrategyState()
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
@@ -1838,6 +1842,7 @@ class MomentumRotationStrategy(BaseStrategy):
         self.pending_switch_cash = current_holding * price_old
         self.OldPriority = self.Priority
         self.Priority = 99
+        self.SellExecuted = True
         self.Print(f"Closed position: {current_holding} shares of {old_stock} @ {price_old:.3f}")
 
     def SwitchPosition_Buy(self, C, current_prices):    # MomentumRotationStrategy
@@ -1852,6 +1857,7 @@ class MomentumRotationStrategy(BaseStrategy):
             self.Print(f"Switch amount insufficient for 100 shares, skipped")
             return
 
+        self.SellExecuted = False
         # 检查可用资金
         if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount=cash_from_sale):
             self.base_price = price_new

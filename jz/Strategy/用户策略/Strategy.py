@@ -423,7 +423,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -741,7 +741,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -798,9 +798,12 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
         if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
-            level = self.sell_levels[self.sell_index]
-            diff = self.atr * level
-            sell_threshold = base_price + diff
+            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
+                sell_threshold = base_price
+            else:
+                level = self.sell_levels[self.sell_index]
+                diff = self.atr * level
+                sell_threshold = base_price + diff
 
             if current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
@@ -827,9 +830,12 @@ class SpreadGridStrategy(BaseStrategy):
             self.print(f'Error: sell_index error')
 
         if self.buy_index < len(self.buy_levels) and not executed:   # SpreadGridStrategy
-            level = self.buy_levels[self.buy_index]
-            diff = self.atr * level
-            buy_threshold = base_price - diff
+            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
+                buy_threshold = base_price
+            else:
+                level = self.buy_levels[self.buy_index]
+                diff = self.atr * level
+                buy_threshold = base_price - diff
 
             if current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True

@@ -819,10 +819,10 @@ class SpreadGridStrategy(BaseStrategy):
                         increments = self.logical_holding // (3 * orderQty)
                         orderQuantity = orderQuantity + increments
 
-                    if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
+                    if self.logical_holding < 0 and ((abs(self.logical_holding) + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.4):
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0:
-                        if 7 <= days_above_ma <= 13 and -0.3 < self.slope < 0.3:
+                        if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
@@ -852,10 +852,10 @@ class SpreadGridStrategy(BaseStrategy):
                         increments = abs(self.logical_holding) // (3 * orderQty)
                         orderQuantity = orderQuantity + max(increments, 1)
 
-                    if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
+                    if self.logical_holding > 0 and ((self.logical_holding + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.4):
                         executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0:
-                        if 7 <= days_above_ma <= 13 and -0.3 < self.slope < 0.3:
+                        if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:
                         executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)

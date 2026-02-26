@@ -811,17 +811,18 @@ class SpreadGridStrategy(BaseStrategy):
                     base_price = sum(close_prices[-20:]) / 20
                     if current_price < base_price - self.atr * self.buy_levels[0]:
                         sell = False
-                if sell:
-                    orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding >= 4:
-                        orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                        increments = self.logical_holding // (3 * orderQty)
-                        orderQuantity = orderQuantity + increments
 
-                    if self.logical_holding < 0 and ((abs(self.logical_holding) + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
-                        executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
-                    elif self.logical_holding == 0:
+                orderQuantity = orderQty
+                if orderQty == 1 and self.logical_holding >= 4:
+                    orderQuantity = 2
+                if orderQty > 1 and self.logical_holding > 3 * orderQty:
+                    increments = self.logical_holding // (3 * orderQty)
+                    orderQuantity = orderQuantity + increments
+
+                if self.logical_holding < 0 and ((abs(self.logical_holding) + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
+                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
+                elif sell:
+                    if self.logical_holding == 0:
                         if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
@@ -844,17 +845,17 @@ class SpreadGridStrategy(BaseStrategy):
                     if current_price > base_price + self.atr * self.sell_levels[0]:
                         buy = False
 
-                if buy:
-                    orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding <= -4:
-                        orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                        increments = abs(self.logical_holding) // (3 * orderQty)
-                        orderQuantity = orderQuantity + max(increments, 1)
+                orderQuantity = orderQty
+                if orderQty == 1 and self.logical_holding <= -4:
+                    orderQuantity = 2
+                if orderQty > 1 and self.logical_holding < -3 * orderQty:
+                    increments = abs(self.logical_holding) // (3 * orderQty)
+                    orderQuantity = orderQuantity + max(increments, 1)
 
-                    if self.logical_holding > 0 and ((self.logical_holding + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
-                        executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
-                    elif self.logical_holding == 0:
+                if self.logical_holding > 0 and ((self.logical_holding + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                elif buy:
+                    if self.logical_holding == 0:
                         if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:

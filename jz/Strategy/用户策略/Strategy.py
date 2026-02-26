@@ -825,7 +825,7 @@ class SpreadGridStrategy(BaseStrategy):
                     elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3:
-                        if 7 <= days_above_ma <= 13
+                        if 7 <= days_above_ma <= 13:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)

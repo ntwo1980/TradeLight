@@ -96,7 +96,7 @@ class BaseStrategy():
                 vals = df['Close'].values[-20:]
                 shift = vals.min() - 1e-6
                 y = np.log(vals - shift)
-                slope, intercept = np.polyfit(x, y, 1)
+                s)lope, intercept = np.polyfit(x, y, 1)
                 self.slopes[code] = slope
                 self.r_squareds[code] = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
             else:
@@ -819,7 +819,7 @@ class SpreadGridStrategy(BaseStrategy):
                         increments = self.logical_holding // (3 * orderQty)
                         orderQuantity = orderQuantity + increments
 
-                    if self.logical_holding < 0 and ((abs(self.logical_holding) + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.4):
+                    if self.logical_holding < 0 and ((abs(self.logical_holding) + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0:
                         if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:
@@ -852,7 +852,7 @@ class SpreadGridStrategy(BaseStrategy):
                         increments = abs(self.logical_holding) // (3 * orderQty)
                         orderQuantity = orderQuantity + max(increments, 1)
 
-                    if self.logical_holding > 0 and ((self.logical_holding + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.4):
+                    if self.logical_holding > 0 and ((self.logical_holding + orderQuantity) >= 7 * orderQty or abs(self.slope) > 0.3):
                         executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0:
                         if 7 <= days_above_ma <= 13 and abs(self.slope) < 0.3:

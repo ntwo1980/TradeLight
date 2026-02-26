@@ -798,14 +798,14 @@ class SpreadGridStrategy(BaseStrategy):
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
         if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
-            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0 and -0.3 < self.slope < 0.3:
+            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0 and abs(self.slope) < 0.3:
                 sell_threshold = base_price + self.atr * self.sell_levels[0] / 2
             else:
                 level = self.sell_levels[self.sell_index]
                 diff = self.atr * level
                 sell_threshold = base_price + diff
 
-            if self.logical_holding < 0 and abs(self.slope) > 0.3):
+            if self.logical_holding < 0 and abs(self.slope) > 0.3:
                 executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
@@ -833,14 +833,14 @@ class SpreadGridStrategy(BaseStrategy):
             self.print(f'Error: sell_index error')
 
         if self.buy_index < len(self.buy_levels) and not executed:   # SpreadGridStrategy
-            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0 and -0.3 < self.slope < 0.3:
+            if self.logical_holding == 0 and buy_position == 0 and sell_position == 0 and abs(self.slope) < 0.3:
                 buy_threshold = base_price + self.atr * self.buy_levels[0] / 2
             else:
                 level = self.buy_levels[self.buy_index]
                 diff = self.atr * level
                 buy_threshold = base_price - diff
 
-            if self.logical_holding > 0 and abs(self.slope) > 0.3):
+            if self.logical_holding > 0 and abs(self.slope) > 0.3:
                 executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
             elif current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True

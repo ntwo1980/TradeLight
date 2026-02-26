@@ -96,7 +96,7 @@ class BaseStrategy():
                 vals = df['Close'].values[-20:]
                 shift = vals.min() - 1e-6
                 y = np.log(vals - shift)
-                s)lope, intercept = np.polyfit(x, y, 1)
+                slope, intercept = np.polyfit(x, y, 1)
                 self.slopes[code] = slope
                 self.r_squareds[code] = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
             else:

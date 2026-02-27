@@ -143,23 +143,7 @@ def handlebar(C):
     if not strategies[0].IsBacktest:
         return
 
-    max_retries = 100  # 最大重试次数，可根据需要调整
-    retry_count = 0
-
-    while retry_count < max_retries:
-        executed_flag = False
-        # 每次都按当前 PriceRatio 重新排序
-        for s in sorted(strategies, key=lambda x: (-x.Priority, -x.SellCount, x.PriceRatio)):
-            s.f(C)
-            if s.SellExecuted:
-                executed_flag = True
-                break  # 一旦有策略执行成功，立即跳出 for，重新开始 while
-        if not executed_flag:
-            break  # 本轮无任何策略执行，退出循环
-        retry_count += 1
-
-    if retry_count >= max_retries:
-        print("警告：达到最大重试次数，可能存在死循环或策略持续触发 Executed。")
+    f(C)
 
 def f(C):
     max_retries = 100  # 最大重试次数，可根据需要调整

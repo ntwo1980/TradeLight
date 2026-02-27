@@ -803,7 +803,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            if self.logical_holding < 0 and self.logical_holding < orderQty * 5 and abs(self.slope) > 0.3:
+            if self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3:
                 executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True

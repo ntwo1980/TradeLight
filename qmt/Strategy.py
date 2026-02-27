@@ -480,8 +480,11 @@ class BaseStrategy():
         return msg
 
 class SimpleGridStrategy(BaseStrategy):
-    def __init__(self, **kwargs):
+    def __init__(self, buyThresholdRatio = 1, **kwargs):
         super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
+        self.buy_threshold_ratio = buyThresholdRatio
+        if self.buy_threshold_ratio > 1:
+            self.buy_threshold_ratio = 1
 
     def init(self, C):   # SimpleGridStrategy
         super().init(C)
@@ -565,12 +568,11 @@ class SimpleGridStrategy(BaseStrategy):
             'atr': self.atr,
             'grid_unit': self.grid_unit})
 
-
         if self.current_price >= base_price + self.grid_unit * 1.001:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - self.grid_unit * 1.001:
+        elif self.current_price <= base_price - (self.grid_unit * 1.001 * self.buy_threshold_ratio):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
         if executed:

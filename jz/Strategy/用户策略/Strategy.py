@@ -808,8 +808,7 @@ class SpreadGridStrategy(BaseStrategy):
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
                 if self.logical_holding == orderQty and buy_position == orderQty:
-                    base_price = sum(close_prices[-20:]) / 20
-                    if current_price < base_price - self.atr * self.buy_levels[0]:
+                    if current_price < sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
                         sell = False
 
                 if sell:
@@ -842,8 +841,7 @@ class SpreadGridStrategy(BaseStrategy):
             elif current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True
                 if self.logical_holding == -orderQty and sell_position == orderQty:
-                    base_price = sum(close_prices[-20:]) / 20
-                    if current_price > base_price + self.atr * self.sell_levels[0]:
+                    if current_price > sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
                         buy = False
 
                 if buy:

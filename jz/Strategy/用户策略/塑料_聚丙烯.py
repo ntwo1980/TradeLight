@@ -16,7 +16,7 @@ def initialize(context):
             'codes': ['SPD|m|L-PP|2605|2605', 'DCE|M|L&PP|2605', 'DCE|F|L|2605', 'DCE|F|PP|2605'],
             'orderQty': 3,
             'firstPosition': True,
-            'atr': 35
+            'atr': 40
         },
         api = api()
     )

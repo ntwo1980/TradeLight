@@ -161,7 +161,7 @@ class BaseStrategy():
             self.after_market_close(context)
             return False
 
-        if not self.IsBacktest and self.idx < 10:
+        if not self.IsBacktest and self.idx < 5:
             self.idx = self.idx + 1
             return False
 
@@ -550,7 +550,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.logical_holding == 0 and buy_position == 0:
             ma_20 = talib.MA(self.DailyPrices[code]['Close'], timeperiod=20)
             days_above_ma = np.sum(self.DailyPrices[code]['Close'][-20:] > ma_20[-20:])
-            if 7 <= days_above_ma <= 13 and (limit is None or current_price < limit):
+            if 6 <= days_above_ma <= 14 and (limit is None or current_price < limit):
             # if up_days >= 2 and (limit is None or current_price < limit):
                 base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
                 if self.atr > 0:
@@ -803,7 +803,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            if self.logical_holding < 0 and self.logical_holding < orderQty * 5 and abs(self.slope) > 0.3:
+            if self.logical_holding < 0 and self.logical_holding < orderQty * 5 and abs(self.slope) < 0.3:
                 executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
                 sell = True
@@ -825,7 +825,7 @@ class SpreadGridStrategy(BaseStrategy):
                     elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3:
-                        if 7 <= days_above_ma <= 13:
+                        if 6 <= days_above_ma <= 14:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
@@ -837,7 +837,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3:
+            if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) < 0.3:
                 executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
             elif current_price <= buy_threshold and not existing_order and orderQty > 0:
                 buy = True

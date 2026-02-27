@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': '豆一_豆粕',
             'codes': ['SPD|m|A-M|2605|2605', 'DCE|M|A&M|2605', 'DCE|F|A|2605', 'DCE|F|M|2605'],
-            'orderQty': 2,
+            'orderQty': 5,
             'firstPosition': True,
             'atr': 50
         },

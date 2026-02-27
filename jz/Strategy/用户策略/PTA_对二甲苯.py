@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': 'PTA_对二甲苯',
             'codes': ['SPD|m|TA-PX|605|605', 'ZCE|M|TA&PX|605', 'ZCE|F|TA|605', 'ZCE|F|PX|605'],
-            'orderQty': 3,
+            'orderQty': 4,
             'firstPosition': True,
             'atr': 70
         },

@@ -12,11 +12,13 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '玉米',
-            'codes': ['DCE|F|C|2605'],
+            'name': '玻璃',
+            'codes': ['ZCE|F|FG|609'],
             'orderQty': 1,
-            'limit': 2100,
+            'limit': 1200,
             'threshold': 0.025,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -82,6 +84,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

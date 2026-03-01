@@ -1,3 +1,11 @@
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import talib
 import types
 from Strategy import PairLevelGridStrategy
@@ -8,15 +16,15 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = PairLevelGridStrategy()
+    strategy = SpreadGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '红枣',
-            'codes': ['ZCE|F|CJ|605'],
+            'name': '纯碱0507',
+            'codes': ['SPD|s|SA|605|609', 'ZCE|S|SA|605|609', 'ZCE|F|SA|605', 'ZCE|F|SA|609'],
             'orderQty': 1,
-            'limit': 8800,
-            'threshold': 0.025,
+            'firstPosition': False,
+            'atr': 6,
         },
         api = api()
     )

@@ -29,9 +29,9 @@ class BaseStrategy():
         self.dingding_keyword = None
         self.waiting_list = []
         self.pending_state_json = None
-        self.idx = 0
         self.max_logical_holding = 0
         self.trade_quantity = 0
+        self.order_deleted = False
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -43,7 +43,6 @@ class BaseStrategy():
         #self.api.SetTriggerType(3, 1000) # 每隔1000毫秒触发一次
         self.api.SetTriggerType(5)
         self.api.SetTriggerType(6) #连接状态触发
-        self.api.SetTriggerType(4, ['145900'])
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
 
@@ -61,9 +60,6 @@ class BaseStrategy():
 
     def LastTradeDate(self):
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
-
-    def CurrentTime(self):
-        return str(self.api.Time()) if self.IsBacktest else str(self.api.CurrentTime())
 
     def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
@@ -87,8 +83,11 @@ class BaseStrategy():
                 atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
 
                 atr_config = self.params.get('atr')
+                fixed_atr = self.params.get('fixedAtr', False)
                 if atr_config is not None:
-                    if atr > atr_config * 1.3 or atr < atr_config * 0.7:
+                    if fixed_atr:
+                        atr = atr_config
+                    elif atr > atr_config * 1.3 or atr < atr_config * 0.7:
                         atr = atr_config
 
                 self.ATRs[code] = atr
@@ -145,6 +144,8 @@ class BaseStrategy():
         self.context = context
         self.IsBacktest = context.strategyStatus() != 'C'
 
+        now = self.api.CurrentTime()
+
         if context.triggerType() == 'N':
             if context.triggerData()['ServerType'] == 'T':# 交易
                 if context.triggerData()['EventType'] == 1:# 交易连接
@@ -157,18 +158,19 @@ class BaseStrategy():
                     self.print('Error: StopTrade')
 
                     return False
-        elif context.triggerType() == "T":
-            self.after_market_close(context)
+
+        if not self.IsBacktest and 0.0859 < now < 0.090010:
+            if self.order_deleted:
+                self.order_deleted = False
             return False
 
-        if not self.IsBacktest and self.idx < 5:
-            self.idx = self.idx + 1
+        if not self.IsBacktest and 0.2059 < now < 0.210010:
+            if not self.order_deleted:
+                self.api.DeleteAllOrders()
+                self.order_deleted = True
             return False
 
         return True
-
-    def after_market_close(self, context):
-        pass
 
     def GetBuyPosition(self, code):
         if self.IsBacktest:

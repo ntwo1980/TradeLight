@@ -13,7 +13,7 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '白糖',
-            'codes': ['ZCE|F|SR|605'],
+            'codes': ['ZCE|F|SR|609'],
             'orderQty': 1,
             'limit': 5200,
             'threshold': 0.025,
@@ -22,7 +22,6 @@ def initialize(context):
     )
 
     strategis.append(strategy)
-
 
 # 策略触发事件每次触发时都会执行该函数
 def handle_data(context):
@@ -54,6 +53,7 @@ def api():
         Close=Close,
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
+        DeleteAllOrders=DeleteAllOrders,
         Enum_Buy=Enum_Buy,
         Enum_Canceled=Enum_Canceled,
         Enum_Entry=Enum_Entry,

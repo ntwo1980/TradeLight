@@ -13,7 +13,7 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '纸浆',
-            'codes': ['SHFE|F|SP|2605'],
+            'codes': ['SHFE|F|SP|2607'],
             'orderQty': 1,
             'limit': 5200,
             'threshold': 0.025,
@@ -54,6 +54,7 @@ def api():
         Close=Close,
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
+        DeleteAllOrders=DeleteAllOrders,
         Enum_Buy=Enum_Buy,
         Enum_Canceled=Enum_Canceled,
         Enum_Entry=Enum_Entry,

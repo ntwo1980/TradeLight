@@ -56,6 +56,7 @@ def api():
         Close=Close,
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
+        DeleteAllOrders=DeleteAllOrders,
         Enum_Buy=Enum_Buy,
         Enum_Canceled=Enum_Canceled,
         Enum_Entry=Enum_Entry,

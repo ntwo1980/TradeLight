@@ -164,10 +164,11 @@ class BaseStrategy():
                 self.order_deleted = False
             return False
 
-        if not self.IsBacktest and 0.2059 < now < 0.210010:
+        if not self.IsBacktest and 0.2059 < now < 0.210010 and 'SPD|m|FG-SA' in self.codes[0]:
             if not self.order_deleted:
-                self.api.DeleteAllOrders()
                 self.order_deleted = True
+                self.api.DeleteAllOrders()
+                self.print("Order deleted")
             return False
 
         return True
@@ -859,7 +860,7 @@ class SpreadGridStrategy(BaseStrategy):
                     elif self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                         executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3:
-                        if 7 <= days_above_ma <= 13:
+                        if 6 <= days_above_ma <= 14:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:
                         executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)

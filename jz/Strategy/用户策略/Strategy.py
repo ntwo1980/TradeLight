@@ -159,12 +159,12 @@ class BaseStrategy():
 
                     return False
 
-        if not self.IsBacktest and 0.0859 < now < 0.090010:
+        if not self.IsBacktest and (0.0859 < now < 0.090010 or 0.2059 < now < 0.210010):
             if self.order_deleted:
                 self.order_deleted = False
             return False
 
-        if not self.IsBacktest and 0.2059 < now < 0.210010 and 'SPD|m|FG-SA' in self.codes[0]:
+        if not self.IsBacktest and 0.2259 < now < 0.2310 and 'SPD|m|FG-SA' in self.codes[0]:
             if not self.order_deleted:
                 self.order_deleted = True
                 self.api.DeleteAllOrders()

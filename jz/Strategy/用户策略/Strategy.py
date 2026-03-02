@@ -743,6 +743,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.buy_index = 0
         self.sell_index = 0
         self.new_base_price = None
+        self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
 
         for code in self.codes:
             self.api.SetBarInterval(code, 'M', 1, 1)
@@ -827,7 +828,7 @@ class SpreadGridStrategy(BaseStrategy):
                     elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3:
-                        if 6 <= days_above_ma <= 14:
+                        if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                             executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
@@ -860,7 +861,7 @@ class SpreadGridStrategy(BaseStrategy):
                     elif self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                         executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3:
-                        if 6 <= days_above_ma <= 14:
+                        if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                             executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:
                         executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)

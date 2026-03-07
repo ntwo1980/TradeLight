@@ -811,31 +811,33 @@ class SpreadGridStrategy(BaseStrategy):
             if self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3:
                 executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
-                sell = True
-                if self.logical_holding == orderQty and buy_position == orderQty:
-                    if current_price < sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
-                        sell = False
+                orderQuantity = orderQty
+                if orderQty == 1 and self.logical_holding >= 4:
+                    orderQuantity = 2
+                if orderQty > 1 and self.logical_holding > 3 * orderQty:
+                    increments = self.logical_holding // (3 * orderQty)
+                    orderQuantity = orderQuantity + increments
 
-                if sell:
-                    orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding >= 4:
-                        orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                        increments = self.logical_holding // (3 * orderQty)
-                        orderQuantity = orderQuantity + increments
-
-                    if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
-                    elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
-                    elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + 1.5 * self.atr:
-                        if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, True)
+                if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
+                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
+                elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
+                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
+                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + 1.5 * self.atr:
+                    if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
+                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, True)
+                else:
+                    if self.logical_holding < 0:
+                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                     else:
-                        if self.logical_holding < 0:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+                        if self.double_first_position and self.logical_holding <= orderQty * 2:
+                            orderQuantity = orderQty * 2
+
+                        if self.logical_holding == orderQuantity and buy_position == orderQuantity:
+                            if current_price >= sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
+                                executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
                         else:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position and self.logical_holding <= orderQty * 2 else orderQuantity, True)
+                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+
         else:
             self.print(f'Error: sell_index error')
 
@@ -847,31 +849,32 @@ class SpreadGridStrategy(BaseStrategy):
             if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3:
                 executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
             elif current_price <= buy_threshold and not existing_order and orderQty > 0:
-                buy = True
-                if self.logical_holding == -orderQty and sell_position == orderQty:
-                    if current_price > sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
-                        buy = False
+                orderQuantity = orderQty
+                if orderQty == 1 and self.logical_holding <= -4:
+                    orderQuantity = 2
+                if orderQty > 1 and self.logical_holding < -3 * orderQty:
+                    increments = abs(self.logical_holding) // (3 * orderQty)
+                    orderQuantity = orderQuantity + max(increments, 1)
 
-                if buy:
-                    orderQuantity = orderQty
-                    if orderQty == 1 and self.logical_holding <= -4:
-                        orderQuantity = 2
-                    if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                        increments = abs(self.logical_holding) // (3 * orderQty)
-                        orderQuantity = orderQuantity + max(increments, 1)
-
-                    if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
-                        executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
-                    elif self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                        executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
-                    elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - 1.5 * self.atr:
-                        if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, False, True)
+                if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                elif self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - 1.5 * self.atr:
+                    if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
+                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, False, True)
+                else:
+                    if self.logical_holding > 0:
+                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                     else:
-                        if self.logical_holding > 0:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
+                        if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
+                            orderQuantity = orderQty * 2
+
+                        if self.logical_holding == -orderQuantity and sell_position == orderQuantity:
+                            if current_price <= sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
+                                executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
                         else:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position and abs(self.logical_holding) <= orderQty * 2 else orderQuantity, False, True)
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
         elif not executed:
             self.print(f'Error: buy_index error')
 

@@ -744,7 +744,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
         self.new_base_price = None
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
-        self.doubleFirstPosition = self.params.get('doubleFirstPosition', True)
+        self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
             self.api.SetBarInterval(code, 'M', 1, 1)
@@ -830,9 +830,12 @@ class SpreadGridStrategy(BaseStrategy):
                         executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), False, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + 1.5 * self.atr:
                         if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.doubleFirstPosition else orderQuantity, True)
+                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, True)
                     else:
-                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.doubleFirstPosition and abs(self.logical_holding) < orderQty else orderQuantity, True)
+                        if self.logical_holding < 0:
+                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+                        else:
+                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position and self.logical_holding <= orderQty * 2 else orderQuantity, True)
         else:
             self.print(f'Error: sell_index error')
 
@@ -863,9 +866,12 @@ class SpreadGridStrategy(BaseStrategy):
                         executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
                     elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - 1.5 * self.atr:
                         if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.doubleFirstPosition else orderQuantity, False, True)
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, False, True)
                     else:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.doubleFirstPosition and self.logical_holding < orderQty else orderQuantity, False, True)
+                        if self.logical_holding > 0:
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, False, True)
+                        else:
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position and abs(self.logical_holding) <= orderQty * 2 else orderQuantity, False, True)
         elif not executed:
             self.print(f'Error: buy_index error')
 

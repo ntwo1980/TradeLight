@@ -13,7 +13,7 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '菜粕',
-            'codes': ['ZCE|F|RM|605'],
+            'codes': ['ZCE|F|RM|609'],
             'orderQty': 6,
             'limit': 2300,
             'threshold': 0.025,

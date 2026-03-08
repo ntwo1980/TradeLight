@@ -15,8 +15,9 @@ def initialize(context):
             'name': '豆二_豆粕',
             'codes': ['SPD|m|B-M|2605|2605', 'DCE|M|B&M|2605', 'DCE|F|B|2605', 'DCE|F|M|2605'],
             'orderQty': 5,
-            'firstPosition': True,
-            'atr': 18
+            'firstPosition': False,
+            'atr': 16,
+            'fixedAtr': True
         },
         api = api()
     )

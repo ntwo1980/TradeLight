@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': '纸浆',
             'codes': ['SHFE|F|SP|2607'],
-            'orderQty': 1,
+            'orderQty': 2,
             'limit': 5200,
             'threshold': 0.025,
         },

@@ -14,8 +14,7 @@ def initialize(context):
         params = {
             'name': '白糖',
             'codes': ['ZCE|F|SR|609'],
-            'orderQty': 1,
-            'limit': 5200,
+            'orderQty': 4,
             'threshold': 0.025,
         },
         api = api()

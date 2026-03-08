@@ -15,8 +15,9 @@ def initialize(context):
             'name': '玉米_淀粉',
             'codes': ['SPD|m|C-CS|2605|2605', 'DCE|M|C&CS|2605', 'DCE|F|C|2605', 'DCE|F|CS|2605'],
             'orderQty': 5,
-            'firstPosition': False,
-            'atr': 13
+            'firstPosition': True,
+            'atr': 10,
+            'fixedAtr': True
         },
         api = api()
     )

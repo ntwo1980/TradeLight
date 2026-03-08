@@ -20,7 +20,7 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '纯碱0507',
+            'name': '纯碱0509',
             'codes': ['SPD|s|SA|605|609', 'ZCE|S|SA|605|609', 'ZCE|F|SA|605', 'ZCE|F|SA|609'],
             'orderQty': 1,
             'firstPosition': False,

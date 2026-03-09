@@ -1152,7 +1152,7 @@ class PairGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        if not self.CheckWaitingList(C):
+        if self.pending_switch_to is None and not self.CheckWaitingList(C):
             return
 
         # Get position
@@ -1547,7 +1547,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not self.IsBacktest and not self.IsTradingTime():
             return
 
-        if not self.CheckWaitingList(C):
+        if self.pending_switch_to is None and not self.CheckWaitingList(C):
             return
 
         # Get position

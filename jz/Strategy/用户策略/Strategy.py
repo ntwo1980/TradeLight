@@ -747,7 +747,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -815,7 +815,7 @@ class SpreadGridStrategy(BaseStrategy):
                 if orderQty == 1 and self.logical_holding >= 4:
                     orderQuantity = 2
                 if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                    increments = self.logical_holding // (3 * orderQty)
+                    increments = orderQty // 3
                     orderQuantity = orderQuantity + increments
 
                 if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
@@ -853,8 +853,8 @@ class SpreadGridStrategy(BaseStrategy):
                 if orderQty == 1 and self.logical_holding <= -4:
                     orderQuantity = 2
                 if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                    increments = abs(self.logical_holding) // (3 * orderQty)
-                    orderQuantity = orderQuantity + max(increments, 1)
+                    increments = orderQty // 3
+                    orderQuantity = orderQuantity + increments
 
                 if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
                     executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)

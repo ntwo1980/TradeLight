@@ -1,10 +1,12 @@
-import requests
-import pandas as pd
-import numpy as np
-from datetime import datetime
-import talib
 import json
 import os
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import requests
+import talib
+
 
 class BaseStrategy():
     def __init__(self, **kwargs):   # BaseStrategy
@@ -337,6 +339,7 @@ class BaseStrategy():
 
     def existing_order(self):
         tmp = []
+        has_filled = False
         for o in self.waiting_list:
             status = self.api.A_OrderStatus(o)
             if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
@@ -344,14 +347,22 @@ class BaseStrategy():
                 self.print(f"Order {o} status={status} existing")
             else:
                 if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                    has_filled = True
                     if self.pending_state_json is not None:
                         self.save_strategy_state_data(self.pending_state_json)
 
                 self.pending_state_json = None
                 self.print(f"Order {o} status={status} removed from waiting list")
 
+        if has_filled and tmp:
+            for o in tmp:
+                self.api.A_DeleteOrder(o)
+                self.print(f"Order {o} deleted due to other order filled")
+            tmp = []
+
         self.waiting_list = tmp
         return len(self.waiting_list) > 0
+
 
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"

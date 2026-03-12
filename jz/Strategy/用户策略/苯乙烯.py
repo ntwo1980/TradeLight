@@ -1,7 +1,7 @@
-import talib
 import types
-from Strategy import PairLevelGridStrategy
-from Strategy import SpreadGridStrategy
+
+import talib
+from Strategy import PairLevelGridStrategy, SpreadGridStrategy
 
 strategy = None
 strategis = []
@@ -41,6 +41,7 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
+        A_DeleteOrder=A_DeleteOrder,
         A_OrderStatus=A_OrderStatus,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,

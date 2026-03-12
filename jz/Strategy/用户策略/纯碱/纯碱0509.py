@@ -1,15 +1,15 @@
-import sys
 import os
+import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-import talib
 import types
-from Strategy import PairLevelGridStrategy
-from Strategy import SpreadGridStrategy
+
+import talib
+from Strategy import PairLevelGridStrategy, SpreadGridStrategy
 
 strategy = None
 strategis = []
@@ -51,6 +51,7 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
+        A_DeleteOrder=A_DeleteOrder,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,

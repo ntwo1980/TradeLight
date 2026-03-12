@@ -1,7 +1,7 @@
-import talib
 import types
-from Strategy import PairLevelGridStrategy
-from Strategy import SpreadGridStrategy
+
+import talib
+from Strategy import PairLevelGridStrategy, SpreadGridStrategy
 
 strategy = None
 strategis = []
@@ -56,6 +56,7 @@ def api():
         CurrentBar=CurrentBar,
         CurrentTime=CurrentTime,
         DeleteAllOrders=DeleteAllOrders,
+        A_DeleteOrder=A_DeleteOrder,
         Enum_Buy=Enum_Buy,
         Enum_Canceled=Enum_Canceled,
         Enum_Entry=Enum_Entry,

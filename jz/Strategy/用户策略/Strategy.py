@@ -165,11 +165,11 @@ class BaseStrategy():
                 self.order_deleted = False
             return False
 
-        if not self.IsBacktest and 0.2259 < now < 0.2310 and 'ZCE|F|RM' in self.codes[0]:
+        if not self.IsBacktest and 0.2259 < now < 0.2310:
             if not self.order_deleted:
                 self.order_deleted = True
-                self.api.DeleteAllOrders()
-                self.print("Order deleted")
+                self.delete_orders()
+
             return False
 
         return True
@@ -380,6 +380,21 @@ class BaseStrategy():
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
+
+    def exit_callback(self, context):
+        self.delete_orders()
+
+    def delete_orders(self):
+        for order_id, changes in self.waiting_list:
+            status = self.api.A_OrderStatus(order_id)
+            if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                self.apply_changes(changes)
+                self.save_strategy_state()
+                self.print(f"Order {order_id} filled, applied changes")
+            elif status != self.api.Enum_Canceled():
+                self.api.A_DeleteOrder(order_id)
+                self.print(f"Order {order_id} deleted")
+        self.waiting_list = []
 
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)

@@ -30,7 +30,6 @@ class BaseStrategy():
         self.dingding_token = None
         self.dingding_keyword = None
         self.waiting_list = []
-        self.pending_state_json = None
         self.max_logical_holding = 0
         self.trade_quantity = 0
         self.order_deleted = False
@@ -341,7 +340,7 @@ class BaseStrategy():
                 if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
                     has_filled = True
                     self.apply_changes(changes)
-                    self.save_strategy_state(save_file=True)
+                    self.save_strategy_state()
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 
         if has_filled and tmp:
@@ -576,14 +575,14 @@ class PairLevelGridStrategy(BaseStrategy):
 
         state = super().load_strategy_state()
         if state is None:
-            self.save_strategy_state(True)
+            self.save_strategy_state()
         elif not self.IsBacktest:
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
 
-    def save_strategy_state(self, save_file=False):   # PairLevelGridStrategy
+    def save_strategy_state(self):   # PairLevelGridStrategy
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
@@ -591,10 +590,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'sell_index': self.sell_index,
         }
 
-        if(save_file):
-            super().save_strategy_state_data(data)
-        else:
-            self.pending_state_json = data
+        super().save_strategy_state_data(data)
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None
@@ -700,7 +696,7 @@ class SpreadGridStrategy(BaseStrategy):
                     executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
                 elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
                     executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
-                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price * self.atr:
+                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
@@ -840,24 +836,21 @@ class SpreadGridStrategy(BaseStrategy):
         state = super().load_strategy_state()
         # self.print(state)
         if state is None:
-            self.save_strategy_state(True)
+            self.save_strategy_state()
         elif not self.IsBacktest:
             self.base_price = state['base_price']
             self.logical_holding = state['logical_holding']
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
 
-    def save_strategy_state(self, save_file=False):   # SpreadGridStrategy
+    def save_strategy_state(self):   # SpreadGridStrategy
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
         }
-        if(save_file):
-            super().save_strategy_state_data(data)
-        else:
-            self.pending_state_json = data
+        super().save_strategy_state_data(data)
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None

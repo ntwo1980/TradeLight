@@ -206,7 +206,7 @@ class BaseStrategy():
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
-                return False
+                return (False, 0)
 
             if self.is_spread_code(code):
                 if self.params.get('firstPosition', True):
@@ -236,30 +236,24 @@ class BaseStrategy():
 
             if abs(buy_position - sell_position) > orderQty * maxPositionMultiplier:
                 self.print('Error: reach buy position limit')
-                return False
+                return (False, 0)
             if sell_position >= quantity:
                 direction = '平'
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
-                if retEnter == 0:
-                    self.waiting_list.append(EnterOrderID)
             else:
                 if sell_position > 0:
                     direction = '平'
                     self.trade_quantity = sell_position
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
-                    if retEnter == 0:
-                        self.waiting_list.append(EnterOrderID)
                 else:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
-                    if retEnter == 0:
-                        self.waiting_list.append(EnterOrderID)
             self.send_order_count += 1
 
         self.print(f"Buy{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
             msg = f"Name: {self.name}\nbuy{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
-        return retEnter == 0
+        return (retEnter == 0, EnterOrderID)
 
     def Sell(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
@@ -277,7 +271,7 @@ class BaseStrategy():
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
-                return False
+                return (False, 0)
 
             if len(self.codes) > 1 and  '|M|' in code:
                 if self.params.get('firstPosition', True):
@@ -306,24 +300,18 @@ class BaseStrategy():
             maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
             if abs(sell_position - buy_position) > orderQty * maxPositionMultiplier:
                 self.print('Error: reach sell position limit')
-                return False
+                return (False, 0)
 
             if buy_position >= quantity:
                 direction = '平'
                 retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
-                if retEnter == 0:
-                    self.waiting_list.append(EnterOrderID)
             else:
                 if buy_position > 0:
                     direction = '平'
                     self.trade_quantity = buy_position
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
-                    if retEnter == 0:
-                        self.waiting_list.append(EnterOrderID)
                 else:
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity, price, code)
-                    if retEnter == 0:
-                        self.waiting_list.append(EnterOrderID)
 
             self.send_order_count += 1
 
@@ -332,38 +320,38 @@ class BaseStrategy():
         if not self.IsBacktest:
             msg = f"Name: {self.name}\nsell{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
-        return retEnter == 0
+        return (retEnter == 0, EnterOrderID)
 
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code
 
+    def apply_changes(self, changes):
+        for key, value in changes.items():
+            setattr(self, key, value)
+
     def existing_order(self):
         tmp = []
         has_filled = False
-        for o in self.waiting_list:
-            status = self.api.A_OrderStatus(o)
+        for order_id, changes in self.waiting_list:
+            status = self.api.A_OrderStatus(order_id)
             if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
-                tmp.append(o)
-                self.print(f"Order {o} status={status} existing")
+                tmp.append((order_id, changes))
+                self.print(f"Order {order_id} status={status} existing")
             else:
                 if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
                     has_filled = True
-                    if self.pending_state_json is not None:
-                        self.save_strategy_state_data(self.pending_state_json)
-
-                self.pending_state_json = None
-                self.print(f"Order {o} status={status} removed from waiting list")
+                    self.apply_changes(changes)
+                    self.save_strategy_state(save_file=True)
+                self.print(f"Order {order_id} status={status} removed from waiting list")
 
         if has_filled and tmp:
-            for o in tmp:
-                self.api.A_DeleteOrder(o)
-                self.print(f"Order {o} deleted due to other order filled")
+            for order_id, changes in tmp:
+                self.api.A_DeleteOrder(order_id)
+                self.print(f"Order {order_id} deleted due to other order filled")
             tmp = []
 
         self.waiting_list = tmp
         return len(self.waiting_list) > 0
-
-
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
 
@@ -515,9 +503,6 @@ class PairLevelGridStrategy(BaseStrategy):
         elif not executed:
             self.print(f'Error: buy_index error')
 
-        if executed and not self.IsBacktest:
-            self.save_strategy_state()        # PairLevelGridStrategy
-
         if abs(self.logical_holding) > self.max_logical_holding:
             self.max_logical_holding = abs(self.logical_holding)
 
@@ -543,31 +528,47 @@ class PairLevelGridStrategy(BaseStrategy):
             })
 
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
-        if not self.Buy(code, quantity, price):
+        succeed, order_id = self.Buy(code, quantity, price)
+        if not succeed:
             return False
 
-        self.logical_holding += self.trade_quantity
-        self.base_price = price
-        self.last_buy_date = datetime.today().strftime('%Y%m%d')
-        self.buy_index += 1
-        if self.buy_index >= len(self.buy_levels):
-            self.buy_index = len(self.buy_levels) - 1
-        self.sell_index = 0
+        changes = {}
+        changes["logical_holding"] = self.logical_holding + self.trade_quantity
+        changes["base_price"] = price
+        changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
+        changes["buy_index"] = self.buy_index + 1
+        if changes["buy_index"] >= len(self.buy_levels):
+            changes["buy_index"] = len(self.buy_levels) - 1
+        changes["sell_index"] = 0
+
+        if self.IsBacktest:
+            self.apply_changes(changes)
+        else:
+            self.waiting_list.append((order_id, changes))
 
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        if not self.Sell(code, quantity, price):
+        succeed, order_id = self.Sell(code, quantity, price)
+        if not succeed:
             return False
-        self.logical_holding -= self.trade_quantity
-        self.base_price = price
-        self.sell_index += 1
-        if self.sell_index >= len(self.sell_levels):
-            self.sell_index = len(self.sell_levels) - 1
-        self.buy_index = 0
-        self.last_sell_date = datetime.today().strftime('%Y%m%d')
+
+        changes = {}
+        changes["logical_holding"] = self.logical_holding - self.trade_quantity
+        changes["base_price"] = price
+        changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
+        changes["sell_index"] = self.sell_index + 1
+        if changes["sell_index"] >= len(self.sell_levels):
+            changes["sell_index"] = len(self.sell_levels) - 1
+        changes["buy_index"] = 0
+
+        if self.IsBacktest:
+            self.apply_changes(changes)
+        else:
+            self.waiting_list.append((order_id, changes))
 
         return True
+
 
     def load_strategy_state(self):  # PairLevelGridStrategy
         if self.is_state_loaded:
@@ -686,7 +687,7 @@ class SpreadGridStrategy(BaseStrategy):
             sell_threshold = base_price + diff
 
             if self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3:
-                executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
+                executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
             elif current_price >= sell_threshold and not existing_order and orderQty > 0:
                 orderQuantity = orderQty
                 if orderQty == 1 and self.logical_holding >= 4:
@@ -696,24 +697,24 @@ class SpreadGridStrategy(BaseStrategy):
                     orderQuantity = orderQuantity + increments
 
                 if self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
+                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
                 elif self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
+                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
                 elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price * self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, True)
+                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
                     if self.logical_holding < 0:
-                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+                        executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
                     else:
                         if self.double_first_position and self.logical_holding <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
                             if current_price >= sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
-                                executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+                                executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
                         else:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity, True)
+                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
 
         else:
             self.print(f'Error: sell_index error')
@@ -724,7 +725,7 @@ class SpreadGridStrategy(BaseStrategy):
             buy_threshold = base_price - diff
 
             if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3:
-                executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
             elif current_price <= buy_threshold and not existing_order and orderQty > 0:
                 orderQuantity = orderQty
                 if orderQty == 1 and self.logical_holding <= -4:
@@ -734,29 +735,26 @@ class SpreadGridStrategy(BaseStrategy):
                     orderQuantity = orderQuantity + increments
 
                 if self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
-                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
                 elif self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding, True)
+                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
                 elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity, True)
+                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
                     if self.logical_holding > 0:
-                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, True)
+                        executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
                     else:
                         if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
                         if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
                             if current_price <= sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
-                                executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, True)
+                                executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
                         else:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity, True)
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
         elif not executed:
             self.print(f'Error: buy_index error')
-
-        if executed and not self.IsBacktest:
-            self.save_strategy_state()
 
         if abs(self.logical_holding) > self.max_logical_holding:
             self.max_logical_holding = abs(self.logical_holding)
@@ -783,42 +781,55 @@ class SpreadGridStrategy(BaseStrategy):
                 'days_above_ma': days_above_ma
             })
 
-    def ExecuteBuy(self, code, price, quantity, change_index):    # SpreadGridStrategy
+    def ExecuteBuy(self, code, price, quantity):    # SpreadGridStrategy
         self.print('ExecuteBuy')
-        if not self.Buy(code, quantity, price):
+        succeed, order_id = self.Buy(code, quantity, price)
+        if not succeed:
             return False
 
-        original_holding = self.logical_holding
-        self.logical_holding += self.trade_quantity
-        self.base_price = price
-        self.last_buy_date = datetime.today().strftime('%Y%m%d')
-        if change_index:
-            if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
-                self.buy_index = 0
-            else:
-                self.buy_index += 1
-            if self.buy_index >= len(self.buy_levels):
-                self.buy_index = len(self.buy_levels) - 1
-            self.sell_index = 0
+        changes = {}
+        new_holding = self.logical_holding + self.trade_quantity
+        changes["logical_holding"] = new_holding
+        changes["base_price"] = price
+        changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
+        if (self.logical_holding * new_holding < 0) or (new_holding == 0):
+            changes["buy_index"] = 0
+        else:
+            changes["buy_index"] = self.buy_index + 1
+        if changes["buy_index"] >= len(self.buy_levels):
+            changes["buy_index"] = len(self.buy_levels) - 1
+        changes["sell_index"] = 0
+
+        if self.IsBacktest:
+            self.apply_changes(changes)
+        else:
+            self.waiting_list.append((order_id, changes))
 
         return True
 
-    def ExecuteSell(self, code, price, quantity, change_index):    # SpreadGridStrategy
+    def ExecuteSell(self, code, price, quantity):    # SpreadGridStrategy
         self.print('ExecuteSell')
-        if not self.Sell(code, quantity, price):
+        succeed, order_id = self.Sell(code, quantity, price)
+        if not succeed:
             return False
-        original_holding = self.logical_holding
-        self.logical_holding -= self.trade_quantity
-        self.base_price = price
-        if change_index:
-            if (original_holding * self.logical_holding < 0) or (self.logical_holding == 0):
-                self.sell_index = 0
-            else:
-                self.sell_index += 1
-            if self.sell_index >= len(self.sell_levels):
-                self.sell_index = len(self.sell_levels) - 1
-            self.buy_index = 0
-        self.last_sell_date = datetime.today().strftime('%Y%m%d')
+
+        changes = {}
+        new_holding = self.logical_holding - self.trade_quantity
+        changes["logical_holding"] = new_holding
+        changes["base_price"] = price
+        changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
+        if (self.logical_holding * new_holding < 0) or (new_holding == 0):
+            changes["sell_index"] = 0
+        else:
+            changes["sell_index"] = self.sell_index + 1
+        if changes["sell_index"] >= len(self.sell_levels):
+            changes["sell_index"] = len(self.sell_levels) - 1
+        changes["buy_index"] = 0
+
+        if self.IsBacktest:
+            self.apply_changes(changes)
+        else:
+            self.waiting_list.append((order_id, changes))
 
         return True
 

@@ -1,7 +1,7 @@
-import talib
 import types
-from Strategy import PairLevelGridStrategy
 
+import talib
+from Strategy import PairLevelGridStrategy
 
 # 策略参数字典
 g_params['threshold'] = 0.01
@@ -48,7 +48,7 @@ def hisover_callback(context):
 
 # 策略退出前执行该函数一次
 def exit_callback(context):
-    pass
+    strategy.exit_callback(context)
 
 def api():
     api = types.SimpleNamespace(

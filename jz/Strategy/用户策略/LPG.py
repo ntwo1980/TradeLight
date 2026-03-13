@@ -36,7 +36,8 @@ def hisover_callback(context):
 
 # 策略退出前执行该函数一次
 def exit_callback(context):
-    pass
+    for s in strategis:
+        s.exit_callback(context)
 
 def api():
     api = types.SimpleNamespace(

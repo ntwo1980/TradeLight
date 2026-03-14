@@ -34,6 +34,7 @@ class BaseStrategy():
         self.max_logical_holding = 0
         self.trade_quantity = 0
         self.order_deleted = False
+        self.position_closed = False
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -677,6 +678,10 @@ class SpreadGridStrategy(BaseStrategy):
         self.RunGridTrading()
 
     def RunGridTrading(self):    # SpreadGridStrategy
+        if self.position_closed:
+            self.print('position closed')
+            return
+
         self.atr = self.ATRs[self.codes[0]]
         self.slope = self.slopes[self.codes[0]]
         self.r_squared = self.r_squareds[self.codes[0]]
@@ -709,21 +714,24 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            if self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3:
-                executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
-            elif not existing_order:
-                orderQuantity = orderQty
-                if orderQty == 1 and self.logical_holding >= 4:
-                    orderQuantity = 2
-                if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                    increments = orderQty // 3
-                    orderQuantity = orderQuantity + increments
+            orderQuantity = orderQty
+            if orderQty == 1 and self.logical_holding >= 4:
+                orderQuantity = 2
+            if orderQty > 1 and self.logical_holding > 3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
 
-                if current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
-                elif current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                    executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
-                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
+            if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3) \
+                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty) \
+                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
+                self.delete_orders()
+                executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
+                self.position_closed = True
+                return
+
+            if not existing_sell_order:
+
+                if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         if not self.IsBacktest:
                             executed = self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
@@ -759,21 +767,23 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3:
-                executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
-            elif not existing_order:
-                orderQuantity = orderQty
-                if orderQty == 1 and self.logical_holding <= -4:
-                    orderQuantity = 2
-                if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                    increments = orderQty // 3
-                    orderQuantity = orderQuantity + increments
+            orderQuantity = orderQty
+            if orderQty == 1 and self.logical_holding <= -4:
+                orderQuantity = 2
+            if orderQty > 1 and self.logical_holding < -3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
 
-                if current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty:
-                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
-                elif current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3:
-                    executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
-                elif self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
+            if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3) \
+                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty) \
+                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
+                self.delete_orders()
+                executed = self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding))
+                self.position_closed = True
+                return
+
+            if not existing_buy_order:
+                if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         if not self.IsBacktest:
                             executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)

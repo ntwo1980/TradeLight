@@ -351,7 +351,16 @@ class BaseStrategy():
             tmp = []
 
         self.waiting_list = tmp
-        return len(self.waiting_list) > 0
+        existing_buy_order = False
+        existing_sell_order = False
+
+        for order_id, _ in self.waiting_list:
+            if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
+                existing_buy_order = True
+            elif self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
+                existing_sell_order = True
+
+        return (existing_buy_order, existing_sell_order)
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
 
@@ -435,7 +444,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -466,7 +475,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.slope = self.slopes[code]
         self.r_squared = self.r_squareds[code]
         current_price = self.LastPrices[code]
-        existing_order = self.existing_order()
+        existing_buy_order, existing_sell_order = self.existing_order()
+        existing_order = existing_buy_order or existing_sell_order
 
         base_price = self.base_price
         orderQty = self.params.get('orderQty', 1)
@@ -672,7 +682,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.r_squared = self.r_squareds[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]
 
-        existing_order = self.existing_order()
+        existing_buy_order, existing_sell_order = self.existing_order()
+        existing_order = existing_buy_order or existing_sell_order
         base_price = self.base_price
         if self.params.get('firstPosition', True):
             buy_position = self.GetBuyPosition(self.codes[2])
@@ -767,7 +778,7 @@ class SpreadGridStrategy(BaseStrategy):
                         if not self.IsBacktest:
                             executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
                         elif current_price <= buy_threshold:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
+                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
                     if self.logical_holding > 0:
                         if not self.IsBacktest:

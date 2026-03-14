@@ -9,16 +9,17 @@ strategis = []
 
 # 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = SpreadGridStrategy()
+    strategy = PairLevelGridStrategy()
 
     strategy.initialize(context,
         params = {
-            'name': '玉米_淀粉',
-            'codes': ['SPD|m|C-CS|2605|2605', 'DCE|M|C&CS|2605', 'DCE|F|C|2605', 'DCE|F|CS|2605'],
-            'orderQty': 6,
-            'firstPosition': True,
-            'atr': 10,
-            'fixedAtr': True
+            'name': '豆油',
+            'codes': ['DCE|F|Y|2609'],
+            'orderQty': 1,
+            'limit': 8000,
+            'threshold': 0.025,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
         },
         api = api()
     )
@@ -38,15 +39,13 @@ def hisover_callback(context):
 
 # 策略退出前执行该函数一次
 def exit_callback(context):
-    for s in strategis:
-        s.exit_callback(context)
+    pass
 
 def api():
     api = types.SimpleNamespace(
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
-        A_DeleteOrder=A_DeleteOrder,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
@@ -88,6 +87,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,

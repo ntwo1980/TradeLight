@@ -1,4 +1,5 @@
 import json
+import math
 import os
 from datetime import datetime
 
@@ -699,7 +700,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             if self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3:
                 executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
-            elif not existing_order and orderQty > 0:
+            elif not existing_order:
                 orderQuantity = orderQty
                 if orderQty == 1 and self.logical_holding >= 4:
                     orderQuantity = 2
@@ -737,7 +738,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             if self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3:
                 executed = self.ExecuteSell(self.codes[1], current_price, self.logical_holding)
-            elif not existing_order and orderQty > 0:
+            elif not existing_order:
                 orderQuantity = orderQty
                 if orderQty == 1 and self.logical_holding <= -4:
                     orderQuantity = 2

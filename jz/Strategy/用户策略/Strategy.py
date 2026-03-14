@@ -819,6 +819,12 @@ class SpreadGridStrategy(BaseStrategy):
 
     def ExecuteBuy(self, code, price, quantity):    # SpreadGridStrategy
         self.print('ExecuteBuy')
+
+        if not self.IsBacktest:
+            for order_id, _ in self.waiting_list:
+                if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
+                    return False
+
         succeed, order_id = self.Buy(code, quantity, price)
         if not succeed:
             return False
@@ -845,6 +851,12 @@ class SpreadGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, code, price, quantity):    # SpreadGridStrategy
         self.print('ExecuteSell')
+
+        if not self.IsBacktest:
+            for order_id, _ in self.waiting_list:
+                if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
+                    return False
+
         succeed, order_id = self.Sell(code, quantity, price)
         if not succeed:
             return False

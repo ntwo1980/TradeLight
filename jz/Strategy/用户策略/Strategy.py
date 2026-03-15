@@ -678,6 +678,9 @@ class SpreadGridStrategy(BaseStrategy):
         self.RunGridTrading()
 
     def RunGridTrading(self):    # SpreadGridStrategy
+        existing_buy_order, existing_sell_order = self.existing_order()
+        existing_order = existing_buy_order or existing_sell_order
+
         if self.position_closed:
             self.print('position closed')
             return
@@ -687,8 +690,6 @@ class SpreadGridStrategy(BaseStrategy):
         self.r_squared = self.r_squareds[self.codes[0]]
         current_price = self.LastPrices[self.codes[0]]
 
-        existing_buy_order, existing_sell_order = self.existing_order()
-        existing_order = existing_buy_order or existing_sell_order
         base_price = self.base_price
         if self.params.get('firstPosition', True):
             buy_position = self.GetBuyPosition(self.codes[2])
@@ -703,8 +704,6 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             base_price = sum(close_prices[-20:]) / 20
-
-        executed = False
 
         sell_threshold = 0
         buy_threshold = 0
@@ -725,24 +724,23 @@ class SpreadGridStrategy(BaseStrategy):
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
                 self.delete_orders()
-                executed = self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding))
+                self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True
                 return
 
             if not existing_sell_order:
-
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         if not self.IsBacktest:
-                            executed = self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
+                            self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
                         elif current_price >= sell_threshold:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
+                            self.ExecuteSell(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
                     if self.logical_holding < 0:
                         if not self.IsBacktest:
-                            executed = self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
+                            self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
                         elif current_price >= sell_threshold:
-                            executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
+                            self.ExecuteSell(self.codes[1], current_price, orderQuantity)
                     else:
                         if self.double_first_position and self.logical_holding <= orderQty * 2:
                             orderQuantity = orderQty * 2
@@ -750,19 +748,19 @@ class SpreadGridStrategy(BaseStrategy):
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
                             if current_price >= sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
                                 if not self.IsBacktest:
-                                    executed = self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
+                                    self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
                                 elif current_price >= sell_threshold:
-                                    executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
+                                    self.ExecuteSell(self.codes[1], current_price, orderQuantity)
                         else:
                             if not self.IsBacktest:
-                                executed = self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
+                                self.ExecuteSell(self.codes[1], math.ceil(sell_threshold), orderQuantity)
                             elif current_price >= sell_threshold:
-                                executed = self.ExecuteSell(self.codes[1], current_price, orderQuantity)
+                                self.ExecuteSell(self.codes[1], current_price, orderQuantity)
 
         else:
             self.print(f'Error: sell_index error')
 
-        if self.buy_index < len(self.buy_levels) and not executed:   # SpreadGridStrategy
+        if self.buy_index < len(self.buy_levels):   # SpreadGridStrategy
             level = self.buy_levels[self.buy_index]
             diff = self.atr * level
             buy_threshold = base_price - diff
@@ -778,7 +776,7 @@ class SpreadGridStrategy(BaseStrategy):
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
                 self.delete_orders()
-                executed = self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding))
+                self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True
                 return
 
@@ -786,15 +784,15 @@ class SpreadGridStrategy(BaseStrategy):
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         if not self.IsBacktest:
-                            executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
+                            self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity * 2 if self.double_first_position else orderQuantity)
                         elif current_price <= buy_threshold:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
+                            self.ExecuteBuy(self.codes[1], current_price, orderQuantity * 2 if self.double_first_position else orderQuantity)
                 else:
                     if self.logical_holding > 0:
                         if not self.IsBacktest:
-                            executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
+                            self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
                         elif current_price <= buy_threshold:
-                            executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
+                            self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
                     else:
                         if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
                             orderQuantity = orderQty * 2
@@ -802,15 +800,15 @@ class SpreadGridStrategy(BaseStrategy):
                         if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
                             if current_price <= sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
                                 if not self.IsBacktest:
-                                    executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
+                                    self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
                                 elif current_price <= buy_threshold:
-                                    executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
+                                    self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
                         else:
                             if not self.IsBacktest:
-                                executed = self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
+                                self.ExecuteBuy(self.codes[1], math.floor(buy_threshold), orderQuantity)
                             elif current_price <= buy_threshold:
-                                executed = self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
-        elif not executed:
+                                self.ExecuteBuy(self.codes[1], current_price, orderQuantity)
+        else:
             self.print(f'Error: buy_index error')
 
         if abs(self.logical_holding) > self.max_logical_holding:
@@ -838,10 +836,10 @@ class SpreadGridStrategy(BaseStrategy):
                 'days_above_ma': days_above_ma
             })
 
-    def ExecuteBuy(self, code, price, quantity):    # SpreadGridStrategy
+    def ExecuteBuy(self, code, price, quantity, force = False):    # SpreadGridStrategy
         self.print('ExecuteBuy')
 
-        if not self.IsBacktest:
+        if not self.IsBacktest and not force:
             for order_id, _ in self.waiting_list:
                 if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
                     return False
@@ -870,10 +868,10 @@ class SpreadGridStrategy(BaseStrategy):
 
         return True
 
-    def ExecuteSell(self, code, price, quantity):    # SpreadGridStrategy
+    def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
         self.print('ExecuteSell')
 
-        if not self.IsBacktest:
+        if not self.IsBacktest and not force:
             for order_id, _ in self.waiting_list:
                 if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
                     return False

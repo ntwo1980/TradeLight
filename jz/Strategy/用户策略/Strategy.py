@@ -23,7 +23,7 @@ class BaseStrategy():
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0
-        self.max_send_order_count = 20
+        self.max_send_order_count = 40
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True
@@ -165,6 +165,10 @@ class BaseStrategy():
         if not self.IsBacktest and (0.0859 < now < 0.090010 or 0.2059 < now < 0.210010):
             if self.order_deleted:
                 self.order_deleted = False
+            if self.position_closed:
+                self.position_closed = False
+
+            self.max_send_order_count = 40
             return False
 
         if not self.IsBacktest and 0.2259 < now < 0.2310:
@@ -274,7 +278,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            if len(self.codes) > 1 and  '|M|' in code:
+            if self.is_spread_code(code):
                 if self.params.get('firstPosition', True):
                     buy_position = self.GetBuyPosition(self.codes[2])
                     sell_position = self.GetSellPosition(self.codes[2])
@@ -445,7 +449,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -624,6 +628,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.DailyPrices = {}
         self.ATRs = {}
         self.slopes = {}
+        self.r_squareds = {}
         self.is_state_loaded = False
 
         if self.api.BuyPosition(self.codes[0]) > 0:
@@ -650,7 +655,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -927,6 +932,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
+        self.slopes = {}
+        self.r_squareds = {}
         self.is_state_loaded = False
 
         if self.api.BuyPosition(self.codes[1]) > 0:

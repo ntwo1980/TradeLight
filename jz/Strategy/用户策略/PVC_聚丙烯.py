@@ -91,8 +91,6 @@ def api():
         SellPosition=SellPosition,
         SetActual=SetActual,
         SetBarInterval=SetBarInterval,
-        SetOrderWay=SetOrderWay,
-        SetTriggerType=SetTriggerType,
         SetUserNo=SetUserNo,
         StartTrade=StartTrade,
         StopTrade=StopTrade,
@@ -101,5 +99,4 @@ def api():
         Vol=Vol,
     )
 
-    return api
     return api

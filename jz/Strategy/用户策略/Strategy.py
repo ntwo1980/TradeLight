@@ -23,7 +23,7 @@ class BaseStrategy():
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0
-        self.max_send_order_count = 40
+        self.max_send_order_count = 10
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True

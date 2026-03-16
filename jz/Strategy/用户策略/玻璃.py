@@ -105,4 +105,3 @@ def api():
     )
 
     return api
-    return api

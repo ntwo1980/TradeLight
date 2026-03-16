@@ -662,7 +662,7 @@ class SpreadGridStrategy(BaseStrategy):
 
     def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
         if not self.IsBacktest:
-            trade_price = math.floor(price) if is_buy else math.ceil(price)
+            trade_price = min(math.floor(price), condition_price) if is_buy else max(math.ceil(price), condition_price)
             return trade_func(code, trade_price, quantity)
         elif (is_buy and price <= condition_price) or (not is_buy and price >= condition_price):
             return trade_func(code, price, quantity)

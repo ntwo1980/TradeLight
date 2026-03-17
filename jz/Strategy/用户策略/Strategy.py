@@ -564,15 +564,16 @@ class PairLevelGridStrategy(BaseStrategy):
                 'slope': self.slope,
                 'r_squared': self.r_squared,
             })
-
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
-        succeed, order_id = self.Buy(code, quantity, price)
+        tick = self.api.PriceTick(code)
+        trade_price = math.floor(price / tick) * tick
+        succeed, order_id = self.Buy(code, quantity, trade_price)
         if not succeed:
             return False
 
         changes = {}
         changes["logical_holding"] = self.logical_holding + self.trade_quantity
-        changes["base_price"] = price
+        changes["base_price"] = trade_price
         changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
         changes["buy_index"] = self.buy_index + 1
         if changes["buy_index"] >= len(self.buy_levels):
@@ -587,13 +588,15 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        succeed, order_id = self.Sell(code, quantity, price)
+        tick = self.api.PriceTick(code)
+        trade_price = math.ceil(price / tick) * tick
+        succeed, order_id = self.Sell(code, quantity, trade_price)
         if not succeed:
             return False
 
         changes = {}
         changes["logical_holding"] = self.logical_holding - self.trade_quantity
-        changes["base_price"] = price
+        changes["base_price"] = trade_price
         changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
         changes["sell_index"] = self.sell_index + 1
         if changes["sell_index"] >= len(self.sell_levels):
@@ -606,7 +609,6 @@ class PairLevelGridStrategy(BaseStrategy):
             self.waiting_list.append((order_id, changes))
 
         return True
-
 
     def load_strategy_state(self):  # PairLevelGridStrategy
         self._load_common_grid_state()

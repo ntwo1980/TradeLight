@@ -357,6 +357,9 @@ class BaseStrategy():
         if self.is_state_loaded:
             raise Exception("state has been loaded")
 
+        return self._load_strategy_state_raw()
+
+    def _load_strategy_state_raw(self):
         file = self.get_state_file_name()
 
         if not os.path.exists(file):
@@ -364,7 +367,7 @@ class BaseStrategy():
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-                self.is_state_loaded= True
+                self.is_state_loaded = True
 
                 return state
         except Exception as e:
@@ -372,6 +375,9 @@ class BaseStrategy():
             return None
 
     def save_strategy_state_data(self, data):   # BaseStrategy
+        self._save_strategy_state_data_raw(data)
+
+    def _save_strategy_state_data_raw(self, data):
         file = self.get_state_file_name()
 
         try:
@@ -379,6 +385,28 @@ class BaseStrategy():
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
+
+    def _load_common_grid_state(self):
+        if self.is_state_loaded:
+            return
+
+        state = self._load_strategy_state_raw()
+        if state is None:
+            self.save_strategy_state()
+        elif not self.IsBacktest:
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+            self.buy_index = state['buy_index']
+            self.sell_index = state['sell_index']
+
+    def _save_common_grid_state(self):
+        data = {
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'buy_index': self.buy_index,
+            'sell_index': self.sell_index,
+        }
+        self._save_strategy_state_data_raw(data)
 
     def exit_callback(self, context):
         self.delete_orders()
@@ -585,27 +613,10 @@ class PairLevelGridStrategy(BaseStrategy):
 
 
     def load_strategy_state(self):  # PairLevelGridStrategy
-        if self.is_state_loaded:
-            return
-
-        state = super().load_strategy_state()
-        if state is None:
-            self.save_strategy_state()
-        elif not self.IsBacktest:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.buy_index = state['buy_index']
-            self.sell_index = state['sell_index']
+        self._load_common_grid_state()
 
     def save_strategy_state(self):   # PairLevelGridStrategy
-        data = {
-            'base_price': self.base_price,
-            'logical_holding': self.logical_holding,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index,
-        }
-
-        super().save_strategy_state_data(data)
+        self._save_common_grid_state()
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None
@@ -883,27 +894,10 @@ class SpreadGridStrategy(BaseStrategy):
         return True
 
     def load_strategy_state(self):  # SpreadGridStrategy
-        if self.is_state_loaded:
-            return
-
-        state = super().load_strategy_state()
-        # self.print(state)
-        if state is None:
-            self.save_strategy_state()
-        elif not self.IsBacktest:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.buy_index = state['buy_index']
-            self.sell_index = state['sell_index']
+        self._load_common_grid_state()
 
     def save_strategy_state(self):   # SpreadGridStrategy
-        data = {
-            'base_price': self.base_price,
-            'logical_holding': self.logical_holding,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index,
-        }
-        super().save_strategy_state_data(data)
+        self._save_common_grid_state()
 
     def hisover_callback(self, context):
         self.DailyPricesDate = None

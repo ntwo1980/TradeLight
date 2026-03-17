@@ -665,10 +665,10 @@ class SimpleGridStrategy(BaseStrategy):
                 self.logical_holding = position
 
     def GetGridUnit(self, stock, price, atr):   # SimpleGridStrategy
-        if stock == "159985.SZ":
-            return max(atr, price * 0.01)
+        # if stock == "159985.SZ":
+        #     return max(atr * 0.7, price * 0.01)
 
-        return atr * 0.7
+        return max(atr * 0.7, price * 0.01)
 
     def SaveStrategyState(self):   # SimpleGridStrategy
         stock = self.Stocks[0]

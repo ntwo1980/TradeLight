@@ -194,6 +194,32 @@ class BaseStrategy():
             return self.api.A_SellPositionCanCover(code)
             # return self.api.A_SellPosition(code)
 
+    def _resolve_positions_for_order(self, code):
+        if self.is_spread_code(code):
+            if self.params.get('firstPosition', True):
+                buy_position = self.GetBuyPosition(self.codes[2])
+                sell_position = self.GetSellPosition(self.codes[2])
+            else:
+                buy_position = self.GetSellPosition(self.codes[3])
+                sell_position = self.GetBuyPosition(self.codes[3])
+
+            if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                if self.logical_holding >= 0:
+                    buy_position = self.logical_holding
+                else:
+                    sell_position = abs(self.logical_holding)
+        else:
+            buy_position = self.GetBuyPosition(code)
+            sell_position = self.GetSellPosition(code)
+
+            if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+                if self.logical_holding >= 0:
+                    buy_position = self.logical_holding
+                else:
+                    self.print('Error: sell position is less than 0')
+
+        return buy_position, sell_position
+
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
@@ -213,28 +239,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            if self.is_spread_code(code):
-                if self.params.get('firstPosition', True):
-                    buy_position = self.GetBuyPosition(self.codes[2])
-                    sell_position = self.GetSellPosition(self.codes[2])
-                else:
-                    buy_position = self.GetSellPosition(self.codes[3])
-                    sell_position = self.GetBuyPosition(self.codes[3])
-
-                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                    if self.logical_holding >= 0:
-                        buy_position = self.logical_holding
-                    else:
-                        sell_position = abs(self.logical_holding)
-            else:
-                buy_position = self.GetBuyPosition(code)
-                sell_position = self.GetSellPosition(code)
-
-                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                    if self.logical_holding >= 0:
-                        buy_position = self.logical_holding
-                    else:
-                        self.print('Error: sell position is less than 0')
+            buy_position, sell_position = self._resolve_positions_for_order(code)
 
             orderQty = self.params.get('orderQty', 1)
             maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
@@ -278,28 +283,7 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            if self.is_spread_code(code):
-                if self.params.get('firstPosition', True):
-                    buy_position = self.GetBuyPosition(self.codes[2])
-                    sell_position = self.GetSellPosition(self.codes[2])
-                else:
-                    buy_position = self.GetSellPosition(self.codes[3])
-                    sell_position = self.GetBuyPosition(self.codes[3])
-
-                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                    if self.logical_holding >= 0:
-                        buy_position = self.logical_holding
-                    else:
-                        sell_position = abs(self.logical_holding)
-            else:
-                buy_position = self.GetBuyPosition(code)
-                sell_position = self.GetSellPosition(code)
-
-                if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                    if self.logical_holding >= 0:
-                        buy_position = self.logical_holding
-                    else:
-                        self.print('Error: sell position is less than 0')
+            buy_position, sell_position = self._resolve_positions_for_order(code)
 
             orderQty = self.params.get('orderQty', 1)
             maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)

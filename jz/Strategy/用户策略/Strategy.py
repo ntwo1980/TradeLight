@@ -457,7 +457,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -648,7 +648,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -713,10 +713,11 @@ class SpreadGridStrategy(BaseStrategy):
 
         close_prices = self.DailyPrices[self.codes[0]]['Close']
         ma_20 = talib.MA(close_prices, timeperiod=20)
+        ma_20_last = ma_20.iat[-1]
         days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
 
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
-            base_price = ma_20[-1]
+            base_price = ma_20_last
 
         sell_threshold = 0
         buy_threshold = 0
@@ -754,10 +755,10 @@ class SpreadGridStrategy(BaseStrategy):
                             orderQuantity = orderQty * 2
 
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
-                            if current_price >= ma_20[-1] - self.atr * self.buy_levels[0]:
+                            if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
                                 self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
-                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, ma_20[-1] - self.atr * self.buy_levels[0] + 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
+                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, ma_20_last - self.atr * self.buy_levels[0] + 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
@@ -797,10 +798,10 @@ class SpreadGridStrategy(BaseStrategy):
                             orderQuantity = orderQty * 2
 
                         if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
-                            if current_price <= ma_20[-1] + self.atr * self.sell_levels[0]:
+                            if current_price <= ma_20_last + self.atr * self.sell_levels[0]:
                                 self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                             else:
-                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20[-1] + self.atr * self.sell_levels[0] - 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
+                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20_last + self.atr * self.sell_levels[0] - 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:

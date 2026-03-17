@@ -48,7 +48,7 @@ def api():
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
         A_OrderBuyOrSell=A_OrderBuyOrSell,
-        A_OrderEntryOrE=A_OrderEntryOrE,
+        A_OrderEntryOrExit=A_OrderEntryOrExit,
         A_OrderStatus=A_OrderStatus,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,

@@ -716,7 +716,7 @@ class SpreadGridStrategy(BaseStrategy):
         days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
 
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
-            base_price = sum(close_prices[-20:]) / 20
+            base_price = ma_20[-1]
 
         sell_threshold = 0
         buy_threshold = 0
@@ -754,8 +754,10 @@ class SpreadGridStrategy(BaseStrategy):
                             orderQuantity = orderQty * 2
 
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
-                            if current_price >= sum(close_prices[-20:]) / 20 - self.atr * self.buy_levels[0]:
+                            if current_price >= ma_20[-1] - self.atr * self.buy_levels[0]:
                                 self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
+                            else:
+                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20[-1] - self.atr * self.buy_levels[0] + self.api.PriceTick(self.codes[1]), is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
@@ -795,8 +797,10 @@ class SpreadGridStrategy(BaseStrategy):
                             orderQuantity = orderQty * 2
 
                         if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
-                            if current_price <= sum(close_prices[-20:]) / 20 + self.atr * self.sell_levels[0]:
+                            if current_price <= ma_20[-1] + self.atr * self.sell_levels[0]:
                                 self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
+                            else:
+                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20[-1] + self.atr * self.sell_levels[0] - self.api.PriceTick(self.codes[1]), is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:

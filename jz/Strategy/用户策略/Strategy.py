@@ -353,12 +353,6 @@ class BaseStrategy():
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
 
-    def load_strategy_state(self):  # BaseStrategy
-        if self.is_state_loaded:
-            raise Exception("state has been loaded")
-
-        return self._load_strategy_state_raw()
-
     def _load_strategy_state_raw(self):
         file = self.get_state_file_name()
 

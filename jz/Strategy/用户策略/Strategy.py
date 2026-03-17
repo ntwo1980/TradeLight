@@ -20,6 +20,8 @@ class BaseStrategy():
         self.MinutePrices = {}
         self.LastPrices = {}
         self.base_price = 0
+        self.buy_index = 0
+        self.sell_index = 0
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0

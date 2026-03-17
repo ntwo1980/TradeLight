@@ -661,12 +661,20 @@ class SpreadGridStrategy(BaseStrategy):
         self.api.SetActual()
 
     def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
+        tick = self.api.PriceTick(code)  # 获取最小变动单位
+
         if not self.IsBacktest:
-            trade_price = math.floor(min(price, condition_price)) if is_buy else math.ceil(max(price, condition_price))
+            if is_buy:
+                trade_price = math.floor(min(price, condition_price) / tick) * tick
+            else:
+                trade_price = math.ceil(max(price, condition_price) / tick) * tick
             return trade_func(code, trade_price, quantity)
         elif (is_buy and price <= condition_price) or (not is_buy and price >= condition_price):
-            return trade_func(code, price, quantity)
-
+            if is_buy:
+                trade_price = math.floor(price / tick) * tick
+            else:
+                trade_price = math.ceil(price / tick) * tick
+            return trade_func(code, trade_price, quantity)
     def handle_data(self, context):     # SpreadGridStrategy
         if not super().handle_data(context):
             return

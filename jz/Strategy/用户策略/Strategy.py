@@ -457,7 +457,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -648,7 +648,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -758,7 +758,7 @@ class SpreadGridStrategy(BaseStrategy):
                             if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
                                 self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
-                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, ma_20_last - self.atr * self.buy_levels[0] + 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
+                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, ma_20_last - self.atr * self.buy_levels[0], is_buy=False)
                         else:
                             self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
@@ -801,7 +801,7 @@ class SpreadGridStrategy(BaseStrategy):
                             if current_price <= ma_20_last + self.atr * self.sell_levels[0]:
                                 self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                             else:
-                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20_last + self.atr * self.sell_levels[0] - 2 * self.api.PriceTick(self.codes[1]), is_buy=True)
+                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20_last + self.atr * self.sell_levels[0], is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:

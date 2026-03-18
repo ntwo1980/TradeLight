@@ -69,7 +69,7 @@ class BaseStrategy():
     def today_str(self):
         return datetime.today().strftime('%Y%m%d')
 
-    def _calc_log_regression(self, values):
+    def calc_log_regression(self, values):
         x = np.arange(len(values))
         shift = values.min() - 1e-6
         y = np.log(values - shift)
@@ -77,7 +77,7 @@ class BaseStrategy():
         r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
         return slope, r_squared
 
-    def _fetch_ohlcv(self, code, period):
+    def fetch_ohlcv(self, code, period):
         return pd.DataFrame({
             'Open':  self.api.Open(code, period, 1),
             'High':  self.api.High(code, period, 1),
@@ -90,7 +90,7 @@ class BaseStrategy():
         if self.DailyPricesDate == self.LastTradeDate():
             return
         for code in codes:
-            df = self._fetch_ohlcv(code, 'D')
+            df = self.fetch_ohlcv(code, 'D')
 
             if len(df) >= 4:
                 atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
@@ -104,7 +104,7 @@ class BaseStrategy():
                         atr = atr_config
 
                 self.ATRs[code] = atr
-                slope, r_squared = self._calc_log_regression(df['Close'].values[-20:])
+                slope, r_squared = self.calc_log_regression(df['Close'].values[-20:])
                 self.slopes[code] = slope
                 self.r_squareds[code] = r_squared
             else:
@@ -119,7 +119,7 @@ class BaseStrategy():
         minute_prices = {}
 
         for code in codes:
-            minute_prices[code] = self._fetch_ohlcv(code, 'M')
+            minute_prices[code] = self.fetch_ohlcv(code, 'M')
 
         return minute_prices
 
@@ -186,7 +186,7 @@ class BaseStrategy():
             return self.api.A_SellPositionCanCover(code)
             # return self.api.A_SellPosition(code)
 
-    def _resolve_positions_for_order(self, code):
+    def resolve_positions_for_order(self, code):
         if self.is_spread_code(code):
             if self.params.get('firstPosition', True):
                 buy_position = self.GetBuyPosition(self.codes[2])
@@ -212,7 +212,7 @@ class BaseStrategy():
 
         return buy_position, sell_position
 
-    def _log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):
+    def log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):
         self.print(f"{verb}{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
             msg = f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
@@ -237,15 +237,15 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            buy_position, sell_position = self._resolve_positions_for_order(code)
+            buy_position, sell_position = self.resolve_positions_for_order(code)
 
-            if self._position_limit_exceeded(buy_position, sell_position):
+            if self.position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach buy position limit')
                 return (False, 0)
-            direction, retEnter, EnterOrderID = self._send_live_order(self.api.Enum_Buy(), sell_position, quantity, price, code)
+            direction, retEnter, EnterOrderID = self.send_live_order(self.api.Enum_Buy(), sell_position, quantity, price, code)
             self.send_order_count += 1
 
-        self._log_trade('Buy', direction, code, quantity, price, retEnter, EnterOrderID)
+        self.log_trade('Buy', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
 
     def Sell(self, code, quantity, price):  # BaseStrategy
@@ -266,18 +266,18 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            buy_position, sell_position = self._resolve_positions_for_order(code)
+            buy_position, sell_position = self.resolve_positions_for_order(code)
 
-            if self._position_limit_exceeded(buy_position, sell_position):
+            if self.position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach sell position limit')
                 return (False, 0)
-            direction, retEnter, EnterOrderID = self._send_live_order(self.api.Enum_Sell(), buy_position, quantity, price, code)
+            direction, retEnter, EnterOrderID = self.send_live_order(self.api.Enum_Sell(), buy_position, quantity, price, code)
             self.send_order_count += 1
 
-        self._log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
+        self.log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
 
-    def _send_live_order(self, enum_direction, cover_position, quantity, price, code):
+    def send_live_order(self, enum_direction, cover_position, quantity, price, code):
         if cover_position >= quantity:
             direction = '平'
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), quantity, price, code)
@@ -290,28 +290,28 @@ class BaseStrategy():
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Entry(), quantity, price, code)
         return direction, retEnter, EnterOrderID
 
-    def _next_clamped_index(self, current_index, levels):
+    def next_clamped_index(self, current_index, levels):
         return min(current_index + 1, len(levels) - 1)
 
-    def _tick_floor(self, code, price):
+    def tick_floor(self, code, price):
         tick = self.api.PriceTick(code)
         return math.floor(price / tick) * tick
 
-    def _tick_ceil(self, code, price):
+    def tick_ceil(self, code, price):
         tick = self.api.PriceTick(code)
         return math.ceil(price / tick) * tick
 
-    def _position_limit_exceeded(self, buy_position, sell_position):
+    def position_limit_exceeded(self, buy_position, sell_position):
         orderQty = self.params.get('orderQty', 1)
         maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
         return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
-    def _update_max_holding(self):
+    def update_max_holding(self):
         holding = abs(self.logical_holding)
         if holding > self.max_logical_holding:
             self.max_logical_holding = holding
 
-    def _check_in_session(self):
+    def check_in_session(self):
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
             if self.print_debug:
                 self.print(f'Error: Not in session')
@@ -402,13 +402,13 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
 
-    def _commit_changes(self, order_id, changes):
+    def commit_changes(self, order_id, changes):
         if self.IsBacktest:
             self.apply_changes(changes)
         else:
             self.waiting_list.append((order_id, changes))
 
-    def _reset_price_cache(self):
+    def reset_price_cache(self):
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
@@ -478,7 +478,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not super().handle_data(context):
             return
 
-        if not self._check_in_session():
+        if not self.check_in_session():
             return
 
         self.load_strategy_state()
@@ -551,7 +551,7 @@ class PairLevelGridStrategy(BaseStrategy):
         elif not executed:
             self.print(f'Error: buy_index error')
 
-        self._update_max_holding()
+        self.update_max_holding()
 
         if self.print_debug:
             self.print({
@@ -574,7 +574,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'r_squared': self.r_squared,
             })
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
-        trade_price = self._tick_floor(code, price)
+        trade_price = self.tick_floor(code, price)
         succeed, order_id = self.Buy(code, quantity, trade_price)
         if not succeed:
             return False
@@ -583,14 +583,14 @@ class PairLevelGridStrategy(BaseStrategy):
         changes["logical_holding"] = self.logical_holding + self.trade_quantity
         changes["base_price"] = trade_price
         changes["last_buy_date"] = self.today_str()
-        changes["buy_index"] = self._next_clamped_index(self.buy_index, self.buy_levels)
+        changes["buy_index"] = self.next_clamped_index(self.buy_index, self.buy_levels)
         changes["sell_index"] = 0
 
-        self._commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes)
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        trade_price = self._tick_ceil(code, price)
+        trade_price = self.tick_ceil(code, price)
         succeed, order_id = self.Sell(code, quantity, trade_price)
         if not succeed:
             return False
@@ -599,14 +599,14 @@ class PairLevelGridStrategy(BaseStrategy):
         changes["logical_holding"] = self.logical_holding - self.trade_quantity
         changes["base_price"] = trade_price
         changes["last_sell_date"] = self.today_str()
-        changes["sell_index"] = self._next_clamped_index(self.sell_index, self.sell_levels)
+        changes["sell_index"] = self.next_clamped_index(self.sell_index, self.sell_levels)
         changes["buy_index"] = 0
 
-        self._commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes)
         return True
 
     def hisover_callback(self, context):   # PairLevelGridStrategy
-        self._reset_price_cache()
+        self.reset_price_cache()
 
         if self.api.BuyPosition(self.codes[0]) > 0:
             self.api.Sell(self.api.BuyPosition(self.codes[0]), self.LastPrices[self.codes[0]], self.codes[0])
@@ -648,21 +648,21 @@ class SpreadGridStrategy(BaseStrategy):
     def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
         if not self.IsBacktest:
             if is_buy:
-                trade_price = self._tick_floor(code, min(price, condition_price))
+                trade_price = self.tick_floor(code, min(price, condition_price))
             else:
-                trade_price = self._tick_ceil(code, max(price, condition_price))
+                trade_price = self.tick_ceil(code, max(price, condition_price))
             return trade_func(code, trade_price, quantity)
         elif (is_buy and price <= condition_price) or (not is_buy and price >= condition_price):
             if is_buy:
-                trade_price = self._tick_floor(code, price)
+                trade_price = self.tick_floor(code, price)
             else:
-                trade_price = self._tick_ceil(code, price)
+                trade_price = self.tick_ceil(code, price)
             return trade_func(code, trade_price, quantity)
     def handle_data(self, context):     # SpreadGridStrategy
         if not super().handle_data(context):
             return
 
-        if not self._check_in_session():
+        if not self.check_in_session():
             return
 
         self.load_strategy_state()
@@ -785,7 +785,7 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             self.print(f'Error: buy_index error')
 
-        self._update_max_holding()
+        self.update_max_holding()
 
         if self.print_debug:
             self.print({
@@ -829,10 +829,10 @@ class SpreadGridStrategy(BaseStrategy):
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["buy_index"] = 0
         else:
-            changes["buy_index"] = self._next_clamped_index(self.buy_index, self.buy_levels)
+            changes["buy_index"] = self.next_clamped_index(self.buy_index, self.buy_levels)
         changes["sell_index"] = 0
 
-        self._commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes)
         return True
 
     def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
@@ -855,14 +855,14 @@ class SpreadGridStrategy(BaseStrategy):
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["sell_index"] = 0
         else:
-            changes["sell_index"] = self._next_clamped_index(self.sell_index, self.sell_levels)
+            changes["sell_index"] = self.next_clamped_index(self.sell_index, self.sell_levels)
         changes["buy_index"] = 0
 
-        self._commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes)
         return True
 
     def hisover_callback(self, context):   # SpreadGridStrategy
-        self._reset_price_cache()
+        self.reset_price_cache()
 
         if self.api.BuyPosition(self.codes[1]) > 0:
             self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])

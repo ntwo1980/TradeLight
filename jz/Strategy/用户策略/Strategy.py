@@ -242,16 +242,7 @@ class BaseStrategy():
             if self._position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach buy position limit')
                 return (False, 0)
-            if sell_position >= quantity:
-                direction = '平'
-                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), quantity, price, code)
-            else:
-                if sell_position > 0:
-                    direction = '平'
-                    self.trade_quantity = sell_position
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Exit(), sell_position, price, code)
-                else:
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
+            direction, retEnter, EnterOrderID = self._send_live_order(self.api.Enum_Buy(), sell_position, quantity, price, code)
             self.send_order_count += 1
 
         self._log_trade('Buy', direction, code, quantity, price, retEnter, EnterOrderID)
@@ -280,22 +271,24 @@ class BaseStrategy():
             if self._position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach sell position limit')
                 return (False, 0)
-
-            if buy_position >= quantity:
-                direction = '平'
-                retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), quantity, price, code)
-            else:
-                if buy_position > 0:
-                    direction = '平'
-                    self.trade_quantity = buy_position
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Exit(), buy_position, price, code)
-                else:
-                    retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Sell(), self.api.Enum_Entry(), quantity, price, code)
-
+            direction, retEnter, EnterOrderID = self._send_live_order(self.api.Enum_Sell(), buy_position, quantity, price, code)
             self.send_order_count += 1
 
         self._log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
+
+    def _send_live_order(self, enum_direction, cover_position, quantity, price, code):
+        if cover_position >= quantity:
+            direction = '平'
+            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), quantity, price, code)
+        elif cover_position > 0:
+            direction = '平'
+            self.trade_quantity = cover_position
+            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), cover_position, price, code)
+        else:
+            direction = '开'
+            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Entry(), quantity, price, code)
+        return direction, retEnter, EnterOrderID
 
     def _next_clamped_index(self, current_index, levels):
         return min(current_index + 1, len(levels) - 1)

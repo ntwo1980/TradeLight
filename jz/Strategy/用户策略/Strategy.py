@@ -758,7 +758,7 @@ class SpreadGridStrategy(BaseStrategy):
                             if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
                                 self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
-                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, ma_20_last - self.atr * self.buy_levels[0], is_buy=False)
+                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
                         else:
                             self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
@@ -801,7 +801,7 @@ class SpreadGridStrategy(BaseStrategy):
                             if current_price <= ma_20_last + self.atr * self.sell_levels[0]:
                                 self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                             else:
-                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, ma_20_last + self.atr * self.sell_levels[0], is_buy=True)
+                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
                         else:
                             self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:

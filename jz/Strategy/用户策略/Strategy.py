@@ -196,21 +196,17 @@ class BaseStrategy():
             else:
                 buy_position = self.GetSellPosition(self.codes[3])
                 sell_position = self.GetBuyPosition(self.codes[3])
-
-            if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                if self.logical_holding >= 0:
-                    buy_position = self.logical_holding
-                else:
-                    sell_position = abs(self.logical_holding)
         else:
             buy_position = self.GetBuyPosition(code)
             sell_position = self.GetSellPosition(code)
 
-            if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-                if self.logical_holding >= 0:
-                    buy_position = self.logical_holding
-                else:
-                    self.print('Error: sell position is less than 0')
+        if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
+            if self.logical_holding >= 0:
+                buy_position = self.logical_holding
+            elif self.is_spread_code(code):
+                sell_position = abs(self.logical_holding)
+            else:
+                self.print('Error: sell position is less than 0')
 
         return buy_position, sell_position
 

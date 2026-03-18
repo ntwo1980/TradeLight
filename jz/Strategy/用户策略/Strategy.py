@@ -798,16 +798,15 @@ class SpreadGridStrategy(BaseStrategy):
         if not succeed:
             return False
 
-        changes = {}
         new_holding = self.logical_holding + self.trade_quantity
-        changes["logical_holding"] = new_holding
-        changes["base_price"] = price
-        changes["last_buy_date"] = self.today_str()
-        if (self.logical_holding * new_holding < 0) or (new_holding == 0):
-            changes["buy_index"] = 0
-        else:
-            changes["buy_index"] = self.next_clamped_index(self.buy_index, self.buy_levels)
-        changes["sell_index"] = 0
+        cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        changes = {
+            "logical_holding": new_holding,
+            "base_price": price,
+            "last_buy_date": self.today_str(),
+            "buy_index": 0 if cross_zero else self.next_clamped_index(self.buy_index, self.buy_levels),
+            "sell_index": 0,
+        }
 
         self.commit_changes(order_id, changes)
         return True
@@ -824,16 +823,15 @@ class SpreadGridStrategy(BaseStrategy):
         if not succeed:
             return False
 
-        changes = {}
         new_holding = self.logical_holding - self.trade_quantity
-        changes["logical_holding"] = new_holding
-        changes["base_price"] = price
-        changes["last_sell_date"] = self.today_str()
-        if (self.logical_holding * new_holding < 0) or (new_holding == 0):
-            changes["sell_index"] = 0
-        else:
-            changes["sell_index"] = self.next_clamped_index(self.sell_index, self.sell_levels)
-        changes["buy_index"] = 0
+        cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        changes = {
+            "logical_holding": new_holding,
+            "base_price": price,
+            "last_sell_date": self.today_str(),
+            "sell_index": 0 if cross_zero else self.next_clamped_index(self.sell_index, self.sell_levels),
+            "buy_index": 0,
+        }
 
         self.commit_changes(order_id, changes)
         return True

@@ -205,6 +205,12 @@ class BaseStrategy():
 
         return buy_position, sell_position
 
+    def _log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):
+        self.print(f"{verb}{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
+        if not self.IsBacktest:
+            msg = f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            self.dingding(msg)
+
     def Buy(self, code, quantity, price):  # BaseStrategy
         # timestamp = int(time.time())
         # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
@@ -244,10 +250,7 @@ class BaseStrategy():
                     retEnter, EnterOrderID = self.api.A_SendOrder(self.api.Enum_Buy(), self.api.Enum_Entry(), quantity, price, code)
             self.send_order_count += 1
 
-        self.print(f"Buy{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
-        if not self.IsBacktest:
-            msg = f"Name: {self.name}\nbuy{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
-            self.dingding(msg)
+        self._log_trade('Buy', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
 
     def Sell(self, code, quantity, price):  # BaseStrategy
@@ -289,11 +292,7 @@ class BaseStrategy():
 
             self.send_order_count += 1
 
-        self.print(f"Sell{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
-
-        if not self.IsBacktest:
-            msg = f"Name: {self.name}\nsell{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
-            self.dingding(msg)
+        self._log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
 
     def is_spread_code(self, code):

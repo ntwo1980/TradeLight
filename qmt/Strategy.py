@@ -1,12 +1,14 @@
-import datetime
-import time
-import pandas as pd
-import numpy as np
-import talib
-import json
-import os
-import math
 import bisect
+import datetime
+import json
+import math
+import os
+import time
+
+import numpy as np
+import pandas as pd
+import talib
+
 
 class BaseStrategy():
     def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, tradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
@@ -145,7 +147,7 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
+        if not self.IsBacktest and maxSellCount > 5 and index < total / 4 and total > 5:
             tradingAmount = tradingAmount / 4
 
         return tradingAmount

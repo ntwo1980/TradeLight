@@ -12,6 +12,8 @@ import talib
 class BaseStrategy():
     def __init__(self, **kwargs):   # BaseStrategy
         self.context = None
+        self.logical_holding = 0
+        self.name = ""
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
@@ -464,7 +466,6 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def initialize(self, context, **kwargs):     # PairLevelGridStrategy
         super().initialize(context, **kwargs)
-        self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
         self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
@@ -624,7 +625,6 @@ class SpreadGridStrategy(BaseStrategy):
 
     def initialize(self, context, **kwargs):     # SpreadGridStrategy
         super().initialize(context, **kwargs)
-        self.logical_holding = 0
         self.codes = self.params['codes']
         self.name = self.params['name']
         self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]

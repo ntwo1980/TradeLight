@@ -653,6 +653,14 @@ class SpreadGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
+    def _calc_order_quantity(self, orderQty):
+        orderQuantity = orderQty
+        if orderQty == 1 and abs(self.logical_holding) >= 4:
+            orderQuantity = 2
+        if orderQty > 1 and abs(self.logical_holding) > 3 * orderQty:
+            orderQuantity += orderQty // 3
+        return orderQuantity
+
     def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
         tick = self.api.PriceTick(code)  # 获取最小变动单位
 
@@ -727,12 +735,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding >= 4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self._calc_order_quantity(orderQty)
 
             if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty) \
@@ -770,12 +773,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding <= -4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self._calc_order_quantity(orderQty)
 
             if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty) \

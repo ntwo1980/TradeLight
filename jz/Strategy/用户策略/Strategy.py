@@ -298,6 +298,14 @@ class BaseStrategy():
     def _next_clamped_index(self, current_index, levels):
         return min(current_index + 1, len(levels) - 1)
 
+    def _tick_floor(self, code, price):
+        tick = self.api.PriceTick(code)
+        return math.floor(price / tick) * tick
+
+    def _tick_ceil(self, code, price):
+        tick = self.api.PriceTick(code)
+        return math.ceil(price / tick) * tick
+
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code
 
@@ -564,8 +572,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'r_squared': self.r_squared,
             })
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
-        tick = self.api.PriceTick(code)
-        trade_price = math.floor(price / tick) * tick
+        trade_price = self._tick_floor(code, price)
         succeed, order_id = self.Buy(code, quantity, trade_price)
         if not succeed:
             return False
@@ -581,8 +588,7 @@ class PairLevelGridStrategy(BaseStrategy):
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        tick = self.api.PriceTick(code)
-        trade_price = math.ceil(price / tick) * tick
+        trade_price = self._tick_ceil(code, price)
         succeed, order_id = self.Sell(code, quantity, trade_price)
         if not succeed:
             return False
@@ -644,19 +650,17 @@ class SpreadGridStrategy(BaseStrategy):
         return orderQuantity
 
     def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
-        tick = self.api.PriceTick(code)  # 获取最小变动单位
-
         if not self.IsBacktest:
             if is_buy:
-                trade_price = math.floor(min(price, condition_price) / tick) * tick
+                trade_price = self._tick_floor(code, min(price, condition_price))
             else:
-                trade_price = math.ceil(max(price, condition_price) / tick) * tick
+                trade_price = self._tick_ceil(code, max(price, condition_price))
             return trade_func(code, trade_price, quantity)
         elif (is_buy and price <= condition_price) or (not is_buy and price >= condition_price):
             if is_buy:
-                trade_price = math.floor(price / tick) * tick
+                trade_price = self._tick_floor(code, price)
             else:
-                trade_price = math.ceil(price / tick) * tick
+                trade_price = self._tick_ceil(code, price)
             return trade_func(code, trade_price, quantity)
     def handle_data(self, context):     # SpreadGridStrategy
         if not super().handle_data(context):

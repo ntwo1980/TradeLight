@@ -400,6 +400,12 @@ class BaseStrategy():
         self.r_squareds = {}
         self.is_state_loaded = False
 
+    def close_all_positions(self, trade_code, price_code):
+        if self.api.BuyPosition(trade_code) > 0:
+            self.api.Sell(self.api.BuyPosition(trade_code), self.LastPrices[price_code], trade_code)
+        if self.api.SellPosition(trade_code) > 0:
+            self.api.BuyToCover(self.api.SellPosition(trade_code), self.LastPrices[price_code], trade_code)
+
     def exit_callback(self, context):
         self.delete_orders()
 
@@ -589,12 +595,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
     def hisover_callback(self, context):   # PairLevelGridStrategy
         self.reset_price_cache()
-
-        if self.api.BuyPosition(self.codes[0]) > 0:
-            self.api.Sell(self.api.BuyPosition(self.codes[0]), self.LastPrices[self.codes[0]], self.codes[0])
-        if self.api.SellPosition(self.codes[0]) > 0:
-            self.api.BuyToCover(self.api.SellPosition(self.codes[0]), self.LastPrices[self.codes[0]], self.codes[0])
-
+        self.close_all_positions(self.codes[0], self.codes[0])
         self.print('max position:' + str(self.max_logical_holding))
 
 class SpreadGridStrategy(BaseStrategy):
@@ -844,10 +845,5 @@ class SpreadGridStrategy(BaseStrategy):
 
     def hisover_callback(self, context):   # SpreadGridStrategy
         self.reset_price_cache()
-
-        if self.api.BuyPosition(self.codes[1]) > 0:
-            self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
-        if self.api.SellPosition(self.codes[1]) > 0:
-            self.api.BuyToCover(self.api.SellPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])
-
+        self.close_all_positions(self.codes[1], self.codes[0])
         self.print('max position:' + str(self.max_logical_holding))

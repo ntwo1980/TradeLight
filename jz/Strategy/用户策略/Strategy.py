@@ -423,7 +423,7 @@ class BaseStrategy():
     def dingding(self, msg):
         webhook_url = f"https://oapi.dingtalk.com/robot/send?access_token={self.dingding_token}"
 
-        message = {
+        payload = {
             "msgtype": "text",
             "text": {
                 "content": f"{msg}\n{self.dingding_keyword}",
@@ -433,9 +433,8 @@ class BaseStrategy():
             }
         }
 
-        headers = {'Content-Type': 'application/json'}
         try:
-            response = requests.post(webhook_url, data=json.dumps(message), headers=headers, timeout=5)
+            requests.post(webhook_url, json=payload, timeout=5)
         except Exception as e:
             self.print(f"DingDing exception (ignored): {e}")
 

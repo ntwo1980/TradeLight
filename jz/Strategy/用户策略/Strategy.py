@@ -626,6 +626,8 @@ class SpreadGridStrategy(BaseStrategy):
             else:
                 trade_price = self.tick_ceil(code, price)
             return trade_func(code, trade_price, quantity)
+
+        return False
     def handle_data(self, context):     # SpreadGridStrategy
         if not super().handle_data(context):
             return

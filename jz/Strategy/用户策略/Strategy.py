@@ -404,6 +404,12 @@ class BaseStrategy():
         }
         self._save_strategy_state_data_raw(data)
 
+    def _commit_changes(self, order_id, changes):
+        if self.IsBacktest:
+            self.apply_changes(changes)
+        else:
+            self.waiting_list.append((order_id, changes))
+
     def _reset_price_cache(self):
         self.DailyPricesDate = None
         self.DailyPrices = {}
@@ -588,11 +594,7 @@ class PairLevelGridStrategy(BaseStrategy):
             changes["buy_index"] = len(self.buy_levels) - 1
         changes["sell_index"] = 0
 
-        if self.IsBacktest:
-            self.apply_changes(changes)
-        else:
-            self.waiting_list.append((order_id, changes))
-
+        self._commit_changes(order_id, changes)
         return True
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
@@ -611,11 +613,7 @@ class PairLevelGridStrategy(BaseStrategy):
             changes["sell_index"] = len(self.sell_levels) - 1
         changes["buy_index"] = 0
 
-        if self.IsBacktest:
-            self.apply_changes(changes)
-        else:
-            self.waiting_list.append((order_id, changes))
-
+        self._commit_changes(order_id, changes)
         return True
 
     def load_strategy_state(self):  # PairLevelGridStrategy
@@ -858,11 +856,7 @@ class SpreadGridStrategy(BaseStrategy):
             changes["buy_index"] = len(self.buy_levels) - 1
         changes["sell_index"] = 0
 
-        if self.IsBacktest:
-            self.apply_changes(changes)
-        else:
-            self.waiting_list.append((order_id, changes))
-
+        self._commit_changes(order_id, changes)
         return True
 
     def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
@@ -890,11 +884,7 @@ class SpreadGridStrategy(BaseStrategy):
             changes["sell_index"] = len(self.sell_levels) - 1
         changes["buy_index"] = 0
 
-        if self.IsBacktest:
-            self.apply_changes(changes)
-        else:
-            self.waiting_list.append((order_id, changes))
-
+        self._commit_changes(order_id, changes)
         return True
 
     def load_strategy_state(self):  # SpreadGridStrategy

@@ -325,11 +325,11 @@ class BaseStrategy():
         has_filled = False
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
-            if status != self.api.Enum_Filled() and status != self.api.Enum_FillPart() and status != self.api.Enum_Canceled():
+            if status != self.api.Enum_Filled() and status != self.api.Enum_Canceled():
                 tmp.append((order_id, changes))
                 self.print(f"Order {order_id} status={status} existing")
             else:
-                if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+                if status == self.api.Enum_Filled():
                     has_filled = True
                     self.apply_changes(changes)
                     self.save_strategy_state()
@@ -410,7 +410,7 @@ class BaseStrategy():
     def delete_orders(self):
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
-            if status == self.api.Enum_Filled() or status == self.api.Enum_FillPart():
+            if status == self.api.Enum_Filled():
                 self.apply_changes(changes)
                 self.save_strategy_state()
                 self.print(f"Order {order_id} filled, applied changes")

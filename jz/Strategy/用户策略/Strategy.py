@@ -264,13 +264,12 @@ class BaseStrategy():
         return self.execute_order(False, code, quantity, price)
 
     def send_live_order(self, enum_direction, cover_position, quantity, price, code):
-        if cover_position >= quantity:
+        if cover_position > 0:
             direction = '平'
+            if cover_position < quantity:
+                quantity = cover_position
+                self.trade_quantity = cover_position
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), quantity, price, code)
-        elif cover_position > 0:
-            direction = '平'
-            self.trade_quantity = cover_position
-            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), cover_position, price, code)
         else:
             direction = '开'
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Entry(), quantity, price, code)

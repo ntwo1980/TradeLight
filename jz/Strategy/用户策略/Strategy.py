@@ -232,6 +232,8 @@ class BaseStrategy():
                 self.api.BuyToCover(quantity, price, code)
             else:
                 self.api.Buy(quantity, price, code)
+
+            return (True, 0)
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
@@ -261,6 +263,8 @@ class BaseStrategy():
                 self.api.Sell(quantity, price, code)
             else:
                 self.api.SellShort(quantity, price, code)
+
+            return (True, 0)
         else:
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
@@ -360,7 +364,7 @@ class BaseStrategy():
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
 
-    def _load_strategy_state_raw(self):
+    def load_strategy_state_raw(self):
         file = self.get_state_file_name()
 
         if not os.path.exists(file):
@@ -379,7 +383,7 @@ class BaseStrategy():
         if self.is_state_loaded:
             return
 
-        state = self._load_strategy_state_raw()
+        state = self.load_strategy_state_raw()
         if state is None:
             self.save_strategy_state()
         elif not self.IsBacktest:
@@ -511,7 +515,6 @@ class PairLevelGridStrategy(BaseStrategy):
             ma_20 = talib.MA(self.DailyPrices[code]['Close'], timeperiod=20)
             days_above_ma = np.sum(self.DailyPrices[code]['Close'][-20:] > ma_20[-20:])
             if 6 <= days_above_ma <= 14 and (limit is None or current_price < limit):
-            # if up_days >= 2 and (limit is None or current_price < limit):
                 base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
                 if self.atr > 0:
                     order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() - self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
@@ -637,7 +640,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
-    def _calc_order_quantity(self, orderQty):
+    def calc_order_quantity(self, orderQty):
         orderQuantity = orderQty
         if orderQty == 1 and abs(self.logical_holding) >= 4:
             orderQuantity = 2
@@ -645,7 +648,7 @@ class SpreadGridStrategy(BaseStrategy):
             orderQuantity += orderQty // 3
         return orderQuantity
 
-    def _execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
+    def execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
         if not self.IsBacktest:
             if is_buy:
                 trade_price = self.tick_floor(code, min(price, condition_price))
@@ -715,7 +718,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            orderQuantity = self._calc_order_quantity(orderQty)
+            orderQuantity = self.calc_order_quantity(orderQty)
 
             if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty) \
@@ -729,21 +732,21 @@ class SpreadGridStrategy(BaseStrategy):
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
-                        self._execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
+                        self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
                 else:
                     if self.logical_holding < 0:
-                        self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
+                        self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                     else:
                         if self.double_first_position and self.logical_holding <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
                             if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
-                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
+                                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
-                                self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
+                                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
                         else:
-                            self._execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
+                            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
         else:
             self.print(f'Error: sell_index error')
@@ -753,7 +756,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            orderQuantity = self._calc_order_quantity(orderQty)
+            orderQuantity = self.calc_order_quantity(orderQty)
 
             if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty) \
@@ -767,21 +770,21 @@ class SpreadGridStrategy(BaseStrategy):
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
                     if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
-                        self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
+                        self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
                 else:
                     if self.logical_holding > 0:
-                        self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
+                        self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                     else:
                         if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
                         if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
                             if current_price <= ma_20_last + self.atr * self.sell_levels[0]:
-                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
+                                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                             else:
-                                self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
+                                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
                         else:
-                            self._execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
+                            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:
             self.print(f'Error: buy_index error')
 

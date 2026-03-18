@@ -311,6 +311,13 @@ class BaseStrategy():
         if holding > self.max_logical_holding:
             self.max_logical_holding = holding
 
+    def _check_in_session(self):
+        if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
+            if self.print_debug:
+                self.print(f'Error: Not in session')
+            return False
+        return True
+
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code
 
@@ -478,9 +485,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not super().handle_data(context):
             return
 
-        if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
-            if self.print_debug:
-                self.print(f'Error: Not in session')
+        if not self._check_in_session():
             return
 
         self.load_strategy_state()
@@ -670,9 +675,7 @@ class SpreadGridStrategy(BaseStrategy):
         if not super().handle_data(context):
             return
 
-        if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
-            if self.print_debug:
-                self.print(f'Error: Not in session')
+        if not self._check_in_session():
             return
 
         self.load_strategy_state()

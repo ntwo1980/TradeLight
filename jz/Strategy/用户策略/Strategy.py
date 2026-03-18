@@ -66,23 +66,20 @@ class BaseStrategy():
     def LastTradeDate(self):
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
 
+    def _fetch_ohlcv(self, code, period):
+        return pd.DataFrame({
+            'Open':  self.api.Open(code, period, 1),
+            'High':  self.api.High(code, period, 1),
+            'Low':   self.api.Low(code, period, 1),
+            'Close': self.api.Close(code, period, 1),
+            'Vol':   self.api.Vol(code, period, 1),
+        })
+
     def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
             return
         for code in codes:
-            close_prices = self.api.Close(code, 'D', 1)
-            open_prices = self.api.Open(code, 'D', 1)
-            high_prices = self.api.High(code, 'D', 1)
-            low_prices = self.api.Low(code, 'D', 1)
-            vol_prices = self.api.Vol(code, 'D', 1)
-
-            df = pd.DataFrame({
-                'Open': open_prices,
-                'High': high_prices,
-                'Low': low_prices,
-                'Close': close_prices,
-                'Vol': vol_prices
-            })
+            df = self._fetch_ohlcv(code, 'D')
 
             if len(df) >= 4:
                 atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
@@ -115,21 +112,7 @@ class BaseStrategy():
         minute_prices = {}
 
         for code in codes:
-            close_prices = self.api.Close(code, 'M', 1)
-            open_prices = self.api.Open(code, 'M', 1)
-            high_prices = self.api.High(code, 'M', 1)
-            low_prices = self.api.Low(code, 'M', 1)
-            vol_prices = self.api.Vol(code, 'M', 1)
-
-            df = pd.DataFrame({
-                'Open': open_prices,
-                'High': high_prices,
-                'Low': low_prices,
-                'Close': close_prices,
-                'Vol': vol_prices
-            })
-
-            minute_prices[code] = df
+            minute_prices[code] = self._fetch_ohlcv(code, 'M')
 
         return minute_prices
 

@@ -66,6 +66,9 @@ class BaseStrategy():
     def LastTradeDate(self):
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
 
+    def today_str(self):
+        return datetime.today().strftime('%Y%m%d')
+
     def _fetch_ohlcv(self, code, period):
         return pd.DataFrame({
             'Open':  self.api.Open(code, period, 1),
@@ -582,7 +585,7 @@ class PairLevelGridStrategy(BaseStrategy):
         changes = {}
         changes["logical_holding"] = self.logical_holding + self.trade_quantity
         changes["base_price"] = trade_price
-        changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
+        changes["last_buy_date"] = self.today_str()
         changes["buy_index"] = self._next_clamped_index(self.buy_index, self.buy_levels)
         changes["sell_index"] = 0
 
@@ -598,7 +601,7 @@ class PairLevelGridStrategy(BaseStrategy):
         changes = {}
         changes["logical_holding"] = self.logical_holding - self.trade_quantity
         changes["base_price"] = trade_price
-        changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
+        changes["last_sell_date"] = self.today_str()
         changes["sell_index"] = self._next_clamped_index(self.sell_index, self.sell_levels)
         changes["buy_index"] = 0
 
@@ -825,7 +828,7 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding + self.trade_quantity
         changes["logical_holding"] = new_holding
         changes["base_price"] = price
-        changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
+        changes["last_buy_date"] = self.today_str()
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["buy_index"] = 0
         else:
@@ -851,7 +854,7 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding - self.trade_quantity
         changes["logical_holding"] = new_holding
         changes["base_price"] = price
-        changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
+        changes["last_sell_date"] = self.today_str()
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["sell_index"] = 0
         else:

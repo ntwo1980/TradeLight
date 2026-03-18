@@ -10,6 +10,8 @@ import talib
 
 
 class BaseStrategy():
+    STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index']
+
     def __init__(self, **kwargs):   # BaseStrategy
         self.context = None
         self.logical_holding = 0
@@ -367,18 +369,11 @@ class BaseStrategy():
         if state is None:
             self.save_strategy_state()
         elif not self.IsBacktest:
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.buy_index = state['buy_index']
-            self.sell_index = state['sell_index']
+            for field in self.STATE_FIELDS:
+                setattr(self, field, state[field])
 
     def save_strategy_state(self):
-        data = {
-            'base_price': self.base_price,
-            'logical_holding': self.logical_holding,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index,
-        }
+        data = {field: getattr(self, field) for field in self.STATE_FIELDS}
         file = self.get_state_file_name()
         try:
             with open(file, 'w', encoding='utf-8') as f:

@@ -312,6 +312,11 @@ class BaseStrategy():
                     has_filled = True
                     self.apply_changes(changes)
                     self.save_strategy_state()
+                    verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy() else 'Sell'
+                    direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry()() else '平'
+                    price = self.api.A_OrderFilledPrice(order_id)
+                    msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\n"
+                    self.dingding(msg)
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 
         if has_filled and tmp:
@@ -440,7 +445,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.sell_index = 0
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -600,7 +605,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.double_first_position = self.params.get('doubleFirstPosition', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

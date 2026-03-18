@@ -50,6 +50,7 @@ def api():
         A_SendOrder=A_SendOrder,
         A_OrderBuyOrSell=A_OrderBuyOrSell,
         A_OrderEntryOrExit=A_OrderEntryOrExit,
+        A_OrderFilledPrice=A_OrderFilledPrice,
         A_OrderStatus=A_OrderStatus,
         A_TotalPosition=A_TotalPosition,
         Buy=Buy,

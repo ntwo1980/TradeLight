@@ -126,12 +126,12 @@ class BaseStrategy():
         return minute_prices
 
     def GetLastPrices(self, codes):  # BaseStrategy
-        minute_prices = self.GetMinutePrices(codes)
         last_prices = {}
 
         for code in codes:
             if self.IsBacktest:
-                last_prices[code] = minute_prices[code].iloc[-1]['Close']
+                minute_prices = self.fetch_ohlcv(code, 'M')
+                last_prices[code] = minute_prices.iloc[-1]['Close']
             else:
                 last_prices[code] = self.api.Q_Last(code)
 

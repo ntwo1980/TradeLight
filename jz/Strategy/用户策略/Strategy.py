@@ -497,12 +497,14 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            ma_20 = talib.MA(self.DailyPrices[code]['Close'], timeperiod=20)
-            days_above_ma = np.sum(self.DailyPrices[code]['Close'][-20:] > ma_20[-20:])
+            close_prices = self.DailyPrices[code]['Close']
+            close_20 = close_prices.iloc[-20:]
+            ma_20 = talib.MA(close_prices, timeperiod=20)
+            days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
             if 6 <= days_above_ma <= 14 and (limit is None or current_price < limit):
-                base_price = self.DailyPrices[code]['Close'].iloc[-20:].min() + 2 * self.atr
+                base_price = close_20.min() + 2 * self.atr
                 if self.atr > 0:
-                    order_qty = int((self.DailyPrices[code]['Close'].iloc[-20:].max() - self.DailyPrices[code]['Close'].iloc[-20:].min()) / self.atr)
+                    order_qty = int((close_20.max() - close_20.min()) / self.atr)
                     if order_qty < orderQty:
                         order_qty = orderQty
                     elif order_qty > orderQty * 5:
@@ -510,7 +512,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 else:
                     order_qty = orderQty * 3
             else:
-                base_price = self.DailyPrices[code]['Close'].iloc[-1] / 2
+                base_price = close_prices.iloc[-1] / 2
 
         executed = False
 

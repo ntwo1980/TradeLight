@@ -306,6 +306,11 @@ class BaseStrategy():
         maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
         return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
+    def _update_max_holding(self):
+        holding = abs(self.logical_holding)
+        if holding > self.max_logical_holding:
+            self.max_logical_holding = holding
+
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code
 
@@ -548,8 +553,7 @@ class PairLevelGridStrategy(BaseStrategy):
         elif not executed:
             self.print(f'Error: buy_index error')
 
-        if abs(self.logical_holding) > self.max_logical_holding:
-            self.max_logical_holding = abs(self.logical_holding)
+        self._update_max_holding()
 
         if self.print_debug:
             self.print({
@@ -791,8 +795,7 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             self.print(f'Error: buy_index error')
 
-        if abs(self.logical_holding) > self.max_logical_holding:
-            self.max_logical_holding = abs(self.logical_holding)
+        self._update_max_holding()
 
         if self.print_debug:
             self.print({

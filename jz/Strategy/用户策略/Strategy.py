@@ -295,6 +295,9 @@ class BaseStrategy():
         self._log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
 
+    def _next_clamped_index(self, current_index, levels):
+        return min(current_index + 1, len(levels) - 1)
+
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code
 
@@ -571,9 +574,7 @@ class PairLevelGridStrategy(BaseStrategy):
         changes["logical_holding"] = self.logical_holding + self.trade_quantity
         changes["base_price"] = trade_price
         changes["last_buy_date"] = datetime.today().strftime('%Y%m%d')
-        changes["buy_index"] = self.buy_index + 1
-        if changes["buy_index"] >= len(self.buy_levels):
-            changes["buy_index"] = len(self.buy_levels) - 1
+        changes["buy_index"] = self._next_clamped_index(self.buy_index, self.buy_levels)
         changes["sell_index"] = 0
 
         self._commit_changes(order_id, changes)
@@ -590,9 +591,7 @@ class PairLevelGridStrategy(BaseStrategy):
         changes["logical_holding"] = self.logical_holding - self.trade_quantity
         changes["base_price"] = trade_price
         changes["last_sell_date"] = datetime.today().strftime('%Y%m%d')
-        changes["sell_index"] = self.sell_index + 1
-        if changes["sell_index"] >= len(self.sell_levels):
-            changes["sell_index"] = len(self.sell_levels) - 1
+        changes["sell_index"] = self._next_clamped_index(self.sell_index, self.sell_levels)
         changes["buy_index"] = 0
 
         self._commit_changes(order_id, changes)
@@ -833,9 +832,7 @@ class SpreadGridStrategy(BaseStrategy):
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["buy_index"] = 0
         else:
-            changes["buy_index"] = self.buy_index + 1
-        if changes["buy_index"] >= len(self.buy_levels):
-            changes["buy_index"] = len(self.buy_levels) - 1
+            changes["buy_index"] = self._next_clamped_index(self.buy_index, self.buy_levels)
         changes["sell_index"] = 0
 
         self._commit_changes(order_id, changes)
@@ -861,9 +858,7 @@ class SpreadGridStrategy(BaseStrategy):
         if (self.logical_holding * new_holding < 0) or (new_holding == 0):
             changes["sell_index"] = 0
         else:
-            changes["sell_index"] = self.sell_index + 1
-        if changes["sell_index"] >= len(self.sell_levels):
-            changes["sell_index"] = len(self.sell_levels) - 1
+            changes["sell_index"] = self._next_clamped_index(self.sell_index, self.sell_levels)
         changes["buy_index"] = 0
 
         self._commit_changes(order_id, changes)

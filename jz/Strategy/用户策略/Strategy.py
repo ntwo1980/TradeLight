@@ -415,9 +415,9 @@ class BaseStrategy():
             "msgtype": "text",
             "text": {
                 "content": f"{msg}\n{self.dingding_keyword}",
-                "at": {
-                    "isAtAll": False
-                }
+            },
+            "at": {
+                "isAtAll": False
             }
         }
 

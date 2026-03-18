@@ -404,6 +404,14 @@ class BaseStrategy():
         }
         self._save_strategy_state_data_raw(data)
 
+    def _reset_price_cache(self):
+        self.DailyPricesDate = None
+        self.DailyPrices = {}
+        self.ATRs = {}
+        self.slopes = {}
+        self.r_squareds = {}
+        self.is_state_loaded = False
+
     def exit_callback(self, context):
         self.delete_orders()
 
@@ -617,12 +625,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self._save_common_grid_state()
 
     def hisover_callback(self, context):
-        self.DailyPricesDate = None
-        self.DailyPrices = {}
-        self.ATRs = {}
-        self.slopes = {}
-        self.r_squareds = {}
-        self.is_state_loaded = False
+        self._reset_price_cache()
 
         if self.api.BuyPosition(self.codes[0]) > 0:
             self.api.Sell(self.api.BuyPosition(self.codes[0]), self.LastPrices[self.codes[0]], self.codes[0])
@@ -901,12 +904,7 @@ class SpreadGridStrategy(BaseStrategy):
         self._save_common_grid_state()
 
     def hisover_callback(self, context):
-        self.DailyPricesDate = None
-        self.DailyPrices = {}
-        self.ATRs = {}
-        self.slopes = {}
-        self.r_squareds = {}
-        self.is_state_loaded = False
+        self._reset_price_cache()
 
         if self.api.BuyPosition(self.codes[1]) > 0:
             self.api.Sell(self.api.BuyPosition(self.codes[1]), self.LastPrices[self.codes[0]], self.codes[1])

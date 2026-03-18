@@ -375,18 +375,6 @@ class BaseStrategy():
             self.print(f"Error: Failed to load strategy state: {e}")
             return None
 
-    def save_strategy_state_data(self, data):   # BaseStrategy
-        self._save_strategy_state_data_raw(data)
-
-    def _save_strategy_state_data_raw(self, data):
-        file = self.get_state_file_name()
-
-        try:
-            with open(file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            self.print(f"Error: Failed to save strategy state: {e}")
-
     def load_strategy_state(self):
         if self.is_state_loaded:
             return
@@ -407,7 +395,12 @@ class BaseStrategy():
             'buy_index': self.buy_index,
             'sell_index': self.sell_index,
         }
-        self._save_strategy_state_data_raw(data)
+        file = self.get_state_file_name()
+        try:
+            with open(file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            self.print(f"Error: Failed to save strategy state: {e}")
 
     def _commit_changes(self, order_id, changes):
         if self.IsBacktest:

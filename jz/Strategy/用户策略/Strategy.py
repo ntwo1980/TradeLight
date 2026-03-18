@@ -293,9 +293,7 @@ class BaseStrategy():
         return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
     def update_max_holding(self):
-        holding = abs(self.logical_holding)
-        if holding > self.max_logical_holding:
-            self.max_logical_holding = holding
+        self.max_logical_holding = max(self.max_logical_holding, abs(self.logical_holding))
 
     def check_in_session(self):
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):

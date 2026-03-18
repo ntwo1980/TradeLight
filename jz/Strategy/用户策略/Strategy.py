@@ -387,7 +387,7 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
 
-    def _load_common_grid_state(self):
+    def load_strategy_state(self):
         if self.is_state_loaded:
             return
 
@@ -400,7 +400,7 @@ class BaseStrategy():
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
 
-    def _save_common_grid_state(self):
+    def save_strategy_state(self):
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
@@ -612,13 +612,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self._commit_changes(order_id, changes)
         return True
 
-    def load_strategy_state(self):  # PairLevelGridStrategy
-        self._load_common_grid_state()
-
-    def save_strategy_state(self):   # PairLevelGridStrategy
-        self._save_common_grid_state()
-
-    def hisover_callback(self, context):
+    def hisover_callback(self, context):   # PairLevelGridStrategy
         self._reset_price_cache()
 
         if self.api.BuyPosition(self.codes[0]) > 0:
@@ -874,13 +868,7 @@ class SpreadGridStrategy(BaseStrategy):
         self._commit_changes(order_id, changes)
         return True
 
-    def load_strategy_state(self):  # SpreadGridStrategy
-        self._load_common_grid_state()
-
-    def save_strategy_state(self):   # SpreadGridStrategy
-        self._save_common_grid_state()
-
-    def hisover_callback(self, context):
+    def hisover_callback(self, context):   # SpreadGridStrategy
         self._reset_price_cache()
 
         if self.api.BuyPosition(self.codes[1]) > 0:

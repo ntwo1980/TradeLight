@@ -90,6 +90,15 @@ class BaseStrategy():
             'Vol':   self.api.Vol(code, period, 1),
         })
 
+    def adjust_atr(self, atr):
+        atr_config = self.params.get('atr')
+        if atr_config is not None:
+            if self.params.get('fixedAtr', False):
+                return atr_config
+            elif atr > atr_config * 1.3 or atr < atr_config * 0.7:
+                return atr_config
+        return atr
+
     def GetDailyPrices(self, codes):  # BaseStrategy
         if self.DailyPricesDate == self.LastTradeDate():
             return
@@ -98,16 +107,7 @@ class BaseStrategy():
 
             if len(df) >= 4:
                 atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
-
-                atr_config = self.params.get('atr')
-                fixed_atr = self.params.get('fixedAtr', False)
-                if atr_config is not None:
-                    if fixed_atr:
-                        atr = atr_config
-                    elif atr > atr_config * 1.3 or atr < atr_config * 0.7:
-                        atr = atr_config
-
-                self.ATRs[code] = atr
+                self.ATRs[code] = self.adjust_atr(atr)
                 slope, r_squared = self.calc_log_regression(df['Close'].values[-20:])
                 self.slopes[code] = slope
                 self.r_squareds[code] = r_squared

@@ -232,10 +232,7 @@ class BaseStrategy():
 
             buy_position, sell_position = self._resolve_positions_for_order(code)
 
-            orderQty = self.params.get('orderQty', 1)
-            maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
-
-            if abs(buy_position - sell_position) > orderQty * maxPositionMultiplier:
+            if self._position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach buy position limit')
                 return (False, 0)
             if sell_position >= quantity:
@@ -273,9 +270,7 @@ class BaseStrategy():
 
             buy_position, sell_position = self._resolve_positions_for_order(code)
 
-            orderQty = self.params.get('orderQty', 1)
-            maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
-            if abs(sell_position - buy_position) > orderQty * maxPositionMultiplier:
+            if self._position_limit_exceeded(buy_position, sell_position):
                 self.print('Error: reach sell position limit')
                 return (False, 0)
 
@@ -305,6 +300,11 @@ class BaseStrategy():
     def _tick_ceil(self, code, price):
         tick = self.api.PriceTick(code)
         return math.ceil(price / tick) * tick
+
+    def _position_limit_exceeded(self, buy_position, sell_position):
+        orderQty = self.params.get('orderQty', 1)
+        maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
+        return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
     def is_spread_code(self, code):
         return '|M|' in code or '|S|' in code

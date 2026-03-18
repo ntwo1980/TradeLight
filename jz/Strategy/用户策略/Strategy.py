@@ -21,7 +21,6 @@ class BaseStrategy():
         self.ATRs = {}
         self.slopes = {}
         self.r_squareds = {}
-        self.MinutePrices = {}
         self.LastPrices = {}
         self.base_price = 0
         self.buy_index = 0
@@ -118,14 +117,6 @@ class BaseStrategy():
 
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
             self.DailyPricesDate = self.LastTradeDate()
-
-    def GetMinutePrices(self, codes):  # BaseStrategy
-        minute_prices = {}
-
-        for code in codes:
-            minute_prices[code] = self.fetch_ohlcv(code, 'M')
-
-        return minute_prices
 
     def GetLastPrices(self, codes):  # BaseStrategy
         last_prices = {}

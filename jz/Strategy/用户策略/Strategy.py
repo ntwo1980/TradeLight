@@ -69,6 +69,14 @@ class BaseStrategy():
     def today_str(self):
         return datetime.today().strftime('%Y%m%d')
 
+    def _calc_log_regression(self, values):
+        x = np.arange(len(values))
+        shift = values.min() - 1e-6
+        y = np.log(values - shift)
+        slope, intercept = np.polyfit(x, y, 1)
+        r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
+        return slope, r_squared
+
     def _fetch_ohlcv(self, code, period):
         return pd.DataFrame({
             'Open':  self.api.Open(code, period, 1),
@@ -96,13 +104,9 @@ class BaseStrategy():
                         atr = atr_config
 
                 self.ATRs[code] = atr
-                x = np.arange(len(df['Close'].values[-20:]))
-                vals = df['Close'].values[-20:]
-                shift = vals.min() - 1e-6
-                y = np.log(vals - shift)
-                slope, intercept = np.polyfit(x, y, 1)
+                slope, r_squared = self._calc_log_regression(df['Close'].values[-20:])
                 self.slopes[code] = slope
-                self.r_squareds[code] = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
+                self.r_squareds[code] = r_squared
             else:
                 self.ATRs[code] = None
                 self.slopes[code] = None

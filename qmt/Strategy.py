@@ -125,7 +125,7 @@ class BaseStrategy():
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
 
-        if not self.IsBacktest and maxSellCount > 5 and index < total / 4:
+        if not self.IsBacktest and maxSellCount > 5 and index < total / 4 and total > 5:
             tradingAmount = tradingAmount / 4
 
         return tradingAmount

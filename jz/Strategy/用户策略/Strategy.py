@@ -693,7 +693,7 @@ class SpreadGridStrategy(BaseStrategy):
                 orderQuantity = orderQuantity + increments
 
             if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 7 * orderQty) \
+                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
                 self.delete_orders()
                 self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
@@ -736,7 +736,7 @@ class SpreadGridStrategy(BaseStrategy):
                 orderQuantity = orderQuantity + increments
 
             if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 7 * orderQty) \
+                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
                 self.delete_orders()
                 self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding), True)

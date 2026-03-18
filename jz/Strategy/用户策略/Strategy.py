@@ -220,20 +220,24 @@ class BaseStrategy():
             msg = f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
 
-    def Buy(self, code, quantity, price):  # BaseStrategy
-        # timestamp = int(time.time())
-        # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
+    def execute_order(self, is_buy, code, quantity, price):
         retEnter = 0
         EnterOrderID = 0
         direction = '开'
+        verb = 'Buy' if is_buy else 'Sell'
 
         self.trade_quantity = quantity
         if self.IsBacktest:
-            sell_position = self.GetSellPosition(code)
-            if sell_position > 0:
-                self.api.BuyToCover(quantity, price, code)
+            if is_buy:
+                if self.GetSellPosition(code) > 0:
+                    self.api.BuyToCover(quantity, price, code)
+                else:
+                    self.api.Buy(quantity, price, code)
             else:
-                self.api.Buy(quantity, price, code)
+                if self.GetBuyPosition(code) > 0:
+                    self.api.Sell(quantity, price, code)
+                else:
+                    self.api.SellShort(quantity, price, code)
 
             return (True, 0)
         else:
@@ -244,44 +248,22 @@ class BaseStrategy():
             buy_position, sell_position = self.resolve_positions_for_order(code)
 
             if self.position_limit_exceeded(buy_position, sell_position):
-                self.print('Error: reach buy position limit')
+                self.print(f'Error: reach {verb.lower()} position limit')
                 return (False, 0)
-            direction, retEnter, EnterOrderID = self.send_live_order(self.api.Enum_Buy(), sell_position, quantity, price, code)
+
+            enum_dir = self.api.Enum_Buy() if is_buy else self.api.Enum_Sell()
+            cover_position = sell_position if is_buy else buy_position
+            direction, retEnter, EnterOrderID = self.send_live_order(enum_dir, cover_position, quantity, price, code)
             self.send_order_count += 1
 
-        self.log_trade('Buy', direction, code, quantity, price, retEnter, EnterOrderID)
+        self.log_trade(verb, direction, code, quantity, price, retEnter, EnterOrderID)
         return (retEnter == 0, EnterOrderID)
+
+    def Buy(self, code, quantity, price):  # BaseStrategy
+        return self.execute_order(True, code, quantity, price)
 
     def Sell(self, code, quantity, price):  # BaseStrategy
-        # timestamp = int(time.time())
-        # msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
-        retEnter = 0
-        EnterOrderID = 0
-        direction = '开'
-        self.trade_quantity = quantity
-        if self.IsBacktest:
-            buy_position = self.GetBuyPosition(code)
-            if buy_position > 0:
-                self.api.Sell(quantity, price, code)
-            else:
-                self.api.SellShort(quantity, price, code)
-
-            return (True, 0)
-        else:
-            if self.send_order_count > self.max_send_order_count:
-                self.print('Error: reach order limit')
-                return (False, 0)
-
-            buy_position, sell_position = self.resolve_positions_for_order(code)
-
-            if self.position_limit_exceeded(buy_position, sell_position):
-                self.print('Error: reach sell position limit')
-                return (False, 0)
-            direction, retEnter, EnterOrderID = self.send_live_order(self.api.Enum_Sell(), buy_position, quantity, price, code)
-            self.send_order_count += 1
-
-        self.log_trade('Sell', direction, code, quantity, price, retEnter, EnterOrderID)
-        return (retEnter == 0, EnterOrderID)
+        return self.execute_order(False, code, quantity, price)
 
     def send_live_order(self, enum_direction, cover_position, quantity, price, code):
         if cover_position >= quantity:

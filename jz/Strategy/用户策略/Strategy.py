@@ -488,7 +488,7 @@ class PairLevelGridStrategy(BaseStrategy):
             close_20 = close_prices.iloc[-20:]
             ma_20 = talib.MA(close_prices, timeperiod=20)
             days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
-            if 6 <= days_above_ma <= 14 and (limit is None or current_price < limit):
+            if days_above_ma >= 6 and (limit is None or current_price < limit):
                 base_price = close_20.min() + 2 * self.atr
                 if self.atr > 0:
                     order_qty = int((close_20.max() - close_20.min()) / self.atr)
@@ -697,16 +697,16 @@ class SpreadGridStrategy(BaseStrategy):
                 increments = orderQty // 3
                 orderQuantity = orderQuantity + increments
 
-            if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and abs(self.slope) > 0.3) \
+            if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
+                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3):
                 self.delete_orders()
                 self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True
                 return
 
             if not existing_sell_order:
-                if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
+                if self.logical_holding == 0 and self.slope < 0.3 and current_price <= base_price + self.atr:
                     if days_above_ma <= 14 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
@@ -740,16 +740,16 @@ class SpreadGridStrategy(BaseStrategy):
                 increments = orderQty // 3
                 orderQuantity = orderQuantity + increments
 
-            if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and abs(self.slope) > 0.3) \
+            if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and abs(self.slope) > 0.3):
+                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3):
                 self.delete_orders()
                 self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True
                 return
 
             if not existing_buy_order:
-                if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
+                if self.logical_holding == 0 and self.slope > -0.3 and current_price >= base_price - self.atr:
                     if days_above_ma >= 6 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)

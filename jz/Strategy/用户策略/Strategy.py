@@ -707,7 +707,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             if not existing_sell_order:
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price <= base_price + self.atr:
-                    if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
+                    if days_above_ma <= 14 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
                 else:
@@ -750,7 +750,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             if not existing_buy_order:
                 if self.logical_holding == 0 and abs(self.slope) < 0.3 and current_price >= base_price - self.atr:
-                    if 6 <= days_above_ma <= 14 or self.ignore_days_above_ma:
+                    if days_above_ma >= 6 or self.ignore_days_above_ma:
                         quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
                 else:

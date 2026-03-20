@@ -625,6 +625,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
         self.double_first_position = self.params.get('doubleFirstPosition', True)
+        self.stop_lose = self.params.get('stopLose', True)
 
         for code in self.codes:
             self.api.SetBarInterval(code, 'M', 1, 1)
@@ -719,9 +720,9 @@ class SpreadGridStrategy(BaseStrategy):
                 increments = orderQty // 3
                 orderQuantity = orderQuantity + increments
 
-            if (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
+            if self.stop_lose and ((self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3):
+                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)):
                 self.delete_orders()
                 self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True
@@ -762,9 +763,9 @@ class SpreadGridStrategy(BaseStrategy):
                 increments = orderQty // 3
                 orderQuantity = orderQuantity + increments
 
-            if (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
+            if self.stop_lose and ((self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3):
+                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)):
                 self.delete_orders()
                 self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding), True)
                 self.position_closed = True

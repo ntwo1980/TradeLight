@@ -750,6 +750,8 @@ class SpreadGridStrategy(BaseStrategy):
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
                 else:
                     if self.logical_holding < 0:
+                        if self.logical_holding < -orderQty * 4:
+                            orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                     else:
                         if self.double_first_position and self.logical_holding <= orderQty * 2:
@@ -793,6 +795,8 @@ class SpreadGridStrategy(BaseStrategy):
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
                 else:
                     if self.logical_holding > 0:
+                        if self.logical_holding > orderQty * 4:
+                            orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                     else:
                         if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:

@@ -854,12 +854,14 @@ class SpreadGridStrategy(BaseStrategy):
 
         new_holding = self.logical_holding + self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        orderQty = self.params.get('orderQty', 1)
+
         changes = {
             "logical_holding": new_holding,
             "base_price": price,
             "last_buy_date": self.today_str(),
             "buy_index": 0 if cross_zero else self.next_clamped_index(self.buy_index, self.buy_levels),
-            "sell_index": 0,
+            "sell_index": 1 if new_holding < -orderQty * 3 else 0
         }
 
         self.commit_changes(order_id, changes)
@@ -879,12 +881,14 @@ class SpreadGridStrategy(BaseStrategy):
 
         new_holding = self.logical_holding - self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        orderQty = self.params.get('orderQty', 1)
+
         changes = {
             "logical_holding": new_holding,
             "base_price": price,
             "last_sell_date": self.today_str(),
             "sell_index": 0 if cross_zero else self.next_clamped_index(self.sell_index, self.sell_levels),
-            "buy_index": 0,
+            "buy_index": 1 if new_holding > orderQty * 3 else 0
         }
 
         self.commit_changes(order_id, changes)

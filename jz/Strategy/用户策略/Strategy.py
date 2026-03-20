@@ -28,6 +28,9 @@ class BaseStrategy():
         self.last_buy_date = None
         self.last_sell_date = None
         self.send_order_count = 0
+        self.consecutive_buy_count = 0
+        self.consecutive_sell_count = 0
+        self.max_consecutive_count = 2
         self.max_send_order_count = 10
         self.deal = False
         self.is_state_loaded = False
@@ -155,7 +158,10 @@ class BaseStrategy():
             if self.position_closed:
                 self.position_closed = False
 
-            self.max_send_order_count = 40
+            self.send_order_count = 0
+            self.consecutive_buy_count = 0
+            self.consecutive_sell_count = 0
+
             return False
 
         if not self.IsBacktest and 0.2259 < now < 0.2310:
@@ -234,6 +240,14 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
+            if self.consecutive_buy_count >= self.max_consecutive_count and is_buy:
+                self.print('Error: reach consecutive buy limit')
+                return (False, 0)
+
+            if self.consecutive_sell_count >= self.max_consecutive_count and not is_buy:
+                self.print('Error: reach consecutive sell limit')
+                return (False, 0)
+
             buy_position, sell_position = self.resolve_positions_for_order(code)
 
             if self.position_limit_exceeded(buy_position, sell_position):
@@ -243,6 +257,14 @@ class BaseStrategy():
             enum_dir = self.api.Enum_Buy() if is_buy else self.api.Enum_Sell()
             cover_position = sell_position if is_buy else buy_position
             direction, retEnter, EnterOrderID = self.send_live_order(enum_dir, cover_position, quantity, price, code)
+            if retEnter == 0:
+                if is_buy:
+                    self.consecutive_buy_count += 1
+                    self.consecutive_sell_count = 0
+                else:
+                    self.consecutive_sell_count += 1
+                    self.consecutive_buy_count = 0
+
             self.send_order_count += 1
 
         self.log_trade(verb, direction, code, quantity, price, retEnter, EnterOrderID)

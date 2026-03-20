@@ -96,6 +96,7 @@ def api():
         StartTrade=StartTrade,
         StopTrade=StopTrade,
         Time=Time,
+        TimeDiff=TimeDiff,
         TradeDate=TradeDate,
         Vol=Vol,
     )

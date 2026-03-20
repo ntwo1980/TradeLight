@@ -26,7 +26,9 @@ class BaseStrategy():
         self.buy_index = 0
         self.sell_index = 0
         self.last_buy_date = None
+        self.last_buy_time = None
         self.last_sell_date = None
+        self.last_sell_time = None
         self.send_order_count = 0
         self.consecutive_buy_count = 0
         self.consecutive_sell_count = 0
@@ -173,7 +175,7 @@ class BaseStrategy():
 
         return True
 
-    def GetBuyPosition(self, code):
+    def GetBuyPosition(self, code):    # BaseStrategy
         if self.IsBacktest:
             return self.api.BuyPosition(code)
         else:
@@ -187,7 +189,7 @@ class BaseStrategy():
             return self.api.A_SellPositionCanCover(code)
             # return self.api.A_SellPosition(code)
 
-    def resolve_positions_for_order(self, code):
+    def resolve_positions_for_order(self, code):    # BaseStrategy
         if self.is_spread_code(code):
             if self.params.get('firstPosition', True):
                 buy_position = self.GetBuyPosition(self.codes[2])
@@ -209,13 +211,13 @@ class BaseStrategy():
 
         return buy_position, sell_position
 
-    def log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):
+    def log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):    # BaseStrategy
         self.print(f"{verb}{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
             msg = f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
             self.dingding(msg)
 
-    def execute_order(self, is_buy, code, quantity, price):
+    def execute_order(self, is_buy, code, quantity, price):    # BaseStrategy
         retEnter = 0
         EnterOrderID = 0
         direction = '开'
@@ -240,13 +242,32 @@ class BaseStrategy():
                 self.print('Error: reach order limit')
                 return (False, 0)
 
-            if self.consecutive_buy_count >= self.max_consecutive_count and is_buy:
-                self.print('Error: reach consecutive buy limit')
-                return (False, 0)
+            orderQty = self.params.get('orderQty', 1)
+            if is_buy:
+                if self.consecutive_buy_count >= self.max_consecutive_count:
+                    self.print('Error: reach consecutive buy limit')
+                    return (False, 0)
 
-            if self.consecutive_sell_count >= self.max_consecutive_count and not is_buy:
-                self.print('Error: reach consecutive sell limit')
-                return (False, 0)
+                # Only enforce the "too frequently" cooldown for SpreadGridStrategy
+                if isinstance(self, SpreadGridStrategy) \
+                    and self.consecutive_buy_count > 0 \
+                    and self.logical_holding >= orderQty * 2 \
+                    and self.last_buy_time is not None \
+                    and self.TimeDiff(self.last_buy_time, self.api.CurrentTime()) < 60 * 30:
+                    self.print('Error: buy too frequently')
+                    return (False, 0)
+            else:
+                if self.consecutive_sell_count >= self.max_consecutive_count:
+                    self.print('Error: reach consecutive sell limit')
+                    return (False, 0)
+
+                if isinstance(self, SpreadGridStrategy) \
+                    and self.consecutive_sell_count > 0 \
+                    and self.logical_holding <= -orderQty * 2 \
+                    and self.last_sell_time is not None \
+                    and self.TimeDiff(self.last_sell_time, self.api.CurrentTime()) < 60 * 30:
+                    self.print('Error: sell too frequently')
+                    return (False, 0)
 
             buy_position, sell_position = self.resolve_positions_for_order(code)
 
@@ -261,9 +282,11 @@ class BaseStrategy():
                 if is_buy:
                     self.consecutive_buy_count += 1
                     self.consecutive_sell_count = 0
+                    self.last_buy_time = self.api.CurrentTime()
                 else:
                     self.consecutive_sell_count += 1
                     self.consecutive_buy_count = 0
+                    self.last_sell_time = self.api.CurrentTime()
 
             self.send_order_count += 1
 

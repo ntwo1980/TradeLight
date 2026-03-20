@@ -850,9 +850,9 @@ class SpreadGridStrategy(BaseStrategy):
                     return False
 
         orderQty = self.params.get('orderQty', 1)
-        skip_trade = self.logical_holding + quantity > orderQty * self.max_holding_multiplier
+        skip_trade = not force and self.logical_holding + quantity > orderQty * self.max_holding_multiplier
         order_id = 0
-        if skip_trade and not force:
+        if skip_trade:
             self.print(f'Skip Buy: holding {self.logical_holding} + {quantity} > max {orderQty * self.max_holding_multiplier}')
         else:
             succeed, order_id = self.Buy(code, quantity, price)
@@ -882,9 +882,9 @@ class SpreadGridStrategy(BaseStrategy):
                     return False
 
         orderQty = self.params.get('orderQty', 1)
-        skip_trade = self.logical_holding - quantity < -orderQty * self.max_holding_multiplier
+        skip_trade = not force and self.logical_holding - quantity < -orderQty * self.max_holding_multiplier
         order_id = 0
-        if skip_trade and not force:
+        if skip_trade:
             self.print(f'Skip Sell: holding {self.logical_holding} - {quantity} < -max {orderQty * self.max_holding_multiplier}')
         else:
             succeed, order_id = self.Sell(code, quantity, price)

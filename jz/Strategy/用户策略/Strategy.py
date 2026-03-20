@@ -419,10 +419,10 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
 
-    def commit_changes(self, order_id, changes, skip_trade = False):
-        if self.IsBacktest or skip_trade:
+    def commit_changes(self, order_id, changes):
+        if self.IsBacktest:
             self.apply_changes(changes)
-        elif order_id:
+        else:
             self.waiting_list.append((order_id, changes))
 
     def reset_price_cache(self):
@@ -649,21 +649,12 @@ class SpreadGridStrategy(BaseStrategy):
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
         self.double_first_position = self.params.get('doubleFirstPosition', True)
         self.stop_lose = self.params.get('stopLose', True)
-        self.max_holding_multiplier = 5
 
         for code in self.codes:
             self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
-
-    def calc_order_quantity(self, orderQty):
-        orderQuantity = orderQty
-        if orderQty == 1 and abs(self.logical_holding) >= 4:
-            orderQuantity = 2
-        if orderQty > 1 and abs(self.logical_holding) > 3 * orderQty:
-            orderQuantity += orderQty // 3
-        return orderQuantity
 
     def execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
         if not self.IsBacktest:
@@ -849,18 +840,13 @@ class SpreadGridStrategy(BaseStrategy):
                 if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
                     return False
 
-        orderQty = self.params.get('orderQty', 1)
-        skip_trade = not force and self.logical_holding + quantity > orderQty * self.max_holding_multiplier
-        order_id = 0
-        if skip_trade:
-            self.print(f'Skip Buy: holding {self.logical_holding} + {quantity} > max {orderQty * self.max_holding_multiplier}')
-        else:
-            succeed, order_id = self.Buy(code, quantity, price)
-            if not succeed:
-                return False
+        succeed, order_id = self.Buy(code, quantity, price)
+        if not succeed:
+            return False
 
-        new_holding = self.logical_holding if skip_trade else self.logical_holding + self.trade_quantity
+        new_holding = self.logical_holding + self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        orderQty = self.params.get('orderQty', 1)
 
         changes = {
             "logical_holding": new_holding,
@@ -870,7 +856,7 @@ class SpreadGridStrategy(BaseStrategy):
             "sell_index": 1 if new_holding < -orderQty * 3 else 0
         }
 
-        self.commit_changes(order_id, changes, skip_trade)
+        self.commit_changes(order_id, changes)
         return True
 
     def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
@@ -881,18 +867,13 @@ class SpreadGridStrategy(BaseStrategy):
                 if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
                     return False
 
-        orderQty = self.params.get('orderQty', 1)
-        skip_trade = not force and self.logical_holding - quantity < -orderQty * self.max_holding_multiplier
-        order_id = 0
-        if skip_trade:
-            self.print(f'Skip Sell: holding {self.logical_holding} - {quantity} < -max {orderQty * self.max_holding_multiplier}')
-        else:
-            succeed, order_id = self.Sell(code, quantity, price)
-            if not succeed:
-                return False
+        succeed, order_id = self.Sell(code, quantity, price)
+        if not succeed:
+            return False
 
-        new_holding = self.logical_holding if skip_trade else self.logical_holding - self.trade_quantity
+        new_holding = self.logical_holding - self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
+        orderQty = self.params.get('orderQty', 1)
 
         changes = {
             "logical_holding": new_holding,
@@ -902,7 +883,7 @@ class SpreadGridStrategy(BaseStrategy):
             "buy_index": 1 if new_holding > orderQty * 3 else 0
         }
 
-        self.commit_changes(order_id, changes, skip_trade)
+        self.commit_changes(order_id, changes)
         return True
 
     def hisover_callback(self, context):   # SpreadGridStrategy

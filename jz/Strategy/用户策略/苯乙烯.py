@@ -45,6 +45,7 @@ def api():
         A_DeleteOrder=A_DeleteOrder,
         A_OrderBuyOrSell=A_OrderBuyOrSell,
         A_OrderEntryOrExit=A_OrderEntryOrExit,
+        A_OrderFilledLot=A_OrderFilledLot,
         A_OrderFilledPrice=A_OrderFilledPrice,
         A_OrderStatus=A_OrderStatus,
         A_SellPosition=A_SellPosition,

@@ -360,7 +360,9 @@ class BaseStrategy():
                     verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy() else 'Sell'
                     direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry() else '平'
                     price = self.api.A_OrderFilledPrice(order_id)
-                    msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\n"
+                    quantity = self.api.A_OrderFilledLot(order_id)
+
+                    msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}"
                     self.dingding(msg)
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 

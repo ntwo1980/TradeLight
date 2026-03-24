@@ -189,22 +189,10 @@ class BaseStrategy():
             return self.api.A_SellPositionCanCover(code)
             # return self.api.A_SellPosition(code)
 
-    def resolve_positions_for_order(self, code):    # BaseStrategy
-        if self.is_spread_code(code):
-            position_code = self.GetPositionCode()
-            buy_position = self.GetBuyPosition(position_code)
-            sell_position = self.GetSellPosition(position_code)
-        else:
-            buy_position = self.GetBuyPosition(code)
-            sell_position = self.GetSellPosition(code)
-
-        if buy_position == 0 and sell_position == 0 and self.logical_holding != 0:
-            if self.logical_holding >= 0:
-                buy_position = self.logical_holding
-            elif self.is_spread_code(code):
-                sell_position = abs(self.logical_holding)
-            else:
-                self.print('Error: sell position is less than 0')
+    def resolve_positions_for_order(self):    # BaseStrategy
+        position_code = self.GetPositionCode()
+        buy_position = self.GetBuyPosition(position_code)
+        sell_position = self.GetSellPosition(position_code)
 
         return buy_position, sell_position
 
@@ -266,7 +254,7 @@ class BaseStrategy():
                     self.print('Error: sell too frequently')
                     return (False, 0)
 
-            buy_position, sell_position = self.resolve_positions_for_order(code)
+            buy_position, sell_position = self.resolve_positions_for_order()
 
             if self.position_limit_exceeded(buy_position, sell_position):
                 self.print(f'Error: reach {verb.lower()} position limit')
@@ -358,9 +346,7 @@ class BaseStrategy():
                     direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry() else '平'
                     price = self.api.A_OrderFilledPrice(order_id)
                     quantity = self.api.A_OrderFilledLot(order_id)
-                    position_code = self.GetPositionCode()
-                    buy_position = self.GetBuyPosition(position_code)
-                    sell_position = self.GetSellPosition(position_code)
+                    buy_position, sell_position = self.resolve_positions_for_order()
 
                     msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
                     self.dingding(msg)
@@ -498,8 +484,6 @@ class PairLevelGridStrategy(BaseStrategy):
         self.api.SetActual()
 
     def GetPositionCode(self):
-        # PairLevelGridStrategy does not operate as a spread strategy.
-        # Always use the primary code (codes[0]) for position queries.
         return self.codes[0]
 
     def handle_data(self, context):     # PairLevelGridStrategy

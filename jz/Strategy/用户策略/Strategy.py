@@ -191,12 +191,9 @@ class BaseStrategy():
 
     def resolve_positions_for_order(self, code):    # BaseStrategy
         if self.is_spread_code(code):
-            if self.params.get('firstPosition', True):
-                buy_position = self.GetBuyPosition(self.codes[2])
-                sell_position = self.GetSellPosition(self.codes[2])
-            else:
-                buy_position = self.GetSellPosition(self.codes[3])
-                sell_position = self.GetBuyPosition(self.codes[3])
+            position_code = self.GetPositionCode()
+            buy_position = self.GetBuyPosition(position_code)
+            sell_position = self.GetSellPosition(position_code)
         else:
             buy_position = self.GetBuyPosition(code)
             sell_position = self.GetSellPosition(code)
@@ -497,6 +494,11 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
+    def GetPositionCode(self):
+        # PairLevelGridStrategy does not operate as a spread strategy.
+        # Always use the primary code (codes[0]) for position queries.
+        return self.codes[0]
+
     def handle_data(self, context):     # PairLevelGridStrategy
         if not super().handle_data(context):
             return
@@ -673,6 +675,13 @@ class SpreadGridStrategy(BaseStrategy):
             return trade_func(code, trade_price, quantity)
 
         return False
+
+    def GetPositionCode(self):
+        if self.params.get('firstPosition', True):
+            return self.codes[2]
+        else:
+            return self.codes[3]
+
     def handle_data(self, context):     # SpreadGridStrategy
         if not super().handle_data(context):
             return
@@ -707,12 +716,9 @@ class SpreadGridStrategy(BaseStrategy):
         current_price = self.LastPrices[self.codes[0]]
 
         base_price = self.base_price
-        if self.params.get('firstPosition', True):
-            buy_position = self.GetBuyPosition(self.codes[2])
-            sell_position = self.GetSellPosition(self.codes[2])
-        else:
-            buy_position = self.GetSellPosition(self.codes[3])
-            sell_position = self.GetBuyPosition(self.codes[3])
+        position_code = self.GetPositionCode()
+        buy_position = self.GetBuyPosition(position_code)
+        sell_position = self.GetSellPosition(position_code)
 
         close_prices = self.DailyPrices[self.codes[0]]['Close']
         ma_20 = talib.MA(close_prices, timeperiod=20)

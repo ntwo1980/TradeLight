@@ -193,6 +193,8 @@ class BaseStrategy():
         position_code = self.GetPositionCode()
         buy_position = self.GetBuyPosition(position_code)
         sell_position = self.GetSellPosition(position_code)
+        if isinstance(self, SpreadGridStrategy) and not self.params.get('firstPosition', True):
+            buy_position, sell_position = sell_position, buy_position
 
         return buy_position, sell_position
 
@@ -703,9 +705,7 @@ class SpreadGridStrategy(BaseStrategy):
         current_price = self.LastPrices[self.codes[0]]
 
         base_price = self.base_price
-        position_code = self.GetPositionCode()
-        buy_position = self.GetBuyPosition(position_code)
-        sell_position = self.GetSellPosition(position_code)
+        buy_position, sell_position = self.resolve_positions_for_order()
 
         close_prices = self.DailyPrices[self.codes[0]]['Close']
         ma_20 = talib.MA(close_prices, timeperiod=20)

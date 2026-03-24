@@ -644,7 +644,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.stop_lose = self.params.get('stopLose', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 1)
+            self.api.SetBarInterval(code, 'M', 1, 5000)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
@@ -734,7 +734,7 @@ class SpreadGridStrategy(BaseStrategy):
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)):
                 self.delete_orders()
-                self.ExecuteBuy(self.codes[1], current_price, abs(self.logical_holding), True)
+                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=True)
                 self.position_closed = True
                 return
 
@@ -757,6 +757,8 @@ class SpreadGridStrategy(BaseStrategy):
                                 self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
                                 self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
+                        elif sell_threshold > ma_20_last:
+                            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, self.logical_holding, sell_threshold, is_buy=False)
                         else:
                             self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
 
@@ -779,7 +781,7 @@ class SpreadGridStrategy(BaseStrategy):
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)):
                 self.delete_orders()
-                self.ExecuteSell(self.codes[1], current_price, abs(self.logical_holding), True)
+                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=False)
                 self.position_closed = True
                 return
 
@@ -802,6 +804,8 @@ class SpreadGridStrategy(BaseStrategy):
                                 self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                             else:
                                 self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
+                        elif buy_threshold < ma_20_last:
+                            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), buy_threshold, is_buy=True)
                         else:
                             self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
         else:

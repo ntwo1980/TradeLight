@@ -360,13 +360,19 @@ class BaseStrategy():
 
         self.waiting_list = remaining_orders
 
+        # Determine whether active buy/sell orders remain (single pass, one API call per order)
         existing_buy_order = False
         existing_sell_order = False
-        for order_id, _ in self.waiting_list:
-            if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy:
+        for order_id, _ in remaining_orders:
+            kind = self.api.A_OrderBuyOrSell(order_id)
+            if kind == Enum_Buy:
                 existing_buy_order = True
-            elif self.api.A_OrderBuyOrSell(order_id) == Enum_Sell:
+                if existing_sell_order:
+                    break
+            elif kind == Enum_Sell:
                 existing_sell_order = True
+                if existing_buy_order:
+                    break
 
         return (existing_buy_order, existing_sell_order)
 

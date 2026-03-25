@@ -125,15 +125,18 @@ class BaseStrategy():
 
     def GetLastPrices(self, codes):  # BaseStrategy
         last_prices = {}
-
         for code in codes:
-            if self.IsBacktest:
-                minute_prices = self.fetch_ohlcv(code, 'M')
-                last_prices[code] = minute_prices.iloc[-1]['Close']
-            else:
-                last_prices[code] = self.api.Q_Last(code)
+            last_prices[code] = self.get_last_price(code)
 
         self.LastPrices = last_prices
+
+    def get_last_price(self, code):
+        """Return the most recent price for `code` depending on backtest mode.
+        """
+        if self.IsBacktest:
+            minute_prices = self.fetch_ohlcv(code, 'M')
+            return minute_prices.iloc[-1]['Close']
+        return self.api.Q_Last(code)
 
     def handle_data(self, context):   # BaseStrategy
         self.context = context

@@ -474,8 +474,17 @@ class BaseStrategy():
 
     def dingding(self, msg):
         webhook_url = f"https://oapi.dingtalk.com/robot/send?access_token={self.dingding_token}"
+        payload = self.build_dingding_payload(msg)
 
-        payload = {
+        try:
+            requests.post(webhook_url, json=payload, timeout=5)
+        except Exception as e:
+            self.print(f"DingDing exception (ignored): {e}")
+
+    def build_dingding_payload(self, msg):
+        """Construct the DingDing webhook payload. Extracted for clarity.
+        """
+        return {
             "msgtype": "text",
             "text": {
                 "content": f"{msg}\n{self.dingding_keyword}",
@@ -484,11 +493,6 @@ class BaseStrategy():
                 "isAtAll": False
             }
         }
-
-        try:
-            requests.post(webhook_url, json=payload, timeout=5)
-        except Exception as e:
-            self.print(f"DingDing exception (ignored): {e}")
 
 class PairLevelGridStrategy(BaseStrategy):
     def __init__(self, **kwargs):

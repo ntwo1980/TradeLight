@@ -332,45 +332,60 @@ class BaseStrategy():
             setattr(self, key, value)
 
     def existing_order(self):
-        tmp = []
-        has_filled = False
+        remaining_orders = []
+        any_filled = False
+
+        # Cache enum values to avoid repeated remote/bound calls
+        Enum_Filled = self.api.Enum_Filled()
+        Enum_Canceled = self.api.Enum_Canceled()
+        Enum_Buy = self.api.Enum_Buy()
+        Enum_Sell = self.api.Enum_Sell()
+
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
-            if status != self.api.Enum_Filled() and status != self.api.Enum_Canceled():
-                tmp.append((order_id, changes))
+            if status != Enum_Filled and status != Enum_Canceled:
+                remaining_orders.append((order_id, changes))
                 self.print(f"Order {order_id} status={status} existing")
             else:
-                if status == self.api.Enum_Filled():
-                    has_filled = True
-                    self.apply_changes(changes)
-                    self.save_strategy_state()
-                    verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy() else 'Sell'
-                    direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry() else '平'
-                    price = self.api.A_OrderFilledPrice(order_id)
-                    quantity = self.api.A_OrderFilledLot(order_id)
-                    buy_position, sell_position = self.resolve_positions_for_order()
-
-                    msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
-                    self.dingding(msg)
+                if status == Enum_Filled:
+                    any_filled = True
+                    self.handle_filled_order(order_id, changes, Enum_Buy, Enum_Sell)
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 
-        if has_filled and tmp:
-            for order_id, changes in tmp:
+        if any_filled and remaining_orders:
+            for order_id, changes in remaining_orders:
                 self.api.A_DeleteOrder(order_id)
                 self.print(f"Order {order_id} deleted due to other order filled")
-            tmp = []
+            remaining_orders = []
 
-        self.waiting_list = tmp
+        self.waiting_list = remaining_orders
+
         existing_buy_order = False
         existing_sell_order = False
-
         for order_id, _ in self.waiting_list:
-            if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
+            if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy:
                 existing_buy_order = True
-            elif self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
+            elif self.api.A_OrderBuyOrSell(order_id) == Enum_Sell:
                 existing_sell_order = True
 
         return (existing_buy_order, existing_sell_order)
+
+    def handle_filled_order(self, order_id, changes, Enum_Buy, Enum_Sell):
+        """Apply state changes and send notification for a filled order.
+
+        Extracted to improve readability while preserving existing side-effects
+        and call ordering.
+        """
+        self.apply_changes(changes)
+        self.save_strategy_state()
+        verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy else 'Sell'
+        direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry() else '平'
+        price = self.api.A_OrderFilledPrice(order_id)
+        quantity = self.api.A_OrderFilledLot(order_id)
+        buy_position, sell_position = self.resolve_positions_for_order()
+
+        msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
+        self.dingding(msg)
     def get_state_file_name(self): # BaseStrategy
         return f"{self.config_folder}\\{self.name}.json"
 

@@ -138,6 +138,15 @@ class BaseStrategy():
             return minute_prices.iloc[-1]['Close']
         return self.api.Q_Last(code)
 
+    def daily_close_ma_and_days(self, code, lookback: int = 20, ma_period: int = 20):
+        """Return close series, lookback slice, MA series, MA last value, and days above MA.
+        """
+        close_prices = self.DailyPrices[code]['Close']
+        close_look = close_prices.iloc[-lookback:]
+        ma = talib.MA(close_prices, timeperiod=ma_period)
+        ma_last = ma.iat[-1]
+        days_above_ma = np.sum(close_look > ma[-lookback:])
+        return close_prices, close_look, ma, ma_last, days_above_ma
     def handle_data(self, context):   # BaseStrategy
         self.context = context
         self.IsBacktest = context.strategyStatus() != 'C'
@@ -565,10 +574,7 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            close_prices = self.DailyPrices[code]['Close']
-            close_20 = close_prices.iloc[-20:]
-            ma_20 = talib.MA(close_prices, timeperiod=20)
-            days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
+            close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
             if days_above_ma >= 6 and (limit is None or current_price < limit):
                 base_price = close_20.min() + 2 * self.atr
                 if self.atr > 0:
@@ -750,10 +756,7 @@ class SpreadGridStrategy(BaseStrategy):
         base_price = self.base_price
         buy_position, sell_position = self.resolve_positions_for_order()
 
-        close_prices = self.DailyPrices[self.codes[0]]['Close']
-        ma_20 = talib.MA(close_prices, timeperiod=20)
-        ma_20_last = ma_20.iat[-1]
-        days_above_ma = np.sum(close_prices[-20:] > ma_20[-20:])
+        close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(self.codes[0])
 
         if self.logical_holding == 0 and buy_position == 0 and sell_position == 0:
             base_price = ma_20_last

@@ -204,8 +204,13 @@ class BaseStrategy():
     def log_trade(self, verb, direction, code, quantity, price, retEnter, EnterOrderID):    # BaseStrategy
         self.print(f"{verb}{direction} {quantity} {code}, price: {price:.1f}, base:{self.base_price}, retEnter: {retEnter}, EnterOrderID: {EnterOrderID}")
         if not self.IsBacktest:
-            msg = f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+            msg = self.build_trade_message(verb, direction, code, quantity, price)
             self.dingding(msg)
+
+    def build_trade_message(self, verb, direction, code, quantity, price):
+        """Construct the human-readable trade message used for DingDing.
+        """
+        return f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
 
     def execute_order(self, is_buy, code, quantity, price):    # BaseStrategy
         retEnter = 0

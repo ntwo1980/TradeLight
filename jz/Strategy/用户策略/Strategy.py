@@ -745,19 +745,28 @@ class SpreadGridStrategy(BaseStrategy):
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
                 else:
                     if self.logical_holding < 0:
+                        # Already short: avoid making position excessively
+                        # larger when deeply negative.
                         if self.logical_holding < -orderQty * 4:
                             orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
                         self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                     else:
+                        # Building or flipping to short: allow larger first
+                        # entries if configured.
                         if self.double_first_position and self.logical_holding <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
+                        # If current holdings and available buy position allow,
+                        # place a normal ladder order; otherwise choose altered
+                        # trigger (MA-based) or close existing logical holding.
                         if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
                             if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
                                 self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
                             else:
                                 self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
                         elif sell_threshold > ma_20_last:
+                            # If threshold sits above MA, use current holding size
+                            # (likely a reduce/close action) to avoid overtrading.
                             self.execute_trade(self.ExecuteSell, self.codes[1], current_price, self.logical_holding, sell_threshold, is_buy=False)
                         else:
                             self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
@@ -792,10 +801,13 @@ class SpreadGridStrategy(BaseStrategy):
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
                 else:
                     if self.logical_holding > 0:
+                        # Already long: reduce aggressiveness if deeply exposed.
                         if self.logical_holding > orderQty * 4:
                             orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
                         self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
                     else:
+                        # Building or flipping to long: allow larger first
+                        # entries if configured.
                         if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
                             orderQuantity = orderQty * 2
 
@@ -805,6 +817,8 @@ class SpreadGridStrategy(BaseStrategy):
                             else:
                                 self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
                         elif buy_threshold < ma_20_last:
+                            # Threshold below MA -> consider using current holding
+                            # as the size to avoid opening a larger position.
                             self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), buy_threshold, is_buy=True)
                         else:
                             self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)

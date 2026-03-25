@@ -462,16 +462,26 @@ class BaseStrategy():
         self.delete_orders()
 
     def delete_orders(self):
+        # Cache enums to avoid repeated bound calls
+        Enum_Filled = self.api.Enum_Filled()
+        Enum_Canceled = self.api.Enum_Canceled()
+
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
-            if status == self.api.Enum_Filled():
-                self.apply_changes(changes)
-                self.save_strategy_state()
-                self.print(f"Order {order_id} filled, applied changes")
-            elif status != self.api.Enum_Canceled():
+            if status == Enum_Filled:
+                self.apply_filled_no_notify(order_id, changes)
+            elif status != Enum_Canceled:
                 self.api.A_DeleteOrder(order_id)
                 self.print(f"Order {order_id} deleted")
+
         self.waiting_list = []
+
+    def apply_filled_no_notify(self, order_id, changes):
+        """Apply changes and persist state for a filled order without sending DingDing.
+        """
+        self.apply_changes(changes)
+        self.save_strategy_state()
+        self.print(f"Order {order_id} filled, applied changes")
 
     def print(self, string, **kwargs):
         self.api.LogInfo(string, **kwargs)

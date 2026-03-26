@@ -270,7 +270,7 @@ class BaseStrategy():
                     and self.consecutive_buy_count > 0 \
                     and self.logical_holding >= orderQty * 2 \
                     and self.last_buy_time is not None \
-                    and self.TimeDiff(self.last_buy_time, self.api.CurrentTime()) < 60 * 30:
+                    and self.api.TimeDiff(self.last_buy_time, self.api.CurrentTime()) < 60 * 30:
                     self.print('Error: buy too frequently')
                     return (False, 0)
             else:
@@ -282,7 +282,7 @@ class BaseStrategy():
                     and self.consecutive_sell_count > 0 \
                     and self.logical_holding <= -orderQty * 2 \
                     and self.last_sell_time is not None \
-                    and self.TimeDiff(self.last_sell_time, self.api.CurrentTime()) < 60 * 30:
+                    and self.api.TimeDiff(self.last_sell_time, self.api.CurrentTime()) < 60 * 30:
                     self.print('Error: sell too frequently')
                     return (False, 0)
 
@@ -422,6 +422,7 @@ class BaseStrategy():
 
         msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
         self.dingding(msg)
+
     def get_state_file_name(self): # BaseStrategy
         return os.path.join(self.config_folder, f"{self.name}.json")
 
@@ -532,9 +533,6 @@ class BaseStrategy():
         }
 
 class PairLevelGridStrategy(BaseStrategy):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def initialize(self, context, **kwargs):     # PairLevelGridStrategy
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
@@ -667,6 +665,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.commit_changes(order_id, changes)
         return True
 
+
     def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):
         """Compute base price and suggested order quantity from MA/close series.
 
@@ -706,9 +705,6 @@ class PairLevelGridStrategy(BaseStrategy):
         self.print('max position:' + str(self.max_logical_holding))
 
 class SpreadGridStrategy(BaseStrategy):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def initialize(self, context, **kwargs):     # SpreadGridStrategy
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']

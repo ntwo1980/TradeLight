@@ -390,10 +390,15 @@ class BaseStrategy():
 
         self.waiting_list = remaining_orders
 
-        # Determine whether active buy/sell orders remain (single pass, one API call per order)
+        # Determine whether active buy/sell orders remain.
+        return self.determine_existing_order_flags(remaining_orders, Enum_Buy, Enum_Sell)
+
+    def determine_existing_order_flags(self, orders, Enum_Buy, Enum_Sell):
+        """Return (existing_buy_order, existing_sell_order) for given orders.
+        """
         existing_buy_order = False
         existing_sell_order = False
-        for order_id, _ in remaining_orders:
+        for order_id, _ in orders:
             kind = self.api.A_OrderBuyOrSell(order_id)
             if kind == Enum_Buy:
                 existing_buy_order = True

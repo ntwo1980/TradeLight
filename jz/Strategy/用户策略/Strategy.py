@@ -654,8 +654,14 @@ class PairLevelGridStrategy(BaseStrategy):
         succeed, order_id = self.Buy(code, quantity, trade_price)
         if not succeed:
             return False
+        changes = self.build_pair_buy_changes(trade_price)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_pair_buy_changes(self, trade_price):
+        """Return the changes dict used after a pair-level buy is accepted.
+        """
+        return {
             "logical_holding": self.logical_holding + self.trade_quantity,
             "base_price": trade_price,
             "last_buy_date": self.today_str(),
@@ -663,25 +669,25 @@ class PairLevelGridStrategy(BaseStrategy):
             "sell_index": 0,
         }
 
-        self.commit_changes(order_id, changes)
-        return True
-
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         trade_price = self.tick_ceil(code, price)
         succeed, order_id = self.Sell(code, quantity, trade_price)
         if not succeed:
             return False
+        changes = self.build_pair_sell_changes(trade_price)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_pair_sell_changes(self, trade_price):
+        """Return the changes dict used after a pair-level sell is accepted.
+        """
+        return {
             "logical_holding": self.logical_holding - self.trade_quantity,
             "base_price": trade_price,
             "last_sell_date": self.today_str(),
             "sell_index": self.next_clamped_index(self.sell_index, self.sell_levels),
             "buy_index": 0,
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def hisover_callback(self, context):   # PairLevelGridStrategy
         self.reset_price_cache()

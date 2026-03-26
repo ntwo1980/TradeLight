@@ -582,23 +582,11 @@ class PairLevelGridStrategy(BaseStrategy):
         base_price = self.base_price
         orderQty = self.params.get('orderQty', 1)
         limit = self.params.get('limit')
-        order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
 
-        if self.logical_holding == 0 and buy_position == 0:
-            close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
-            if days_above_ma >= 6 and (limit is None or current_price < limit):
-                base_price = close_20.min() + 2 * self.atr
-                if self.atr > 0:
-                    order_qty = int((close_20.max() - close_20.min()) / self.atr)
-                    if order_qty < orderQty:
-                        order_qty = orderQty
-                    elif order_qty > orderQty * 5:
-                        order_qty = orderQty * 5
-                else:
-                    order_qty = orderQty * 3
-            else:
-                base_price = close_prices.iloc[-1] / 2
+        # Compute base price and effective order quantity (kept as separate helper
+        # to keep `RunGridTrading` concise while preserving exact logic).
+        order_qty, base_price = self.pair_base_and_order_qty(code, buy_position, orderQty, limit, current_price)
 
         executed = False
 
@@ -678,6 +666,32 @@ class PairLevelGridStrategy(BaseStrategy):
         self.commit_changes(order_id, changes)
         return True
 
+    def pair_base_and_order_qty(self, code, buy_position, orderQty, limit, current_price):
+        """Return (order_qty, base_price) using the original decision logic.
+
+        This method is a mechanical extraction from `RunGridTrading` and must
+        preserve behavior exactly.
+        """
+        order_qty = orderQty
+        base_price = self.base_price
+
+        if self.logical_holding == 0 and buy_position == 0:
+            close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
+            if days_above_ma >= 6 and (limit is None or current_price < limit):
+                base_price = close_20.min() + 2 * self.atr
+                if self.atr > 0:
+                    order_qty = int((close_20.max() - close_20.min()) / self.atr)
+                    if order_qty < orderQty:
+                        order_qty = orderQty
+                    elif order_qty > orderQty * 5:
+                        order_qty = orderQty * 5
+                else:
+                    order_qty = orderQty * 3
+            else:
+                base_price = close_prices.iloc[-1] / 2
+
+        return order_qty, base_price
+
     def build_pair_sell_changes(self, trade_price):
         """Return the changes dict used after a pair-level sell is accepted.
         """
@@ -731,6 +745,25 @@ class SpreadGridStrategy(BaseStrategy):
             return trade_func(code, trade_price, quantity)
 
         return False
+
+    def compute_order_quantity(self, orderQty, for_sell=True):
+        """Compute effective orderQuantity used in RunGridTrading.
+        """
+        orderQuantity = orderQty
+        if orderQty == 1:
+            if for_sell and self.logical_holding >= 4:
+                orderQuantity = 2
+            if (not for_sell) and self.logical_holding <= -4:
+                orderQuantity = 2
+        if orderQty > 1:
+            if for_sell and self.logical_holding > 3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
+            if (not for_sell) and self.logical_holding < -3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
+
+        return orderQuantity
 
     def GetPositionCode(self):
         if self.params.get('firstPosition', True):
@@ -787,12 +820,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding >= 4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self.compute_order_quantity(orderQty, for_sell=True)
 
             if self.stop_lose and ((self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
                 or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
@@ -843,12 +871,7 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding <= -4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self.compute_order_quantity(orderQty, for_sell=False)
 
             if self.stop_lose and ((self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
                 or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \

@@ -401,6 +401,14 @@ class BaseStrategy():
 
         return remaining_orders, any_filled, Enum_Buy, Enum_Sell
 
+    def waiting_has_enum(self, enum_value):
+        """Return True if any order in `waiting_list` has buy/sell kind equal to `enum_value`.
+        """
+        for order_id, _ in self.waiting_list:
+            if self.api.A_OrderBuyOrSell(order_id) == enum_value:
+                return True
+        return False
+
     def determine_existing_order_flags(self, orders, Enum_Buy, Enum_Sell):
         """Return (existing_buy_order, existing_sell_order) for given orders.
         """
@@ -989,9 +997,9 @@ class SpreadGridStrategy(BaseStrategy):
         self.print('ExecuteBuy')
 
         if not self.IsBacktest and not force:
-            for order_id, _ in self.waiting_list:
-                if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Buy():
-                    return False
+            Enum_Buy = self.api.Enum_Buy()
+            if self.waiting_has_enum(Enum_Buy):
+                return False
 
         succeed, order_id = self.Buy(code, quantity, price)
         if not succeed:
@@ -1019,9 +1027,9 @@ class SpreadGridStrategy(BaseStrategy):
         self.print('ExecuteSell')
 
         if not self.IsBacktest and not force:
-            for order_id, _ in self.waiting_list:
-                if self.api.A_OrderBuyOrSell(order_id) == self.api.Enum_Sell():
-                    return False
+            Enum_Sell = self.api.Enum_Sell()
+            if self.waiting_has_enum(Enum_Sell):
+                return False
 
         succeed, order_id = self.Sell(code, quantity, price)
         if not succeed:

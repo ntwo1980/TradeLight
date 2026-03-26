@@ -11,6 +11,7 @@ import talib
 
 class BaseStrategy():
     STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index']
+    DEFAULT_LEVELS = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
 
     def __init__(self, **kwargs):   # BaseStrategy
         self.context = None
@@ -59,12 +60,12 @@ class BaseStrategy():
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
 
-        file = f"{self.config_folder}\\config.json"
+        config_path = os.path.join(self.config_folder, 'config.json')
 
-        if not os.path.exists(file):
+        if not os.path.exists(config_path):
             self.print('Error: No config file')
         else:
-            with open(file, 'r', encoding='utf-8') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 self.api.SetUserNo(config['account'])
                 self.dingding_token = config['dingding_token']
@@ -147,6 +148,7 @@ class BaseStrategy():
         ma_last = ma.iat[-1]
         days_above_ma = np.sum(close_look > ma[-lookback:])
         return close_prices, close_look, ma, ma_last, days_above_ma
+
     def handle_data(self, context):   # BaseStrategy
         self.context = context
         self.IsBacktest = context.strategyStatus() != 'C'
@@ -166,7 +168,7 @@ class BaseStrategy():
 
                     return False
 
-        if not self.IsBacktest and (0.0859 < now < 0.090010 or 0.2059 < now < 0.210010):
+        if not self.IsBacktest and self.is_intraday_reset_period(now):
             if self.order_deleted:
                 self.order_deleted = False
             if self.position_closed:
@@ -178,7 +180,7 @@ class BaseStrategy():
 
             return False
 
-        if not self.IsBacktest and 0.2259 < now < 0.2310:
+        if not self.IsBacktest and self.is_order_deletion_period(now):
             if not self.order_deleted:
                 self.order_deleted = True
                 self.delete_orders()
@@ -186,6 +188,17 @@ class BaseStrategy():
             return False
 
         return True
+
+    def is_intraday_reset_period(self, now):
+        """Return True if `now` is within intraday short reset windows.
+
+        These windows reset counters and flags but do not alter semantics.
+        """
+        return (0.0859 < now < 0.090010) or (0.2059 < now < 0.210010)
+
+    def is_order_deletion_period(self, now):
+        """Return True if `now` is within the daily order-deletion window."""
+        return 0.2259 < now < 0.2310
 
     def GetBuyPosition(self, code):    # BaseStrategy
         if self.IsBacktest:
@@ -410,7 +423,7 @@ class BaseStrategy():
         msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
         self.dingding(msg)
     def get_state_file_name(self): # BaseStrategy
-        return f"{self.config_folder}\\{self.name}.json"
+        return os.path.join(self.config_folder, f"{self.name}.json")
 
     def load_strategy_state_raw(self):
         file = self.get_state_file_name()
@@ -526,8 +539,8 @@ class PairLevelGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = list(self.DEFAULT_LEVELS)
+        self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
         self.sell_index = 0
 
@@ -574,19 +587,7 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
 
         if self.logical_holding == 0 and buy_position == 0:
-            close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
-            if days_above_ma >= 6 and (limit is None or current_price < limit):
-                base_price = close_20.min() + 2 * self.atr
-                if self.atr > 0:
-                    order_qty = int((close_20.max() - close_20.min()) / self.atr)
-                    if order_qty < orderQty:
-                        order_qty = orderQty
-                    elif order_qty > orderQty * 5:
-                        order_qty = orderQty * 5
-                else:
-                    order_qty = orderQty * 3
-            else:
-                base_price = close_prices.iloc[-1] / 2
+            order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         executed = False
 
@@ -642,8 +643,14 @@ class PairLevelGridStrategy(BaseStrategy):
         succeed, order_id = self.Buy(code, quantity, trade_price)
         if not succeed:
             return False
+        changes = self.build_pair_buy_changes(trade_price)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_pair_buy_changes(self, trade_price):
+        """Return the changes dict used after a pair-level buy is accepted.
+        """
+        return {
             "logical_holding": self.logical_holding + self.trade_quantity,
             "base_price": trade_price,
             "last_buy_date": self.today_str(),
@@ -651,25 +658,47 @@ class PairLevelGridStrategy(BaseStrategy):
             "sell_index": 0,
         }
 
-        self.commit_changes(order_id, changes)
-        return True
-
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         trade_price = self.tick_ceil(code, price)
         succeed, order_id = self.Sell(code, quantity, trade_price)
         if not succeed:
             return False
+        changes = self.build_pair_sell_changes(trade_price)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):
+        """Compute base price and suggested order quantity from MA/close series.
+
+        Returns (order_qty, base_price, days_above_ma, ma_20_last, close_20)
+        """
+        close_prices, close_20, ma, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
+        if days_above_ma >= 6 and (limit is None or current_price < limit):
+            base_price = close_20.min() + 2 * atr
+            if atr > 0:
+                order_qty = int((close_20.max() - close_20.min()) / atr)
+                if order_qty < orderQty:
+                    order_qty = orderQty
+                elif order_qty > orderQty * 5:
+                    order_qty = orderQty * 5
+            else:
+                order_qty = orderQty * 3
+        else:
+            base_price = close_prices.iloc[-1] / 2
+            order_qty = orderQty
+
+        return order_qty, base_price, days_above_ma, ma_20_last, close_20
+
+    def build_pair_sell_changes(self, trade_price):
+        """Return the changes dict used after a pair-level sell is accepted.
+        """
+        return {
             "logical_holding": self.logical_holding - self.trade_quantity,
             "base_price": trade_price,
             "last_sell_date": self.today_str(),
             "sell_index": self.next_clamped_index(self.sell_index, self.sell_levels),
             "buy_index": 0,
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def hisover_callback(self, context):   # PairLevelGridStrategy
         self.reset_price_cache()
@@ -684,8 +713,8 @@ class SpreadGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = list(self.DEFAULT_LEVELS)
+        self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
         self.sell_index = 0
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
@@ -713,6 +742,128 @@ class SpreadGridStrategy(BaseStrategy):
             return trade_func(code, trade_price, quantity)
 
         return False
+
+    def compute_order_quantity(self, orderQty, for_sell=True):
+        """Compute effective orderQuantity used in RunGridTrading.
+        """
+        orderQuantity = orderQty
+        if orderQty == 1:
+            if for_sell and self.logical_holding >= 4:
+                orderQuantity = 2
+            if (not for_sell) and self.logical_holding <= -4:
+                orderQuantity = 2
+        if orderQty > 1:
+            if for_sell and self.logical_holding > 3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
+            if (not for_sell) and self.logical_holding < -3 * orderQty:
+                increments = orderQty // 3
+                orderQuantity = orderQuantity + increments
+
+        return orderQuantity
+
+
+    def handle_stop_loss_sell(self, current_price, sell_threshold, orderQty, orderQuantity):
+        """Check sell-side stop-loss conditions and execute closure if triggered.
+
+        Returns True if a stop-loss action was performed (and caller should return).
+        """
+        if not self.stop_lose:
+            return False
+
+        cond1 = (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3)
+        cond2 = (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty)
+        cond3 = (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)
+
+        if cond1 or cond2 or cond3:
+            self.delete_orders()
+            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=True)
+            self.position_closed = True
+            return True
+        return False
+
+    def handle_stop_loss_buy(self, current_price, buy_threshold, orderQty, orderQuantity):
+        """Check buy-side stop-loss conditions and execute closure if triggered.
+
+        Returns True if a stop-loss action was performed (and caller should return).
+        """
+        if not self.stop_lose:
+            return False
+
+        cond1 = (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3)
+        cond2 = (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty)
+        cond3 = (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)
+
+        if cond1 or cond2 or cond3:
+            self.delete_orders()
+            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=False)
+            self.position_closed = True
+            return True
+        return False
+
+    def select_sell_trade_params(self, current_price, base_price, sell_threshold, orderQty, orderQuantity, buy_position, ma_20_last, days_above_ma):
+        """Return (quantity, condition_price) for a sell attempt or None.
+
+        Mirrors the original branch logic in `RunGridTrading` for the sell side.
+        """
+        # Case: initial entry when flat
+        if self.logical_holding == 0 and self.slope < 0.3 and current_price <= base_price + self.atr:
+            if days_above_ma <= 14 or self.ignore_days_above_ma:
+                quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
+                return quantity, sell_threshold
+            return None  # MA filter not passed: no trade (matches original behaviour)
+
+        # Already short: adjust aggressiveness for deeply negative exposure
+        if self.logical_holding < 0:
+            if self.logical_holding < -orderQty * 4:
+                orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+            return orderQuantity, sell_threshold
+
+        # Building or flipping to short when currently non-negative
+        if self.double_first_position and self.logical_holding <= orderQty * 2:
+            orderQuantity = orderQty * 2
+
+        if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
+            trigger = ma_20_last - self.atr * self.buy_levels[0]
+            if current_price >= trigger:
+                return orderQuantity, sell_threshold
+            return orderQuantity, max(trigger, sell_threshold)
+        elif sell_threshold > ma_20_last:
+            return self.logical_holding, sell_threshold
+        else:
+            return orderQuantity, sell_threshold
+
+    def select_buy_trade_params(self, current_price, base_price, buy_threshold, orderQty, orderQuantity, sell_position, ma_20_last, days_above_ma):
+        """Return (quantity, condition_price) for a buy attempt or None.
+
+        Mirrors the original branch logic in `RunGridTrading` for the buy side.
+        """
+        # Case: initial entry when flat
+        if self.logical_holding == 0 and self.slope > -0.3 and current_price >= base_price - self.atr:
+            if days_above_ma >= 6 or self.ignore_days_above_ma:
+                quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
+                return quantity, buy_threshold
+            return None  # MA filter not passed: no trade (matches original behaviour)
+
+        # Already long: reduce aggressiveness if deeply exposed
+        if self.logical_holding > 0:
+            if self.logical_holding > orderQty * 4:
+                orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+            return orderQuantity, buy_threshold
+
+        # Building or flipping to long when currently non-positive
+        if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
+            orderQuantity = orderQty * 2
+
+        if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
+            trigger = ma_20_last + self.atr * self.sell_levels[0]
+            if current_price <= trigger:
+                return orderQuantity, buy_threshold
+            return orderQuantity, min(trigger, buy_threshold)
+        elif buy_threshold < ma_20_last:
+            return abs(self.logical_holding), buy_threshold
+        else:
+            return orderQuantity, buy_threshold
 
     def GetPositionCode(self):
         if self.params.get('firstPosition', True):
@@ -769,53 +920,16 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             sell_threshold = base_price + diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding >= 4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding > 3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self.compute_order_quantity(orderQty, for_sell=True)
 
-            if self.stop_lose and ((self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)):
-                self.delete_orders()
-                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=True)
-                self.position_closed = True
+            if self.handle_stop_loss_sell(current_price, sell_threshold, orderQty, orderQuantity):
                 return
 
             if not existing_sell_order:
-                if self.logical_holding == 0 and self.slope < 0.3 and current_price <= base_price + self.atr:
-                    if days_above_ma <= 14 or self.ignore_days_above_ma:
-                        quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
-                        self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, sell_threshold, is_buy=False)
-                else:
-                    if self.logical_holding < 0:
-                        # Already short: avoid making position excessively
-                        # larger when deeply negative.
-                        if self.logical_holding < -orderQty * 4:
-                            orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
-                        self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
-                    else:
-                        # Building or flipping to short: allow larger first
-                        # entries if configured.
-                        if self.double_first_position and self.logical_holding <= orderQty * 2:
-                            orderQuantity = orderQty * 2
-
-                        # If current holdings and available buy position allow,
-                        # place a normal ladder order; otherwise choose altered
-                        # trigger (MA-based) or close existing logical holding.
-                        if self.logical_holding <= orderQuantity and buy_position <= orderQuantity:
-                            if current_price >= ma_20_last - self.atr * self.buy_levels[0]:
-                                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
-                            else:
-                                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, max(ma_20_last - self.atr * self.buy_levels[0], sell_threshold), is_buy=False)
-                        elif sell_threshold > ma_20_last:
-                            # If threshold sits above MA, use current holding size
-                            # (likely a reduce/close action) to avoid overtrading.
-                            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, self.logical_holding, sell_threshold, is_buy=False)
-                        else:
-                            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, orderQuantity, sell_threshold, is_buy=False)
+                params = self.select_sell_trade_params(current_price, base_price, sell_threshold, orderQty, orderQuantity, buy_position, ma_20_last, days_above_ma)
+                if params is not None:
+                    quantity, condition_price = params
+                    self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, condition_price, is_buy=False)
 
         else:
             self.print(f'Error: sell_index error')
@@ -825,49 +939,16 @@ class SpreadGridStrategy(BaseStrategy):
             diff = self.atr * level
             buy_threshold = base_price - diff
 
-            orderQuantity = orderQty
-            if orderQty == 1 and self.logical_holding <= -4:
-                orderQuantity = 2
-            if orderQty > 1 and self.logical_holding < -3 * orderQty:
-                increments = orderQty // 3
-                orderQuantity = orderQuantity + increments
+            orderQuantity = self.compute_order_quantity(orderQty, for_sell=False)
 
-            if self.stop_lose and ((self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)):
-                self.delete_orders()
-                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=False)
-                self.position_closed = True
+            if self.handle_stop_loss_buy(current_price, buy_threshold, orderQty, orderQuantity):
                 return
 
             if not existing_buy_order:
-                if self.logical_holding == 0 and self.slope > -0.3 and current_price >= base_price - self.atr:
-                    if days_above_ma >= 6 or self.ignore_days_above_ma:
-                        quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
-                        self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, buy_threshold, is_buy=True)
-                else:
-                    if self.logical_holding > 0:
-                        # Already long: reduce aggressiveness if deeply exposed.
-                        if self.logical_holding > orderQty * 4:
-                            orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
-                        self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
-                    else:
-                        # Building or flipping to long: allow larger first
-                        # entries if configured.
-                        if self.double_first_position and abs(self.logical_holding) <= orderQty * 2:
-                            orderQuantity = orderQty * 2
-
-                        if abs(self.logical_holding) <= orderQuantity and sell_position <= orderQuantity:
-                            if current_price <= ma_20_last + self.atr * self.sell_levels[0]:
-                                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
-                            else:
-                                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, min(ma_20_last + self.atr * self.sell_levels[0], buy_threshold), is_buy=True)
-                        elif buy_threshold < ma_20_last:
-                            # Threshold below MA -> consider using current holding
-                            # as the size to avoid opening a larger position.
-                            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), buy_threshold, is_buy=True)
-                        else:
-                            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, orderQuantity, buy_threshold, is_buy=True)
+                params = self.select_buy_trade_params(current_price, base_price, buy_threshold, orderQty, orderQuantity, sell_position, ma_20_last, days_above_ma)
+                if params is not None:
+                    quantity, condition_price = params
+                    self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, condition_price, is_buy=True)
         else:
             self.print(f'Error: buy_index error')
 
@@ -910,17 +991,20 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding + self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
         orderQty = self.params.get('orderQty', 1)
+        changes = self.build_buy_changes(new_holding, price, cross_zero, orderQty)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_buy_changes(self, new_holding, price, cross_zero, orderQty):
+        """Build the `changes` dict used after a buy order is accepted.
+        """
+        return {
             "logical_holding": new_holding,
             "base_price": price,
             "last_buy_date": self.today_str(),
             "buy_index": 0 if cross_zero else self.next_clamped_index(self.buy_index, self.buy_levels),
             "sell_index": 1 if new_holding < -orderQty * 3 else 0
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
         self.print('ExecuteSell')
@@ -937,17 +1021,20 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding - self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
         orderQty = self.params.get('orderQty', 1)
+        changes = self.build_sell_changes(new_holding, price, cross_zero, orderQty)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_sell_changes(self, new_holding, price, cross_zero, orderQty):
+        """Build the `changes` dict used after a sell order is accepted.
+        """
+        return {
             "logical_holding": new_holding,
             "base_price": price,
             "last_sell_date": self.today_str(),
             "sell_index": 0 if cross_zero else self.next_clamped_index(self.sell_index, self.sell_levels),
             "buy_index": 1 if new_holding > orderQty * 3 else 0
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def hisover_callback(self, context):   # SpreadGridStrategy
         self.reset_price_cache()

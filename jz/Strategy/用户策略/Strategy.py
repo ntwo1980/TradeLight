@@ -60,12 +60,12 @@ class BaseStrategy():
         self.api.SetOrderWay(1)
         #self.api.SetUserNo('Q20702017')
 
-        file = f"{self.config_folder}\\config.json"
+        config_path = os.path.join(self.config_folder, 'config.json')
 
-        if not os.path.exists(file):
+        if not os.path.exists(config_path):
             self.print('Error: No config file')
         else:
-            with open(file, 'r', encoding='utf-8') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 self.api.SetUserNo(config['account'])
                 self.dingding_token = config['dingding_token']
@@ -422,7 +422,7 @@ class BaseStrategy():
         msg = f"Name: {self.name}\n{verb.lower()}{direction}成交: price: {price:.1f}\nquantity:{quantity}\nposition:{buy_position - sell_position}"
         self.dingding(msg)
     def get_state_file_name(self): # BaseStrategy
-        return f"{self.config_folder}\\{self.name}.json"
+        return os.path.join(self.config_folder, f"{self.name}.json")
 
     def load_strategy_state_raw(self):
         file = self.get_state_file_name()

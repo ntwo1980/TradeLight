@@ -362,6 +362,17 @@ class BaseStrategy():
             setattr(self, key, value)
 
     def existing_order(self):
+        remaining_orders, any_filled, Enum_Buy, Enum_Sell = self.process_waiting_list()
+
+        # Persist the reduced waiting list and determine whether
+        # any active buy/sell orders remain.
+        self.waiting_list = remaining_orders
+        return self.determine_existing_order_flags(remaining_orders, Enum_Buy, Enum_Sell)
+
+    def process_waiting_list(self):
+        """Process `self.waiting_list` and return a tuple:
+        (remaining_orders, any_filled, Enum_Buy, Enum_Sell).
+        """
         remaining_orders = []
         any_filled = False
 
@@ -388,10 +399,7 @@ class BaseStrategy():
                 self.print(f"Order {order_id} deleted due to other order filled")
             remaining_orders = []
 
-        self.waiting_list = remaining_orders
-
-        # Determine whether active buy/sell orders remain.
-        return self.determine_existing_order_flags(remaining_orders, Enum_Buy, Enum_Sell)
+        return remaining_orders, any_filled, Enum_Buy, Enum_Sell
 
     def determine_existing_order_flags(self, orders, Enum_Buy, Enum_Sell):
         """Return (existing_buy_order, existing_sell_order) for given orders.

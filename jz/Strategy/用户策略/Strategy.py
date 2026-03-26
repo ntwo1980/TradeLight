@@ -765,6 +765,44 @@ class SpreadGridStrategy(BaseStrategy):
 
         return orderQuantity
 
+    def handle_stop_loss_sell(self, current_price, sell_threshold, orderQty, orderQuantity):
+        """Check sell-side stop-loss conditions and execute closure if triggered.
+
+        Returns True if a stop-loss action was performed (and caller should return).
+        """
+        if not self.stop_lose:
+            return False
+
+        cond1 = (self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3)
+        cond2 = (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty)
+        cond3 = (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)
+
+        if cond1 or cond2 or cond3:
+            self.delete_orders()
+            self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=True)
+            self.position_closed = True
+            return True
+        return False
+
+    def handle_stop_loss_buy(self, current_price, buy_threshold, orderQty, orderQuantity):
+        """Check buy-side stop-loss conditions and execute closure if triggered.
+
+        Returns True if a stop-loss action was performed (and caller should return).
+        """
+        if not self.stop_lose:
+            return False
+
+        cond1 = (self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3)
+        cond2 = (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty)
+        cond3 = (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)
+
+        if cond1 or cond2 or cond3:
+            self.delete_orders()
+            self.execute_trade(self.ExecuteSell, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=False)
+            self.position_closed = True
+            return True
+        return False
+
     def GetPositionCode(self):
         if self.params.get('firstPosition', True):
             return self.codes[2]
@@ -822,12 +860,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=True)
 
-            if self.stop_lose and ((self.logical_holding < 0 and abs(self.logical_holding) > orderQty * 5 and self.slope > 0.3) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) >= 8 * orderQty) \
-                or (current_price >= sell_threshold and self.logical_holding < 0 and (abs(self.logical_holding) + orderQuantity) > 5 * orderQty and self.slope > 0.3)):
-                self.delete_orders()
-                self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=True)
-                self.position_closed = True
+            if self.handle_stop_loss_sell(current_price, sell_threshold, orderQty, orderQuantity):
                 return
 
             if not existing_sell_order:
@@ -873,12 +906,7 @@ class SpreadGridStrategy(BaseStrategy):
 
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=False)
 
-            if self.stop_lose and ((self.logical_holding > 0 and self.logical_holding > orderQty * 5 and self.slope < -0.3) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) >= 8 * orderQty) \
-                or (current_price <= buy_threshold and self.logical_holding > 0 and (self.logical_holding + orderQuantity) > 5 * orderQty and self.slope < -0.3)):
-                self.delete_orders()
-                self.execute_trade(self.ExecuteSell, self.codes[1], current_price, abs(self.logical_holding), current_price, is_buy=False)
-                self.position_closed = True
+            if self.handle_stop_loss_buy(current_price, buy_threshold, orderQty, orderQuantity):
                 return
 
             if not existing_buy_order:

@@ -167,7 +167,7 @@ class BaseStrategy():
 
                     return False
 
-        if not self.IsBacktest and (0.0859 < now < 0.090010 or 0.2059 < now < 0.210010):
+        if not self.IsBacktest and self.is_intraday_reset_period(now):
             if self.order_deleted:
                 self.order_deleted = False
             if self.position_closed:
@@ -179,7 +179,7 @@ class BaseStrategy():
 
             return False
 
-        if not self.IsBacktest and 0.2259 < now < 0.2310:
+        if not self.IsBacktest and self.is_order_deletion_period(now):
             if not self.order_deleted:
                 self.order_deleted = True
                 self.delete_orders()
@@ -187,6 +187,17 @@ class BaseStrategy():
             return False
 
         return True
+
+    def is_intraday_reset_period(self, now):
+        """Return True if `now` is within intraday short reset windows.
+
+        These windows reset counters and flags but do not alter semantics.
+        """
+        return (0.0859 < now < 0.090010) or (0.2059 < now < 0.210010)
+
+    def is_order_deletion_period(self, now):
+        """Return True if `now` is within the daily order-deletion window."""
+        return 0.2259 < now < 0.2310
 
     def GetBuyPosition(self, code):    # BaseStrategy
         if self.IsBacktest:

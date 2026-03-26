@@ -583,11 +583,11 @@ class PairLevelGridStrategy(BaseStrategy):
         base_price = self.base_price
         orderQty = self.params.get('orderQty', 1)
         limit = self.params.get('limit')
+        order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
 
-        # Compute base price and effective order quantity (kept as separate helper
-        # to keep `RunGridTrading` concise while preserving exact logic).
-        order_qty, base_price, days_above_ma, ma_20_last, close_20 = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
+        if self.logical_holding == 0 and buy_position == 0:
+            order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         executed = False
 

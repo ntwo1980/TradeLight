@@ -11,6 +11,7 @@ import talib
 
 class BaseStrategy():
     STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index']
+    DEFAULT_LEVELS = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
 
     def __init__(self, **kwargs):   # BaseStrategy
         self.context = None
@@ -526,8 +527,8 @@ class PairLevelGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = list(self.DEFAULT_LEVELS)
+        self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
         self.sell_index = 0
 
@@ -684,8 +685,8 @@ class SpreadGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
-        self.buy_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
-        self.sell_levels = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
+        self.buy_levels = list(self.DEFAULT_LEVELS)
+        self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
         self.sell_index = 0
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)

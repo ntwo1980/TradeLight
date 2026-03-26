@@ -148,6 +148,7 @@ class BaseStrategy():
         ma_last = ma.iat[-1]
         days_above_ma = np.sum(close_look > ma[-lookback:])
         return close_prices, close_look, ma, ma_last, days_above_ma
+
     def handle_data(self, context):   # BaseStrategy
         self.context = context
         self.IsBacktest = context.strategyStatus() != 'C'
@@ -586,7 +587,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         # Compute base price and effective order quantity (kept as separate helper
         # to keep `RunGridTrading` concise while preserving exact logic).
-        order_qty, base_price = self.pair_base_and_order_qty(code, buy_position, orderQty, limit, current_price)
+        order_qty, base_price, days_above_ma, ma_20_last, close_20 = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         executed = False
 
@@ -666,31 +667,27 @@ class PairLevelGridStrategy(BaseStrategy):
         self.commit_changes(order_id, changes)
         return True
 
-    def pair_base_and_order_qty(self, code, buy_position, orderQty, limit, current_price):
-        """Return (order_qty, base_price) using the original decision logic.
+    def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):
+        """Compute base price and suggested order quantity from MA/close series.
 
-        This method is a mechanical extraction from `RunGridTrading` and must
-        preserve behavior exactly.
+        Returns (order_qty, base_price, days_above_ma, ma_20_last, close_20)
         """
-        order_qty = orderQty
-        base_price = self.base_price
-
-        if self.logical_holding == 0 and buy_position == 0:
-            close_prices, close_20, ma_20, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
-            if days_above_ma >= 6 and (limit is None or current_price < limit):
-                base_price = close_20.min() + 2 * self.atr
-                if self.atr > 0:
-                    order_qty = int((close_20.max() - close_20.min()) / self.atr)
-                    if order_qty < orderQty:
-                        order_qty = orderQty
-                    elif order_qty > orderQty * 5:
-                        order_qty = orderQty * 5
-                else:
-                    order_qty = orderQty * 3
+        close_prices, close_20, ma, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
+        if days_above_ma >= 6 and (limit is None or current_price < limit):
+            base_price = close_20.min() + 2 * atr
+            if atr > 0:
+                order_qty = int((close_20.max() - close_20.min()) / atr)
+                if order_qty < orderQty:
+                    order_qty = orderQty
+                elif order_qty > orderQty * 5:
+                    order_qty = orderQty * 5
             else:
-                base_price = close_prices.iloc[-1] / 2
+                order_qty = orderQty * 3
+        else:
+            base_price = close_prices.iloc[-1] / 2
+            order_qty = orderQty
 
-        return order_qty, base_price
+        return order_qty, base_price, days_above_ma, ma_20_last, close_20
 
     def build_pair_sell_changes(self, trade_price):
         """Return the changes dict used after a pair-level sell is accepted.
@@ -764,6 +761,7 @@ class SpreadGridStrategy(BaseStrategy):
                 orderQuantity = orderQuantity + increments
 
         return orderQuantity
+
 
     def handle_stop_loss_sell(self, current_price, sell_threshold, orderQty, orderQuantity):
         """Check sell-side stop-loss conditions and execute closure if triggered.

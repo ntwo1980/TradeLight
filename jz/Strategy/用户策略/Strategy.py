@@ -922,17 +922,20 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding + self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
         orderQty = self.params.get('orderQty', 1)
+        changes = self.build_buy_changes(new_holding, price, cross_zero, orderQty)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_buy_changes(self, new_holding, price, cross_zero, orderQty):
+        """Build the `changes` dict used after a buy order is accepted.
+        """
+        return {
             "logical_holding": new_holding,
             "base_price": price,
             "last_buy_date": self.today_str(),
             "buy_index": 0 if cross_zero else self.next_clamped_index(self.buy_index, self.buy_levels),
             "sell_index": 1 if new_holding < -orderQty * 3 else 0
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def ExecuteSell(self, code, price, quantity, force = False):    # SpreadGridStrategy
         self.print('ExecuteSell')
@@ -949,17 +952,20 @@ class SpreadGridStrategy(BaseStrategy):
         new_holding = self.logical_holding - self.trade_quantity
         cross_zero = (self.logical_holding * new_holding < 0) or (new_holding == 0)
         orderQty = self.params.get('orderQty', 1)
+        changes = self.build_sell_changes(new_holding, price, cross_zero, orderQty)
+        self.commit_changes(order_id, changes)
+        return True
 
-        changes = {
+    def build_sell_changes(self, new_holding, price, cross_zero, orderQty):
+        """Build the `changes` dict used after a sell order is accepted.
+        """
+        return {
             "logical_holding": new_holding,
             "base_price": price,
             "last_sell_date": self.today_str(),
             "sell_index": 0 if cross_zero else self.next_clamped_index(self.sell_index, self.sell_levels),
             "buy_index": 1 if new_holding > orderQty * 3 else 0
         }
-
-        self.commit_changes(order_id, changes)
-        return True
 
     def hisover_callback(self, context):   # SpreadGridStrategy
         self.reset_price_cache()

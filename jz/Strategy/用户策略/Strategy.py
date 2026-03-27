@@ -658,11 +658,16 @@ class PairLevelGridStrategy(BaseStrategy):
                 'r_squared': self.r_squared,
             })
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
-        trade_price = self.tick_floor(code, price)
-        succeed, order_id = self.Buy(code, quantity, trade_price)
+        return self.place_pair_order_and_commit(self.Buy, code, price, quantity, True, self.build_pair_buy_changes)
+
+    def place_pair_order_and_commit(self, trade_func, code, price, quantity, is_buy, build_changes_fn):
+        """Place a pair-level order (tick-adjusted) and commit changes on success.
+        """
+        trade_price = self.tick_floor(code, price) if is_buy else self.tick_ceil(code, price)
+        succeed, order_id = trade_func(code, quantity, trade_price)
         if not succeed:
             return False
-        changes = self.build_pair_buy_changes(trade_price)
+        changes = build_changes_fn(trade_price)
         self.commit_changes(order_id, changes)
         return True
 
@@ -678,14 +683,7 @@ class PairLevelGridStrategy(BaseStrategy):
         }
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        trade_price = self.tick_ceil(code, price)
-        succeed, order_id = self.Sell(code, quantity, trade_price)
-        if not succeed:
-            return False
-        changes = self.build_pair_sell_changes(trade_price)
-        self.commit_changes(order_id, changes)
-        return True
-
+        return self.place_pair_order_and_commit(self.Sell, code, price, quantity, False, self.build_pair_sell_changes)
 
     def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):
         """Compute base price and suggested order quantity from MA/close series.

@@ -1798,46 +1798,15 @@ class MomentumRotationStrategy(BaseStrategy):
         rank_list = []
 
         for stock in self.Stocks:
-            df = self.prices[stock].tail(self.days + 1)
-            if 'close' not in df or len(df['close'].dropna()) < 2:
-                rank_list.append((stock, float('-inf')))
-                continue
-
-            y = np.log(df['close'].values)
-
-            # 卡尔曼平滑（使用 pykalman，如果不可用则退回到 EWMA）
-            try:
-                from pykalman import KalmanFilter
-                kf = KalmanFilter(
-                    transition_matrices=[1],
-                    observation_matrices=[1],
-                    initial_state_mean=y[0] if len(y) > 0 else 0.0,
-                    initial_state_covariance=1.0,
-                    observation_covariance=0.15,
-                    transition_covariance=0.01,
-                )
-                smoothed, _ = kf.smooth(np.array(y))
-                y_sm = smoothed.flatten()
-            except Exception:
-                y_sm = pd.Series(y).ewm(alpha=0.3).mean().values
-
-            n = y_sm.size
-            if n < 2:
-                rank_list.append((stock, float('-inf')))
-                continue
-
-            x = np.arange(n)
-            slope, intercept = np.polyfit(x, y_sm, 1)
-
-            annualized_returns = math.exp(slope * 250) - 1
-
-            residuals = y_sm - (slope * x + intercept)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_sm - np.mean(y_sm)) ** 2)
-            r_squared = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
-
+            df = self.prices[stock].tail(self.days+1)
+            y = df['log'] = np.log(df.close)
+            x = df['num'] = np.arange(df.log.size)
+            slope, intercept = np.polyfit(x, y, 1)
+            annualized_returns = math.pow(math.exp(slope), 250) - 1
+            r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
             score = annualized_returns * r_squared
-            rank_list.append((stock, float(score)))
+            score=round(score, 2)
+            rank_list.append((stock, score))
 
         rank_list = sorted(rank_list, key=lambda x: x[1], reverse=True)
 
@@ -1847,50 +1816,19 @@ class MomentumRotationStrategy(BaseStrategy):
         rank_list = []
 
         for stock in self.Stocks:
-            df = self.prices[stock].tail(self.days + 1)
-            if 'close' not in df or len(df['close'].dropna()) < 2:
-                rank_list.append((stock, float('-inf')))
-                continue
-
+            df = self.prices[stock]
             y = np.log(df['close'].values)
-
-            # 卡尔曼平滑（使用 pykalman，如果不可用则退回到 EWMA）
-            try:
-                from pykalman import KalmanFilter
-                kf = KalmanFilter(
-                    transition_matrices=[1],
-                    observation_matrices=[1],
-                    initial_state_mean=y[0] if len(y) > 0 else 0.0,
-                    initial_state_covariance=1.0,
-                    observation_covariance=0.15,
-                    transition_covariance=0.01,
-                )
-                smoothed, _ = kf.smooth(np.array(y))
-                y_sm = smoothed.flatten()
-            except Exception:
-                y_sm = pd.Series(y).ewm(alpha=0.3).mean().values
-
-            n = y_sm.size
-            if n < 2:
-                rank_list.append((stock, float('-inf')))
-                continue
-
+            n = len(y)
             x = np.arange(n)
-            weights = np.linspace(1.0, 2.0, n)
-
-            slope, intercept = np.polyfit(x, y_sm, 1, w=weights)
-
-            annualized_returns = math.exp(slope * 250) - 1
-
-            residuals = y_sm - (slope * x + intercept)
-            weighted_residuals = weights * (residuals ** 2)
-            weighted_mean = np.average(y_sm, weights=weights)
-            weighted_tot = weights * ((y_sm - weighted_mean) ** 2)
-            denom = np.sum(weighted_tot)
-            r_squared = 1.0 - (np.sum(weighted_residuals) / denom) if denom > 0 else 0.0
-
+            weights = np.linspace(1, 2, n)  # 线性增加权重
+            slope, intercept = np.polyfit(x, y, 1, w=weights)
+            annualized_returns = math.pow(math.exp(slope), 250) - 1
+            residuals = y - (slope * x + intercept)
+            weighted_residuals = weights * residuals**2
+            r_squared = 1 - (np.sum(weighted_residuals) / np.sum(weights * (y - np.mean(y))**2))
             score = annualized_returns * r_squared
-            rank_list.append((stock, float(score)))
+
+            rank_list.append((stock, score))
 
         rank_list = sorted(rank_list, key=lambda x: x[1], reverse=True)
 

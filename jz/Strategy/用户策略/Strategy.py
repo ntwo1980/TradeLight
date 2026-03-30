@@ -387,16 +387,16 @@ class BaseStrategy():
         return self._cached_enums
 
     def existing_order(self):
-        remaining_orders, any_filled, Enum_Buy, Enum_Sell = self.process_waiting_list()
+        remaining_orders, any_filled = self.process_waiting_list()
 
         # Persist the reduced waiting list and determine whether
         # any active buy/sell orders remain.
         self.waiting_list = remaining_orders
-        return self.determine_existing_order_flags(remaining_orders, Enum_Buy, Enum_Sell)
+        return self.determine_existing_order_flags(remaining_orders)
 
     def process_waiting_list(self):
         """Process `self.waiting_list` and return a tuple:
-        (remaining_orders, any_filled, Enum_Buy, Enum_Sell).
+        (remaining_orders, any_filled).
         """
         remaining_orders = []
         any_filled = False
@@ -405,8 +405,6 @@ class BaseStrategy():
         enums = self.get_enums()
         Enum_Filled = enums['filled']
         Enum_Canceled = enums['canceled']
-        Enum_Buy = enums['buy']
-        Enum_Sell = enums['sell']
 
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
@@ -416,7 +414,7 @@ class BaseStrategy():
             else:
                 if status == Enum_Filled:
                     any_filled = True
-                    self.handle_filled_order(order_id, changes, Enum_Buy, Enum_Sell)
+                    self.handle_filled_order(order_id, changes)
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 
         if any_filled and remaining_orders:
@@ -425,7 +423,7 @@ class BaseStrategy():
                 self.print(f"Order {order_id} deleted due to other order filled")
             remaining_orders = []
 
-        return remaining_orders, any_filled, Enum_Buy, Enum_Sell
+        return remaining_orders, any_filled
 
     def waiting_has_enum(self, enum_value):
         """Return True if any order in `waiting_list` has buy/sell kind equal to `enum_value`.
@@ -435,25 +433,26 @@ class BaseStrategy():
                 return True
         return False
 
-    def determine_existing_order_flags(self, orders, Enum_Buy, Enum_Sell):
+    def determine_existing_order_flags(self, orders):
         """Return (existing_buy_order, existing_sell_order) for given orders.
         """
         existing_buy_order = False
         existing_sell_order = False
+        enums = self.get_enums()
         for order_id, _ in orders:
             kind = self.api.A_OrderBuyOrSell(order_id)
-            if kind == Enum_Buy:
+            if kind == enums['buy']:
                 existing_buy_order = True
                 if existing_sell_order:
                     break
-            elif kind == Enum_Sell:
+            elif kind == enums['sell']:
                 existing_sell_order = True
                 if existing_buy_order:
                     break
 
         return (existing_buy_order, existing_sell_order)
 
-    def handle_filled_order(self, order_id, changes, Enum_Buy, Enum_Sell):
+    def handle_filled_order(self, order_id, changes):
         """Apply state changes and send notification for a filled order.
 
         Extracted to improve readability while preserving existing side-effects
@@ -462,8 +461,8 @@ class BaseStrategy():
         self.apply_changes(changes)
         self.save_strategy_state()
 
-            enums = self.get_enums()
-        verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy else 'Sell'
+        enums = self.get_enums()
+        verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == enums['buy'] else 'Sell'
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
         quantity = self.api.A_OrderFilledLot(order_id)

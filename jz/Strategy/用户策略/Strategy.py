@@ -51,6 +51,9 @@ class BaseStrategy():
         self.context = context
         self.params = kwargs['params']
         self.api = kwargs['api']
+        # prepare enum cache container and populate once to avoid repeated API calls
+        self._cached_enums = None
+        self.cache_enums()
         self.IsBacktest = context.strategyStatus() != 'C'
 
         #self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
@@ -361,6 +364,22 @@ class BaseStrategy():
         for key, value in changes.items():
             setattr(self, key, value)
 
+    def cache_enums(self):
+        """Cache frequently used enum values from `self.api`.
+        """
+        if getattr(self, '_cached_enums', None) is not None:
+            return self._cached_enums
+
+        self._cached_enums = {
+            'filled': self.api.Enum_Filled(),
+            'canceled': self.api.Enum_Canceled(),
+            'buy': self.api.Enum_Buy(),
+            'sell': self.api.Enum_Sell(),
+            'entry': self.api.Enum_Entry(),
+            'exit': self.api.Enum_Exit(),
+        }
+        return self._cached_enums
+
     def existing_order(self):
         remaining_orders, any_filled, Enum_Buy, Enum_Sell = self.process_waiting_list()
 
@@ -377,10 +396,11 @@ class BaseStrategy():
         any_filled = False
 
         # Cache enum values to avoid repeated remote/bound calls
-        Enum_Filled = self.api.Enum_Filled()
-        Enum_Canceled = self.api.Enum_Canceled()
-        Enum_Buy = self.api.Enum_Buy()
-        Enum_Sell = self.api.Enum_Sell()
+        enums = self.cache_enums()
+        Enum_Filled = enums['filled']
+        Enum_Canceled = enums['canceled']
+        Enum_Buy = enums['buy']
+        Enum_Sell = enums['sell']
 
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
@@ -435,8 +455,10 @@ class BaseStrategy():
         """
         self.apply_changes(changes)
         self.save_strategy_state()
+
+        enums = self.cache_enums()
         verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy else 'Sell'
-        direction = '开' if self.api.A_OrderEntryOrExit(order_id) == self.api.Enum_Entry() else '平'
+        direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
         quantity = self.api.A_OrderFilledLot(order_id)
         buy_position, sell_position = self.resolve_positions_for_order()
@@ -506,15 +528,13 @@ class BaseStrategy():
         self.delete_orders()
 
     def delete_orders(self):
-        # Cache enums to avoid repeated bound calls
-        Enum_Filled = self.api.Enum_Filled()
-        Enum_Canceled = self.api.Enum_Canceled()
+        enums = self.cache_enums()
 
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
-            if status == Enum_Filled:
+            if status == enums['filled']:
                 self.apply_filled_no_notify(order_id, changes)
-            elif status != Enum_Canceled:
+            elif status != enums['canceled']:
                 self.api.A_DeleteOrder(order_id)
                 self.print(f"Order {order_id} deleted")
 

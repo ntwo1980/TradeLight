@@ -322,16 +322,15 @@ class BaseStrategy():
         return self.execute_order(False, code, quantity, price)
 
     def send_live_order(self, enum_direction, cover_position, quantity, price, code):
+        enums = self.get_enums()
         if cover_position > 0:
             direction = '平'
             if cover_position < quantity:
                 quantity = cover_position
                 self.trade_quantity = cover_position
-            enums = self.get_enums()
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, enums['exit'], quantity, price, code)
         else:
             direction = '开'
-            enums = self.get_enums()
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, enums['entry'], quantity, price, code)
         return direction, retEnter, EnterOrderID
 

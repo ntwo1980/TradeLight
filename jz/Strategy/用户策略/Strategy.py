@@ -46,13 +46,13 @@ class BaseStrategy():
         self.trade_quantity = 0
         self.order_deleted = False
         self.position_closed = False
+        self._cached_enums = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
         self.params = kwargs['params']
         self.api = kwargs['api']
         # prepare enum cache container and populate once to avoid repeated API calls
-        self._cached_enums = None
         self.cache_enums()
         self.IsBacktest = context.strategyStatus() != 'C'
 
@@ -367,7 +367,7 @@ class BaseStrategy():
     def cache_enums(self):
         """Cache frequently used enum values from `self.api`.
         """
-        if getattr(self, '_cached_enums', None) is not None:
+        if self._cached_enums is not None:
             return self._cached_enums
 
         self._cached_enums = {

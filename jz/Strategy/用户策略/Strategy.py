@@ -345,6 +345,12 @@ class BaseStrategy():
         tick = self.api.PriceTick(code)
         return math.ceil(price / tick) * tick
 
+    def compute_thresholds(self, base_price, level, atr):
+        """Compute buy/sell thresholds from `base_price` and a `level`.
+        """
+        diff = atr * level
+        return base_price - diff, base_price + diff
+
     def position_limit_exceeded(self, buy_position, sell_position):
         orderQty = self.params.get('orderQty', 1)
         maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
@@ -639,8 +645,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.sell_index < len(self.sell_levels):
             if buy_position > 0:
                 level = self.sell_levels[self.sell_index]
-                diff = self.atr * level
-                sell_threshold = base_price + diff
+                _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
 
                 if current_price >= sell_threshold and not existing_order:
                     if buy_position > 5 * order_qty:
@@ -651,8 +656,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels) and not executed:
             level = self.buy_levels[self.buy_index]
-            diff = self.atr * level
-            buy_threshold = base_price - diff
+            buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
 
             if current_price <= buy_threshold and not existing_order:
                 executed = self.ExecuteBuy(code, current_price, order_qty)
@@ -956,8 +960,7 @@ class SpreadGridStrategy(BaseStrategy):
         orderQty = self.params.get('orderQty', 1)
         if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
             level = self.sell_levels[self.sell_index]
-            diff = self.atr * level
-            sell_threshold = base_price + diff
+            _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
 
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=True)
 
@@ -975,8 +978,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         if self.buy_index < len(self.buy_levels):   # SpreadGridStrategy
             level = self.buy_levels[self.buy_index]
-            diff = self.atr * level
-            buy_threshold = base_price - diff
+            buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
 
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=False)
 

@@ -53,7 +53,8 @@ class BaseStrategy():
         self.params = kwargs['params']
         self.api = kwargs['api']
         # prepare enum cache container and populate once to avoid repeated API calls
-        self.cache_enums()
+        self._cached_enums = None
+        self.get_enums()
         self.IsBacktest = context.strategyStatus() != 'C'
 
         #self.api.SetTriggerType(1)   # 即时行情触发(测试时可放开屏蔽)
@@ -295,7 +296,8 @@ class BaseStrategy():
                 self.print(f'Error: reach {verb.lower()} position limit')
                 return (False, 0)
 
-            enum_dir = self.api.Enum_Buy() if is_buy else self.api.Enum_Sell()
+            enums = self.get_enums()
+            enum_dir = enums['buy'] if is_buy else enums['sell']
             cover_position = sell_position if is_buy else buy_position
             direction, retEnter, EnterOrderID = self.send_live_order(enum_dir, cover_position, quantity, price, code)
             if retEnter == 0:
@@ -325,10 +327,12 @@ class BaseStrategy():
             if cover_position < quantity:
                 quantity = cover_position
                 self.trade_quantity = cover_position
-            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Exit(), quantity, price, code)
+            enums = self.get_enums()
+            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, enums['exit'], quantity, price, code)
         else:
             direction = '开'
-            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, self.api.Enum_Entry(), quantity, price, code)
+            enums = self.get_enums()
+            retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, enums['entry'], quantity, price, code)
         return direction, retEnter, EnterOrderID
 
     def next_clamped_index(self, current_index, levels):
@@ -364,8 +368,10 @@ class BaseStrategy():
         for key, value in changes.items():
             setattr(self, key, value)
 
-    def cache_enums(self):
-        """Cache frequently used enum values from `self.api`.
+    def get_enums(self):
+        """Get (and cache) frequently used enum values from `self.api`.
+
+        Returns a dict with keys: filled, canceled, buy, sell, entry, exit.
         """
         if self._cached_enums is not None:
             return self._cached_enums
@@ -396,7 +402,7 @@ class BaseStrategy():
         any_filled = False
 
         # Cache enum values to avoid repeated remote/bound calls
-        enums = self.cache_enums()
+        enums = self.get_enums()
         Enum_Filled = enums['filled']
         Enum_Canceled = enums['canceled']
         Enum_Buy = enums['buy']
@@ -456,7 +462,7 @@ class BaseStrategy():
         self.apply_changes(changes)
         self.save_strategy_state()
 
-        enums = self.cache_enums()
+            enums = self.get_enums()
         verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == Enum_Buy else 'Sell'
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
@@ -528,7 +534,7 @@ class BaseStrategy():
         self.delete_orders()
 
     def delete_orders(self):
-        enums = self.cache_enums()
+        enums = self.get_enums()
 
         for order_id, changes in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
@@ -1015,8 +1021,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.print('ExecuteBuy')
 
         if not self.IsBacktest and not force:
-            Enum_Buy = self.api.Enum_Buy()
-            if self.waiting_has_enum(Enum_Buy):
+            enums = self.get_enums()
+            if self.waiting_has_enum(enums['buy']):
                 return False
         return self.place_order_and_commit(self.Buy, code, quantity, price, self.build_buy_changes)
 
@@ -1035,8 +1041,8 @@ class SpreadGridStrategy(BaseStrategy):
         self.print('ExecuteSell')
 
         if not self.IsBacktest and not force:
-            Enum_Sell = self.api.Enum_Sell()
-            if self.waiting_has_enum(Enum_Sell):
+            enums = self.get_enums()
+            if self.waiting_has_enum(enums['sell']):
                 return False
         return self.place_order_and_commit(self.Sell, code, quantity, price, self.build_sell_changes)
 

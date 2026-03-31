@@ -958,6 +958,41 @@ class SpreadGridStrategy(BaseStrategy):
         sell_threshold = 0
         buy_threshold = 0
         orderQty = self.params.get('orderQty', 1)
+
+        trading_context = {
+            'base_price': base_price,
+            'orderQty': orderQty,
+            'current_price': current_price,
+            'ma_20_last': ma_20_last,
+            'days_above_ma': days_above_ma,
+            'existing_buy_order': existing_buy_order,
+            'existing_sell_order': existing_sell_order,
+            'buy_position': buy_position,
+            'sell_position': sell_position,
+        }
+
+        sell_threshold, should_return = self.handle_sell_trading(trading_context)
+        if should_return:
+            return
+
+        buy_threshold, should_return = self.handle_buy_trading(trading_context)
+        if should_return:
+            return
+
+        self.update_max_holding()
+
+        if self.print_debug:
+            self.print_debug_info(base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma)
+
+    def handle_sell_trading(self, context):
+        base_price = context['base_price']
+        orderQty = context['orderQty']
+        current_price = context['current_price']
+        ma_20_last = context['ma_20_last']
+        days_above_ma = context['days_above_ma']
+        existing_sell_order = context['existing_sell_order']
+        buy_position = context['buy_position']
+        sell_threshold = 0
         if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
             level = self.sell_levels[self.sell_index]
             _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
@@ -965,7 +1000,7 @@ class SpreadGridStrategy(BaseStrategy):
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=True)
 
             if self.handle_stop_loss_sell(current_price, sell_threshold, orderQty, orderQuantity):
-                return
+                return sell_threshold, True
 
             if not existing_sell_order:
                 params = self.select_sell_trade_params(current_price, base_price, sell_threshold, orderQty, orderQuantity, buy_position, ma_20_last, days_above_ma)
@@ -975,7 +1010,17 @@ class SpreadGridStrategy(BaseStrategy):
 
         else:
             self.print(f'Error: sell_index error')
+        return sell_threshold, False
 
+    def handle_buy_trading(self, context):
+        base_price = context['base_price']
+        orderQty = context['orderQty']
+        current_price = context['current_price']
+        ma_20_last = context['ma_20_last']
+        days_above_ma = context['days_above_ma']
+        existing_buy_order = context['existing_buy_order']
+        sell_position = context['sell_position']
+        buy_threshold = 0
         if self.buy_index < len(self.buy_levels):   # SpreadGridStrategy
             level = self.buy_levels[self.buy_index]
             buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
@@ -983,7 +1028,7 @@ class SpreadGridStrategy(BaseStrategy):
             orderQuantity = self.compute_order_quantity(orderQty, for_sell=False)
 
             if self.handle_stop_loss_buy(current_price, buy_threshold, orderQty, orderQuantity):
-                return
+                return buy_threshold, True
 
             if not existing_buy_order:
                 params = self.select_buy_trade_params(current_price, base_price, buy_threshold, orderQty, orderQuantity, sell_position, ma_20_last, days_above_ma)
@@ -992,30 +1037,29 @@ class SpreadGridStrategy(BaseStrategy):
                     self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, condition_price, is_buy=True)
         else:
             self.print(f'Error: buy_index error')
+        return buy_threshold, False
 
-        self.update_max_holding()
-
-        if self.print_debug:
-            self.print({
-                'b_price': base_price,
-                'r_b_position': buy_position,
-                'r_s_position': sell_position,
-                'l_holding': self.logical_holding,
-                'b_threshold': buy_threshold,
-                's_threshold': sell_threshold,
-                'c_price': current_price,
-                'e_order': existing_order,
-                'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
-                'b_index': self.buy_index,
-                's_index': self.sell_index,
-                'code': self.codes[1],
-                'current_date': self.api.TradeDate(),
-                'current_time': self.api.CurrentTime(),
-                'atr': self.atr,
-                'slope': self.slope,
-                'r_squared': self.r_squared,
-                'days_above_ma': days_above_ma
-            })
+    def print_debug_info(self, base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma):
+        self.print({
+            'b_price': base_price,
+            'r_b_position': buy_position,
+            'r_s_position': sell_position,
+            'l_holding': self.logical_holding,
+            'b_threshold': buy_threshold,
+            's_threshold': sell_threshold,
+            'c_price': current_price,
+            'e_order': existing_order,
+            'yesterday_price': self.DailyPrices[self.codes[0]]['Close'].iloc[-1],
+            'b_index': self.buy_index,
+            's_index': self.sell_index,
+            'code': self.codes[1],
+            'current_date': self.api.TradeDate(),
+            'current_time': self.api.CurrentTime(),
+            'atr': self.atr,
+            'slope': self.slope,
+            'r_squared': self.r_squared,
+            'days_above_ma': days_above_ma
+        })
 
     def ExecuteBuy(self, code, price, quantity, force = False):    # SpreadGridStrategy
         self.print('ExecuteBuy')

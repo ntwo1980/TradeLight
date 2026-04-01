@@ -830,7 +830,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.stop_lose = self.params.get('stopLose', True)
 
         for code in self.codes:
-            self.api.SetBarInterval(code, 'M', 1, 5000)
+            self.api.SetBarInterval(code, 'M', 1, 1)
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()

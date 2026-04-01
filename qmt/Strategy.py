@@ -1329,11 +1329,12 @@ class PairGridStrategy(BaseStrategy):
         super().SaveStrategyState(file, data)
 
 class PairLevelGridStrategy(BaseStrategy):
-    def __init__(self, strategyId='a', threshold_ratio = 0.01, **kwargs):
+    def __init__(self, strategyId='a', threshold_ratio = 0.01, stop_lose = True, **kwargs):
         super().__init__(strategyPrefix='pairlevelgrid', strategyId=strategyId, **kwargs)
         self.stock_A = self.Stocks[0]
         self.stock_B = self.Stocks[1]
         self.threshold_ratio = threshold_ratio
+        self.stop_lose = stop_lose
 
     def init(self, C):    # PairLevelGridStrategy
         super().init(C)
@@ -1486,7 +1487,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'days_above_ma250': days_above_ma250,
         })
 
-        if not self.ClosePosition and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
+        if not self.ClosePosition and self.stop_lose and prices['close'][-1] < sma_5[-1] and prices['close'][-1] < sma_10[-1] and (self.slope < -0.005 or days_above_ma250 < 1):
             self.ClosePosition = True
 
         holdings = self.GetPositions()[0]

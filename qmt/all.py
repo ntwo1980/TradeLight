@@ -53,7 +53,7 @@ pairLevelGridStrategies = [
     #{'stocks': ["159570.SZ", "159567.SZ"], 'stockNames':['创新药', '创新药']},
     #{'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},
     #{'stocks': ["512050.SH", "563220.SH"], 'stockNames':['A500', 'A500']},
-    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利']},
+    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'stop_lose': False},
     #{'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},
     #{'stocks': ["159530.SZ", "159770.SZ"], 'stockNames':['机器人', '机器人']},
     #{'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
@@ -168,9 +168,3 @@ def f(C):
 def g(C):
     for s in strategies:
         s.g(C)
-
-
-
-
-
-

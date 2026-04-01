@@ -622,6 +622,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.RunGridTrading(self.codes[0])
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
+        # Follow the same structure as SpreadGridStrategy.RunGridTrading: build
+        # a trading context, delegate sell/buy handling to helper methods,
+        # and preserve the original trading logic.
         existing_buy_order, existing_sell_order = self.existing_order()
         existing_order = existing_buy_order or existing_sell_order
 
@@ -640,33 +643,29 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.logical_holding == 0 and buy_position == 0:
             order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
-        executed = False
-
         sell_threshold = 0
         buy_threshold = 0
 
-        # SELL side
-        if self.sell_index < len(self.sell_levels):
-            if buy_position > 0:
-                level = self.sell_levels[self.sell_index]
-                _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
+        trading_context = {
+            'code': code,
+            'base_price': base_price,
+            'orderQty': orderQty,
+            'order_qty': order_qty,
+            'current_price': current_price,
+            'existing_buy_order': existing_buy_order,
+            'existing_sell_order': existing_sell_order,
+            'buy_position': buy_position,
+        }
 
-                if current_price >= sell_threshold and not existing_order:
-                    if buy_position > 5 * order_qty:
-                        order_qty = order_qty + 1
-                    executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
-        else:
-            self.print(f'Error: sell_index error')
+        sell_threshold, should_return = self.handle_sell_trading(trading_context)
+        if should_return:
+            return
 
-        # BUY side
-        if self.buy_index < len(self.buy_levels) and not executed:
-            level = self.buy_levels[self.buy_index]
-            buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
-
-            if current_price <= buy_threshold and not existing_order:
-                executed = self.ExecuteBuy(code, current_price, order_qty)
-        elif not executed:
-            self.print(f'Error: buy_index error')
+        # Only attempt buy when sell was not executed, preserving original flow
+        if not trading_context.get('executed'):
+            buy_threshold, should_return = self.handle_buy_trading(trading_context)
+            if should_return:
+                return
 
         self.update_max_holding()
 
@@ -690,6 +689,67 @@ class PairLevelGridStrategy(BaseStrategy):
                 'slope': self.slope,
                 'r_squared': self.r_squared,
             })
+
+    def handle_sell_trading(self, context):
+        """Handle sell-side decision and execution for PairLevelGridStrategy.
+
+        Returns (sell_threshold, should_return). If a sell is executed, the
+        context will have `executed`=True to signal callers to skip buy logic.
+        """
+        code = context['code']
+        base_price = context['base_price']
+        orderQty = context['orderQty']
+        order_qty = context['order_qty']
+        current_price = context['current_price']
+        existing_buy_order = context['existing_buy_order']
+        existing_sell_order = context['existing_sell_order']
+        existing_order = existing_buy_order or existing_sell_order
+        buy_position = context['buy_position']
+
+        sell_threshold = 0
+        if self.sell_index < len(self.sell_levels):
+            if buy_position > 0:
+                level = self.sell_levels[self.sell_index]
+                _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
+
+                if current_price >= sell_threshold and not existing_order:
+                    if buy_position > 5 * order_qty:
+                        order_qty = order_qty + 1
+                    executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
+                    if executed:
+                        # mark that a trade occurred so RunGridTrading can skip buy
+                        context['executed'] = True
+        else:
+            self.print(f'Error: sell_index error')
+
+        return sell_threshold, False
+
+    def handle_buy_trading(self, context):
+        """Handle buy-side decision and execution for PairLevelGridStrategy.
+
+        Returns (buy_threshold, should_return).
+        """
+        code = context['code']
+        base_price = context['base_price']
+        orderQty = context['orderQty']
+        order_qty = context['order_qty']
+        current_price = context['current_price']
+        existing_buy_order = context['existing_buy_order']
+        existing_sell_order = context['existing_sell_order']
+        existing_order = existing_buy_order or existing_sell_order
+        buy_position = context['buy_position']
+
+        buy_threshold = 0
+        if self.buy_index < len(self.buy_levels):
+            level = self.buy_levels[self.buy_index]
+            buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
+
+            if current_price <= buy_threshold and not existing_order:
+                self.ExecuteBuy(code, current_price, order_qty)
+        else:
+            self.print(f'Error: buy_index error')
+
+        return buy_threshold, False
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
         return self.place_pair_order_and_commit(self.Buy, code, price, quantity, True, self.build_pair_buy_changes)
 

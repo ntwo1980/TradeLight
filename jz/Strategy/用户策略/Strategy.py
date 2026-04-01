@@ -622,12 +622,13 @@ class PairLevelGridStrategy(BaseStrategy):
         self.RunGridTrading(self.codes[0])
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
+        existing_buy_order, existing_sell_order = self.existing_order()
+        existing_order = existing_buy_order or existing_sell_order
+
         self.atr = self.ATRs[code]
         self.slope = self.slopes[code]
         self.r_squared = self.r_squareds[code]
         current_price = self.LastPrices[code]
-        existing_buy_order, existing_sell_order = self.existing_order()
-        existing_order = existing_buy_order or existing_sell_order
 
         base_price = self.base_price
         orderQty = self.params.get('orderQty', 1)
@@ -635,6 +636,7 @@ class PairLevelGridStrategy(BaseStrategy):
         order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
 
+        # compute MA-based base price and suggested order quantity when flat
         if self.logical_holding == 0 and buy_position == 0:
             order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
@@ -642,6 +644,8 @@ class PairLevelGridStrategy(BaseStrategy):
 
         sell_threshold = 0
         buy_threshold = 0
+
+        # SELL side
         if self.sell_index < len(self.sell_levels):
             if buy_position > 0:
                 level = self.sell_levels[self.sell_index]
@@ -654,6 +658,7 @@ class PairLevelGridStrategy(BaseStrategy):
         else:
             self.print(f'Error: sell_index error')
 
+        # BUY side
         if self.buy_index < len(self.buy_levels) and not executed:
             level = self.buy_levels[self.buy_index]
             buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
@@ -844,17 +849,27 @@ class SpreadGridStrategy(BaseStrategy):
             return True
         return False
 
-    def select_sell_trade_params(self, current_price, base_price, sell_threshold, orderQty, orderQuantity, buy_position, ma_20_last, days_above_ma):
+    def select_sell_trade_params(self, context):
         """Return (quantity, condition_price) for a sell attempt or None.
 
-        Mirrors the original branch logic in `RunGridTrading` for the sell side.
+        Accepts a `context` dict with keys used by the selector. This mirrors
+        the original branch logic but centralizes parameters into one object.
         """
+        current_price = context['current_price']
+        base_price = context['base_price']
+        sell_threshold = context['sell_threshold']
+        orderQty = context['orderQty']
+        orderQuantity = context['orderQuantity']
+        buy_position = context['buy_position']
+        ma_20_last = context['ma_20_last']
+        days_above_ma = context['days_above_ma']
+
         # Case: initial entry when flat
         if self.logical_holding == 0 and self.slope < 0.3 and current_price <= base_price + self.atr:
             if days_above_ma <= 14 or self.ignore_days_above_ma:
                 quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                 return quantity, sell_threshold
-            return None  # MA filter not passed: no trade (matches original behaviour)
+            return None
 
         # Already short: adjust aggressiveness for deeply negative exposure
         if self.logical_holding < 0:
@@ -876,17 +891,27 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             return orderQuantity, sell_threshold
 
-    def select_buy_trade_params(self, current_price, base_price, buy_threshold, orderQty, orderQuantity, sell_position, ma_20_last, days_above_ma):
+    def select_buy_trade_params(self, context):
         """Return (quantity, condition_price) for a buy attempt or None.
 
-        Mirrors the original branch logic in `RunGridTrading` for the buy side.
+        Accepts a `context` dict with keys used by the selector. This mirrors
+        the original branch logic but centralizes parameters into one object.
         """
+        current_price = context['current_price']
+        base_price = context['base_price']
+        buy_threshold = context['buy_threshold']
+        orderQty = context['orderQty']
+        orderQuantity = context['orderQuantity']
+        sell_position = context['sell_position']
+        ma_20_last = context['ma_20_last']
+        days_above_ma = context['days_above_ma']
+
         # Case: initial entry when flat
         if self.logical_holding == 0 and self.slope > -0.3 and current_price >= base_price - self.atr:
             if days_above_ma >= 6 or self.ignore_days_above_ma:
                 quantity = orderQuantity * 2 if self.double_first_position else orderQuantity
                 return quantity, buy_threshold
-            return None  # MA filter not passed: no trade (matches original behaviour)
+            return None
 
         # Already long: reduce aggressiveness if deeply exposed
         if self.logical_holding > 0:
@@ -1003,7 +1028,9 @@ class SpreadGridStrategy(BaseStrategy):
                 return sell_threshold, True
 
             if not existing_sell_order:
-                params = self.select_sell_trade_params(current_price, base_price, sell_threshold, orderQty, orderQuantity, buy_position, ma_20_last, days_above_ma)
+                context['orderQuantity'] = orderQuantity
+                context['sell_threshold'] = sell_threshold
+                params = self.select_sell_trade_params(context)
                 if params is not None:
                     quantity, condition_price = params
                     self.execute_trade(self.ExecuteSell, self.codes[1], current_price, quantity, condition_price, is_buy=False)
@@ -1031,7 +1058,9 @@ class SpreadGridStrategy(BaseStrategy):
                 return buy_threshold, True
 
             if not existing_buy_order:
-                params = self.select_buy_trade_params(current_price, base_price, buy_threshold, orderQty, orderQuantity, sell_position, ma_20_last, days_above_ma)
+                context['orderQuantity'] = orderQuantity
+                context['buy_threshold'] = buy_threshold
+                params = self.select_buy_trade_params(context)
                 if params is not None:
                     quantity, condition_price = params
                     self.execute_trade(self.ExecuteBuy, self.codes[1], current_price, quantity, condition_price, is_buy=True)

@@ -37,7 +37,6 @@ simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'tradingAmount': 20000, 'buyThresholdRatio': 0.97},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'buyThresholdRatio': 0.97},
-    {'stocks': ["159726.SZ"], 'stockNames':['港股通高股息']},
 ]
 
 stockLevelGridStrategies = [

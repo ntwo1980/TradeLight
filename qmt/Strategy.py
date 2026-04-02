@@ -597,7 +597,8 @@ class SimpleGridStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
+        # if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
+        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy

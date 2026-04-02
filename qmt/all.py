@@ -63,6 +63,7 @@ pairLevelGridStrategies = [
     {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},
     {'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
     {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'stop_lose': False, 'threshold_ratio':0.02},
+    {'stocks': ["159726.SZ", "513830.SH"], 'stockNames':['港股通高股息', '港股通高股息'], 'stop_lose': False, 'threshold_ratio':0.02}
 ]
 
 strategies = []

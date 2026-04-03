@@ -183,7 +183,7 @@ class BaseStrategy():
         month = self.GetMonth(self.Today)
         day = self.GetDay(self.Today)
 
-        if (month == 4 and day <= 20) or (month == 3 and day >=20):
+        if (month == 4 and day <= 1) or (month == 3 and day >=20):
             self.ClosePosition = True
             self.IsGlobalClosePosition = True
         # elif (month == 12 and day >= 15) or (month == 1 and day <=15):

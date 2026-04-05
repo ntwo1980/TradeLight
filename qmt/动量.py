@@ -20,8 +20,8 @@ with open('Strategy.py', "r", encoding="utf-8") as f:
 
 a = MomentumRotationStrategy(
     universe = universe,
-    stocks=['518880.SH', '513100.SH', '159915.SZ', '159207.SZ', "513120.SH", "513020.SH"],
-    stockNames=['黄金ETF', '纳指100', '创业板', '高股息', '港股创新药', '港股科技'],
+    stocks=['518880.SH', '513100.SH', '159915.SZ', "513120.SH", "513020.SH"],
+    stockNames=['黄金ETF', '纳指100', '创业板', '港股创新药', '港股科技'],
     #days = 26,  # 95023
     #days = 27,  # 118554
     days = 28,  # 133602

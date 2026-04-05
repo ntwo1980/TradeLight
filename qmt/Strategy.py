@@ -11,7 +11,9 @@ import talib
 
 
 class BaseStrategy():
-    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, tradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
+    def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, \
+        get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, \
+        tradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
@@ -157,7 +159,7 @@ class BaseStrategy():
             return self.MaxAmount
 
         tradingAmount = self.GetBuyTradingAmount(stock, False)
-        return tradingAmount * 3.5 if self.Priority < 10 else tradingAmount * 5.5
+        return tradingAmount * 3.5 if self.Priority < 5 else tradingAmount * 6.5
 
     def Print(self, string, **kwargs):
         prefix = f"{self.StrategyPrefix}_{self.Stocks[0].replace('.', '')}_{self.StockNames[0]}_{self.StrategyId}"
@@ -596,8 +598,12 @@ class SimpleGridStrategy(BaseStrategy):
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+        max_amount = self.GetMaxAmount(stock)
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
+        if current_price * (unit_to_buy + self.logical_holding) >= max_amount:
+            self.Print("Error: Reach max amount")
+            return False
+        elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
@@ -884,8 +890,12 @@ class LevelGridStrategy(BaseStrategy):
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+        max_amount = self.GetMaxAmount(stock)
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
+        if current_price * (unit_to_buy + self.logical_holding) >= max_amount:
+            self.Print("Error: Reach max amount")
+            return False
+        elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(stock)
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
@@ -1234,8 +1244,12 @@ class PairGridStrategy(BaseStrategy):
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+        max_amount = self.GetMaxAmount(stock)
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock)):
+        if not isSwitch and current_price * (unit_to_buy + self.logical_holding) >= max_amount:
+            self.Print("Error: Reach max amount")
+            return False
+        elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock
@@ -1627,7 +1641,12 @@ class PairLevelGridStrategy(BaseStrategy):
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and (isSwitch or current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock)):
+        max_amount = self.GetMaxAmount(stock)
+
+        if not isSwitch and current_price * (unit_to_buy + self.logical_holding) >= max_amount:
+            self.Print("Error: Reach max amount")
+            return False
+        elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock
@@ -1925,8 +1944,12 @@ class MomentumRotationStrategy(BaseStrategy):
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
+        max_amount = self.GetMaxAmount(stock)
 
-        if available_cash >= current_price * unit_to_buy and unit_to_buy > 0 and current_price * (unit_to_buy + self.logical_holding) <= self.GetMaxAmount(stock):
+        if current_price * (unit_to_buy + self.logical_holding) >= max_amount:
+            self.Print("Error: Reach max amount")
+            return False
+        elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.current_held = stock

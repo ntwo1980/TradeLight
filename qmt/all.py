@@ -12,7 +12,7 @@ levelGridStrategySettings = [
     #{'stocks': ["513090.SH"], 'stockNames':['香港证券']},
     #{'stocks': ["159552.SZ"], 'stockNames':['中证2000增强']},
     #{'stocks': ["159687.SZ"], 'stockNames':['亚太精选']},
-    {'stocks': ["159766.SZ"], 'stockNames':['旅游']},
+    #{'stocks': ["159766.SZ"], 'stockNames':['旅游']},
     #{'stocks': ["159691.SZ"], 'stockNames':['港股红利']},518
     #{'stocks': ["159851.SZ"], 'stockNames':['金融科技']},
     #{'stocks': ["515100.SH"], 'stockNames':['红利低波100']},
@@ -35,8 +35,12 @@ levelGridStrategySettings = [
 
 simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'tradingAmount': 20000, 'buyThresholdRatio': 0.97},
-    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'buyThresholdRatio': 0.97},
+    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'tradingAmount': 20000, 'buyThresholdRatio': 0.97},
+    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10},
+]
+
+pairGridStrategies = [
+    #{'stocks': ["601111.SH", "603885.SH"], 'stockNames':['中国国航', '吉祥航空'], 'priority': 10},
 ]
 
 stockLevelGridStrategies = [
@@ -49,20 +53,20 @@ pairLevelGridStrategies = [
     #{'stocks': ["159562.SZ", "517520.SH"], 'stockNames':['黄金股', '黄金股']},
     #{'stocks': ["515070.SH", "159819.SZ"], 'stockNames':['人工智能', '人工智能']},
     #{'stocks': ["513350.SH", "159518.SZ"], 'stockNames':['标普油气', '标普油气'], 'priority': 10, 'tradingAmount': 20000, 'threshold_ratio':0.02},
-    {'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},
-    {'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},
+    #{'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},
+    #{'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},
     #{'stocks': ["159570.SZ", "159567.SZ"], 'stockNames':['创新药', '创新药']},
-    {'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},
-    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'stop_lose': False, 'threshold_ratio':0.02},
-    {'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},
+    #{'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},
+    #{'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'stop_lose': False, 'threshold_ratio':0.02},
+    #{'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},
     #{'stocks': ["159530.SZ", "159770.SZ"], 'stockNames':['机器人', '机器人']},
     #{'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
     #{'stocks': ["513050.SH", "159605.SZ"], 'stockNames':['中概互联', '中概互联']},
     #{'stocks': ["512890.SH", "515100.SH"], 'stockNames':['红利低波100', '红利低波100']},
-    {'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
-    {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},
-    {'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
-    {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'stop_lose': False, 'threshold_ratio':0.02},
+    #{'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
+    #{'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},
+    #{'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
+    #{'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'stop_lose': False, 'threshold_ratio':0.02},
 ]
 
 strategies = []
@@ -105,6 +109,21 @@ for setting in simpleGridStrategies:
     priority=setting.get('priority', 0),
     tradingAmount=setting.get('tradingAmount', None),
     buyThresholdRatio=setting.get('buyThresholdRatio', 1),
+    get_trade_detail_data_func = get_trade_detail_data,
+    pass_order_func = passorder,
+    cancel_func = cancel,
+    timetag_to_datetime_func = timetag_to_datetime,
+    download_history_data_func = download_history_data)
+
+    strategies.append(strategy)
+
+for setting in pairGridStrategies:
+    strategy = PairGridStrategy(
+    universe = universe,
+    stocks=setting['stocks'],
+    stockNames=setting['stockNames'],
+    priority=setting.get('priority', 0),
+    tradingAmount=setting.get('tradingAmount', None),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,

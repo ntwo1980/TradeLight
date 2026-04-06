@@ -12,7 +12,6 @@ levelGridStrategySettings = [
     #{'stocks': ["513090.SH"], 'stockNames':['香港证券']},
     #{'stocks': ["159552.SZ"], 'stockNames':['中证2000增强']},
     #{'stocks': ["159687.SZ"], 'stockNames':['亚太精选']},
-    {'stocks': ["159766.SZ"], 'stockNames':['旅游']},
     #{'stocks': ["159691.SZ"], 'stockNames':['港股红利']},518
     #{'stocks': ["159851.SZ"], 'stockNames':['金融科技']},
     #{'stocks': ["515100.SH"], 'stockNames':['红利低波100']},
@@ -37,6 +36,7 @@ simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10},
+    {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10},
 ]
 
 stockLevelGridStrategies = [

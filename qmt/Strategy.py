@@ -13,11 +13,11 @@ import talib
 class BaseStrategy():
     def __init__(self, universe, stocks, stockNames, strategyPrefix, strategyId, \
         get_trade_detail_data_func, pass_order_func, cancel_func, timetag_to_datetime_func, download_history_data_func, \
-        tradingAmount = None, MaxAmount = None, closePosition = False, priority = 0):
+        MaxAmount = None, closePosition = False, **kwargs):
         self.Universe = universe
         self.Stocks = stocks
         self.StockNames = stockNames
-        self.Priority = priority
+        self.Priority = kwargs.get('priority', 0)
         self.StrategyPrefix = strategyPrefix
         self.StrategyId = strategyId
         self.IsBacktest = True
@@ -25,7 +25,8 @@ class BaseStrategy():
         self.Yesterday = None
         self.Account = "testS"
         self.AccountType = "STOCK"
-        self.TradingAmount = tradingAmount
+        self.TradingAmount = kwargs.get('tradingAmount', None)
+        self.FirstPositionAmount = kwargs.get('firstPositionAmount', 1)
         self.RetainAmount = 0
         self.base_price = None
         self.logical_holding = 0
@@ -158,8 +159,15 @@ class BaseStrategy():
         if self.MaxAmount is not None:
             return self.MaxAmount
 
-        tradingAmount = self.GetBuyTradingAmount(stock, False)
-        return tradingAmount * 3.5 if self.Priority < 5 else tradingAmount * 6.5
+        if self.TradingAmount is None:
+            buy_amount = self.GetBuyTradingAmount(stock)
+        else:
+            buy_amount = self.TradingAmount
+
+        if self.FirstPositionAmount <= 1:
+            return buy_amount * 3.5 if self.Priority < 5 else buy_amount * 6.5
+        else:
+            return buy_amount * (self.FirstPositionAmount + 3.5)
 
     def Print(self, string, **kwargs):
         prefix = f"{self.StrategyPrefix}_{self.Stocks[0].replace('.', '')}_{self.StockNames[0]}_{self.StrategyId}"
@@ -1402,6 +1410,7 @@ class PairLevelGridStrategy(BaseStrategy):
         price_new = current_prices[self.pending_switch_to]
 
         unit_to_buy = int(cash_from_sale / price_new)
+
         unit_to_buy = (unit_to_buy // 100) * 100  # A股100股整数倍
 
         if unit_to_buy == 0:
@@ -1638,6 +1647,9 @@ class PairLevelGridStrategy(BaseStrategy):
             buy_amount = self.GetBuyTradingAmount(stock)
         else:
             buy_amount = trading_amount
+
+        if not isSwitch and self.FirstPositionAmount > 1 and self.logical_holding < buy_amount / 2:
+            buy_amount = buy_amount * self.FirstPositionAmount
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数

@@ -76,13 +76,13 @@ class BaseStrategy():
                 self.dingding_keyword = config['dingding_keyword']
                 self.print(config['account'])
 
-    def LastTradeDate(self):
+    def LastTradeDate(self):   # BaseStrategy
         return str(self.api.TradeDate()) if self.IsBacktest else str(self.api.Q_LastDate())
 
-    def today_str(self):
+    def today_str(self):   # BaseStrategy
         return datetime.today().strftime('%Y%m%d')
 
-    def calc_log_regression(self, values):
+    def calc_log_regression(self, values):   # BaseStrategy
         x = np.arange(len(values))
         shift = values.min() - 1e-6
         y = np.log(values - shift)
@@ -90,7 +90,7 @@ class BaseStrategy():
         r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
         return slope, r_squared
 
-    def fetch_ohlcv(self, code, period):
+    def fetch_ohlcv(self, code, period):   # BaseStrategy
         return pd.DataFrame({
             'Open':  self.api.Open(code, period, 1),
             'High':  self.api.High(code, period, 1),
@@ -99,7 +99,7 @@ class BaseStrategy():
             'Vol':   self.api.Vol(code, period, 1),
         })
 
-    def adjust_atr(self, atr):
+    def adjust_atr(self, atr):   # BaseStrategy
         atr_config = self.params.get('atr')
         if atr_config is not None:
             if self.params.get('fixedAtr', False):
@@ -135,7 +135,7 @@ class BaseStrategy():
 
         self.LastPrices = last_prices
 
-    def get_last_price(self, code):
+    def get_last_price(self, code):   # BaseStrategy
         """Return the most recent price for `code` depending on backtest mode.
         """
         if self.IsBacktest:
@@ -143,7 +143,7 @@ class BaseStrategy():
             return minute_prices.iloc[-1]['Close']
         return self.api.Q_Last(code)
 
-    def daily_close_ma_and_days(self, code, lookback: int = 20, ma_period: int = 20):
+    def daily_close_ma_and_days(self, code, lookback: int = 20, ma_period: int = 20):   # BaseStrategy
         """Return close series, lookback slice, MA series, MA last value, and days above MA.
         """
         close_prices = self.DailyPrices[code]['Close']
@@ -193,14 +193,14 @@ class BaseStrategy():
 
         return True
 
-    def is_intraday_reset_period(self, now):
+    def is_intraday_reset_period(self, now):   # BaseStrategy
         """Return True if `now` is within intraday short reset windows.
 
         These windows reset counters and flags but do not alter semantics.
         """
         return (0.0859 < now < 0.090010) or (0.2059 < now < 0.210010)
 
-    def is_order_deletion_period(self, now):
+    def is_order_deletion_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily order-deletion window."""
         return 0.2259 < now < 0.2310
 
@@ -211,7 +211,7 @@ class BaseStrategy():
             return self.api.A_BuyPositionCanCover(code)
             # return self.api.A_BuyPosition(code)
 
-    def GetSellPosition(self, code):
+    def GetSellPosition(self, code):   # BaseStrategy
         if self.IsBacktest:
             return self.api.SellPosition(code)
         else:
@@ -233,7 +233,7 @@ class BaseStrategy():
             msg = self.build_trade_message(verb, direction, code, quantity, price)
             self.dingding(msg)
 
-    def build_trade_message(self, verb, direction, code, quantity, price):
+    def build_trade_message(self, verb, direction, code, quantity, price):   # BaseStrategy
         """Construct the human-readable trade message used for DingDing.
         """
         return f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
@@ -321,7 +321,7 @@ class BaseStrategy():
     def Sell(self, code, quantity, price):  # BaseStrategy
         return self.execute_order(False, code, quantity, price)
 
-    def send_live_order(self, enum_direction, cover_position, quantity, price, code):
+    def send_live_order(self, enum_direction, cover_position, quantity, price, code):   # BaseStrategy
         enums = self.get_enums()
         if cover_position > 0:
             direction = '平'
@@ -334,46 +334,46 @@ class BaseStrategy():
             retEnter, EnterOrderID = self.api.A_SendOrder(enum_direction, enums['entry'], quantity, price, code)
         return direction, retEnter, EnterOrderID
 
-    def next_clamped_index(self, current_index, levels):
+    def next_clamped_index(self, current_index, levels):   # BaseStrategy
         return min(current_index + 1, len(levels) - 1)
 
-    def tick_floor(self, code, price):
+    def tick_floor(self, code, price):   # BaseStrategy
         tick = self.api.PriceTick(code)
         return math.floor(price / tick) * tick
 
-    def tick_ceil(self, code, price):
+    def tick_ceil(self, code, price):   # BaseStrategy
         tick = self.api.PriceTick(code)
         return math.ceil(price / tick) * tick
 
-    def compute_thresholds(self, base_price, level, atr):
+    def compute_thresholds(self, base_price, level, atr):   # BaseStrategy
         """Compute buy/sell thresholds from `base_price` and a `level`.
         """
         diff = atr * level
         return base_price - diff, base_price + diff
 
-    def position_limit_exceeded(self, buy_position, sell_position):
+    def position_limit_exceeded(self, buy_position, sell_position):   # BaseStrategy
         orderQty = self.params.get('orderQty', 1)
         maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
         return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
-    def update_max_holding(self):
+    def update_max_holding(self):   # BaseStrategy
         self.max_logical_holding = max(self.max_logical_holding, abs(self.logical_holding))
 
-    def check_in_session(self):
+    def check_in_session(self):   # BaseStrategy
         if not self.IsBacktest and not self.api.IsInSession(self.codes[0]):
             if self.print_debug:
                 self.print(f'Error: Not in session')
             return False
         return True
 
-    def is_spread_code(self, code):
+    def is_spread_code(self, code):   # BaseStrategy
         return '|M|' in code or '|S|' in code
 
-    def apply_changes(self, changes):
+    def apply_changes(self, changes):   # BaseStrategy
         for key, value in changes.items():
             setattr(self, key, value)
 
-    def get_enums(self):
+    def get_enums(self):   # BaseStrategy
         """Get (and cache) frequently used enum values from `self.api`.
 
         Returns a dict with keys: filled, canceled, buy, sell, entry, exit.
@@ -391,7 +391,7 @@ class BaseStrategy():
         }
         return self._cached_enums
 
-    def existing_order(self):
+    def existing_order(self):   # BaseStrategy
         remaining_orders, any_filled = self.process_waiting_list()
 
         # Persist the reduced waiting list and determine whether
@@ -399,7 +399,7 @@ class BaseStrategy():
         self.waiting_list = remaining_orders
         return self.determine_existing_order_flags(remaining_orders)
 
-    def process_waiting_list(self):
+    def process_waiting_list(self):   # BaseStrategy
         """Process `self.waiting_list` and return a tuple:
         (remaining_orders, any_filled).
         """
@@ -430,7 +430,7 @@ class BaseStrategy():
 
         return remaining_orders, any_filled
 
-    def waiting_has_enum(self, enum_value):
+    def waiting_has_enum(self, enum_value):   # BaseStrategy
         """Return True if any order in `waiting_list` has buy/sell kind equal to `enum_value`.
         """
         for order_id, _ in self.waiting_list:
@@ -438,7 +438,7 @@ class BaseStrategy():
                 return True
         return False
 
-    def determine_existing_order_flags(self, orders):
+    def determine_existing_order_flags(self, orders):   # BaseStrategy
         """Return (existing_buy_order, existing_sell_order) for given orders.
         """
         existing_buy_order = False
@@ -457,7 +457,7 @@ class BaseStrategy():
 
         return (existing_buy_order, existing_sell_order)
 
-    def handle_filled_order(self, order_id, changes):
+    def handle_filled_order(self, order_id, changes):   # BaseStrategy
         """Apply state changes and send notification for a filled order.
 
         Extracted to improve readability while preserving existing side-effects
@@ -479,7 +479,7 @@ class BaseStrategy():
     def get_state_file_name(self): # BaseStrategy
         return os.path.join(self.config_folder, f"{self.name}.json")
 
-    def load_strategy_state_raw(self):
+    def load_strategy_state_raw(self):   # BaseStrategy
         file = self.get_state_file_name()
 
         if not os.path.exists(file):
@@ -494,7 +494,7 @@ class BaseStrategy():
             self.print(f"Error: Failed to load strategy state: {e}")
             return None
 
-    def load_strategy_state(self):
+    def load_strategy_state(self):   # BaseStrategy
         if self.is_state_loaded:
             return
 
@@ -505,7 +505,7 @@ class BaseStrategy():
             for field in self.STATE_FIELDS:
                 setattr(self, field, state[field])
 
-    def save_strategy_state(self):
+    def save_strategy_state(self):   # BaseStrategy
         data = {field: getattr(self, field) for field in self.STATE_FIELDS}
         file = self.get_state_file_name()
         try:
@@ -514,13 +514,13 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
 
-    def commit_changes(self, order_id, changes):
+    def commit_changes(self, order_id, changes):   # BaseStrategy
         if self.IsBacktest:
             self.apply_changes(changes)
         else:
             self.waiting_list.append((order_id, changes))
 
-    def reset_price_cache(self):
+    def reset_price_cache(self):   # BaseStrategy
         self.DailyPricesDate = None
         self.DailyPrices = {}
         self.ATRs = {}
@@ -528,16 +528,16 @@ class BaseStrategy():
         self.r_squareds = {}
         self.is_state_loaded = False
 
-    def close_all_positions(self, trade_code, price_code):
+    def close_all_positions(self, trade_code, price_code):   # BaseStrategy
         if self.api.BuyPosition(trade_code) > 0:
             self.api.Sell(self.api.BuyPosition(trade_code), self.LastPrices[price_code], trade_code)
         if self.api.SellPosition(trade_code) > 0:
             self.api.BuyToCover(self.api.SellPosition(trade_code), self.LastPrices[price_code], trade_code)
 
-    def exit_callback(self, context):
+    def exit_callback(self, context):   # BaseStrategy
         self.delete_orders()
 
-    def delete_orders(self):
+    def delete_orders(self):   # BaseStrategy
         enums = self.get_enums()
 
         for order_id, changes in self.waiting_list:
@@ -550,18 +550,18 @@ class BaseStrategy():
 
         self.waiting_list = []
 
-    def apply_filled_no_notify(self, order_id, changes):
+    def apply_filled_no_notify(self, order_id, changes):   # BaseStrategy
         """Apply changes and persist state for a filled order without sending DingDing.
         """
         self.apply_changes(changes)
         self.save_strategy_state()
         self.print(f"Order {order_id} filled, applied changes")
 
-    def print(self, string, **kwargs):
+    def print(self, string, **kwargs):   # BaseStrategy
         self.api.LogInfo(string, **kwargs)
 
 
-    def dingding(self, msg):
+    def dingding(self, msg):   # BaseStrategy
         webhook_url = f"https://oapi.dingtalk.com/robot/send?access_token={self.dingding_token}"
         payload = self.build_dingding_payload(msg)
 
@@ -570,7 +570,7 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"DingDing exception (ignored): {e}")
 
-    def build_dingding_payload(self, msg):
+    def build_dingding_payload(self, msg):   # BaseStrategy
         """Construct the DingDing webhook payload. Extracted for clarity.
         """
         return {
@@ -599,7 +599,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
-    def GetPositionCode(self):
+    def GetPositionCode(self):     # PairLevelGridStrategy
         return self.codes[0]
 
     def handle_data(self, context):     # PairLevelGridStrategy
@@ -690,7 +690,7 @@ class PairLevelGridStrategy(BaseStrategy):
                 'r_squared': self.r_squared,
             })
 
-    def handle_sell_trading(self, context):
+    def handle_sell_trading(self, context):     # PairLevelGridStrategy
         """Handle sell-side decision and execution for PairLevelGridStrategy.
 
         Returns (sell_threshold, should_return). If a sell is executed, the
@@ -724,7 +724,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return sell_threshold, False
 
-    def handle_buy_trading(self, context):
+    def handle_buy_trading(self, context):     # PairLevelGridStrategy
         """Handle buy-side decision and execution for PairLevelGridStrategy.
 
         Returns (buy_threshold, should_return).
@@ -753,7 +753,7 @@ class PairLevelGridStrategy(BaseStrategy):
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
         return self.place_pair_order_and_commit(self.Buy, code, price, quantity, True, self.build_pair_buy_changes)
 
-    def place_pair_order_and_commit(self, trade_func, code, price, quantity, is_buy, build_changes_fn):
+    def place_pair_order_and_commit(self, trade_func, code, price, quantity, is_buy, build_changes_fn):     # PairLevelGridStrategy
         """Place a pair-level order (tick-adjusted) and commit changes on success.
         """
         trade_price = self.tick_floor(code, price) if is_buy else self.tick_ceil(code, price)
@@ -764,7 +764,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.commit_changes(order_id, changes)
         return True
 
-    def build_pair_buy_changes(self, trade_price):
+    def build_pair_buy_changes(self, trade_price):     # PairLevelGridStrategy
         """Return the changes dict used after a pair-level buy is accepted.
         """
         return {
@@ -778,7 +778,7 @@ class PairLevelGridStrategy(BaseStrategy):
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         return self.place_pair_order_and_commit(self.Sell, code, price, quantity, False, self.build_pair_sell_changes)
 
-    def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):
+    def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):     # PairLevelGridStrategy
         """Compute base price and suggested order quantity from MA/close series.
 
         Returns (order_qty, base_price, days_above_ma, ma_20_last, close_20)
@@ -800,7 +800,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         return order_qty, base_price, days_above_ma, ma_20_last, close_20
 
-    def build_pair_sell_changes(self, trade_price):
+    def build_pair_sell_changes(self, trade_price):     # PairLevelGridStrategy
         """Return the changes dict used after a pair-level sell is accepted.
         """
         return {
@@ -835,7 +835,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
-    def execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):
+    def execute_trade(self, trade_func, code, price, quantity, condition_price, is_buy):     # SpreadGridStrategy
         if not self.IsBacktest:
             if is_buy:
                 trade_price = self.tick_floor(code, min(price, condition_price))
@@ -851,7 +851,7 @@ class SpreadGridStrategy(BaseStrategy):
 
         return False
 
-    def compute_order_quantity(self, orderQty, for_sell=True):
+    def compute_order_quantity(self, orderQty, for_sell=True):     # SpreadGridStrategy
         """Compute effective orderQuantity used in RunGridTrading.
         """
         orderQuantity = orderQty
@@ -871,7 +871,7 @@ class SpreadGridStrategy(BaseStrategy):
         return orderQuantity
 
 
-    def handle_stop_loss_sell(self, current_price, sell_threshold, orderQty, orderQuantity):
+    def handle_stop_loss_sell(self, current_price, sell_threshold, orderQty, orderQuantity):     # SpreadGridStrategy
         """Check sell-side stop-loss conditions and execute closure if triggered.
 
         Returns True if a stop-loss action was performed (and caller should return).
@@ -890,7 +890,7 @@ class SpreadGridStrategy(BaseStrategy):
             return True
         return False
 
-    def handle_stop_loss_buy(self, current_price, buy_threshold, orderQty, orderQuantity):
+    def handle_stop_loss_buy(self, current_price, buy_threshold, orderQty, orderQuantity):     # SpreadGridStrategy
         """Check buy-side stop-loss conditions and execute closure if triggered.
 
         Returns True if a stop-loss action was performed (and caller should return).
@@ -909,7 +909,7 @@ class SpreadGridStrategy(BaseStrategy):
             return True
         return False
 
-    def select_sell_trade_params(self, context):
+    def select_sell_trade_params(self, context):     # SpreadGridStrategy
         """Return (quantity, condition_price) for a sell attempt or None.
 
         Accepts a `context` dict with keys used by the selector. This mirrors
@@ -951,7 +951,7 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             return orderQuantity, sell_threshold
 
-    def select_buy_trade_params(self, context):
+    def select_buy_trade_params(self, context):     # SpreadGridStrategy
         """Return (quantity, condition_price) for a buy attempt or None.
 
         Accepts a `context` dict with keys used by the selector. This mirrors
@@ -993,7 +993,7 @@ class SpreadGridStrategy(BaseStrategy):
         else:
             return orderQuantity, buy_threshold
 
-    def GetPositionCode(self):
+    def GetPositionCode(self):     # SpreadGridStrategy
         if self.params.get('firstPosition', True):
             return self.codes[2]
         else:
@@ -1069,7 +1069,7 @@ class SpreadGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print_debug_info(base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma)
 
-    def handle_sell_trading(self, context):
+    def handle_sell_trading(self, context):     # SpreadGridStrategy
         base_price = context['base_price']
         orderQty = context['orderQty']
         current_price = context['current_price']
@@ -1078,7 +1078,7 @@ class SpreadGridStrategy(BaseStrategy):
         existing_sell_order = context['existing_sell_order']
         buy_position = context['buy_position']
         sell_threshold = 0
-        if self.sell_index < len(self.sell_levels):   # SpreadGridStrategy
+        if self.sell_index < len(self.sell_levels):
             level = self.sell_levels[self.sell_index]
             _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
 
@@ -1099,7 +1099,7 @@ class SpreadGridStrategy(BaseStrategy):
             self.print(f'Error: sell_index error')
         return sell_threshold, False
 
-    def handle_buy_trading(self, context):
+    def handle_buy_trading(self, context):     # SpreadGridStrategy
         base_price = context['base_price']
         orderQty = context['orderQty']
         current_price = context['current_price']
@@ -1128,7 +1128,7 @@ class SpreadGridStrategy(BaseStrategy):
             self.print(f'Error: buy_index error')
         return buy_threshold, False
 
-    def print_debug_info(self, base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma):
+    def print_debug_info(self, base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma):     # SpreadGridStrategy
         self.print({
             'b_price': base_price,
             'r_b_position': buy_position,
@@ -1159,7 +1159,7 @@ class SpreadGridStrategy(BaseStrategy):
                 return False
         return self.place_order_and_commit(self.Buy, code, quantity, price, self.build_buy_changes)
 
-    def build_buy_changes(self, new_holding, price, cross_zero, orderQty):
+    def build_buy_changes(self, new_holding, price, cross_zero, orderQty):     # SpreadGridStrategy
         """Build the `changes` dict used after a buy order is accepted.
         """
         return {
@@ -1179,7 +1179,7 @@ class SpreadGridStrategy(BaseStrategy):
                 return False
         return self.place_order_and_commit(self.Sell, code, quantity, price, self.build_sell_changes)
 
-    def place_order_and_commit(self, trade_func, code, quantity, price, build_changes_fn):
+    def place_order_and_commit(self, trade_func, code, quantity, price, build_changes_fn):     # SpreadGridStrategy
         """Place an order via `trade_func` and, on success, build and commit changes.
 
         - `trade_func` must return (succeed: bool, order_id:int)
@@ -1203,7 +1203,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.commit_changes(order_id, changes)
         return True
 
-    def build_sell_changes(self, new_holding, price, cross_zero, orderQty):
+    def build_sell_changes(self, new_holding, price, cross_zero, orderQty):     # SpreadGridStrategy
         """Build the `changes` dict used after a sell order is accepted.
         """
         return {

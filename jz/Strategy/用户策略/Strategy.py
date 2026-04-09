@@ -641,6 +641,7 @@ class PairLevelGridStrategy(BaseStrategy):
         limit = self.params.get('limit')
         order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
+        sell_position = self.GetSellPosition(code)
 
         # compute MA-based base price and suggested order quantity when flat
         if self.logical_holding == 0 and buy_position == 0:
@@ -658,6 +659,7 @@ class PairLevelGridStrategy(BaseStrategy):
             'existing_buy_order': existing_buy_order,
             'existing_sell_order': existing_sell_order,
             'buy_position': buy_position,
+            'sell_position': sell_position,
         }
 
         sell_threshold, should_return = self.handle_sell_trading(trading_context)
@@ -675,8 +677,8 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.print_debug:
             self.print({
                 'b_price': base_price,
-                'r_b_position': self.GetBuyPosition(code),
-                'r_s_position': self.GetSellPosition(code),
+                'r_b_position': buy_position,
+                'r_s_position': sell_position,
                 'l_holding': self.logical_holding,
                 'b_threshold': buy_threshold,
                 's_threshold': sell_threshold,

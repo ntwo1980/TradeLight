@@ -529,10 +529,13 @@ class BaseStrategy():
         self.is_state_loaded = False
 
     def close_all_positions(self, trade_code, price_code):   # BaseStrategy
-        if self.api.BuyPosition(trade_code) > 0:
-            self.api.Sell(self.api.BuyPosition(trade_code), self.LastPrices[price_code], trade_code)
-        if self.api.SellPosition(trade_code) > 0:
-            self.api.BuyToCover(self.api.SellPosition(trade_code), self.LastPrices[price_code], trade_code)
+        buy_position = self.api.BuyPosition(trade_code)
+        sell_position = self.api.SellPosition(trade_code)
+        last_price = self.LastPrices[price_code]
+        if buy_position > 0:
+            self.api.Sell(buy_position, last_price, trade_code)
+        if sell_position > 0:
+            self.api.BuyToCover(sell_position, last_price, trade_code)
 
     def exit_callback(self, context):   # BaseStrategy
         self.delete_orders()

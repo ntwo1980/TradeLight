@@ -259,6 +259,8 @@ class BaseStrategy():
 
             return (True, 0)
         else:
+            now = self.api.CurrentTime()
+
             if self.send_order_count > self.max_send_order_count:
                 self.print('Error: reach order limit')
                 return (False, 0)
@@ -274,7 +276,7 @@ class BaseStrategy():
                     and self.consecutive_buy_count > 0 \
                     and self.logical_holding >= orderQty * 2 \
                     and self.last_buy_time is not None \
-                    and self.api.TimeDiff(self.last_buy_time, self.api.CurrentTime()) < 60 * 30:
+                    and self.api.TimeDiff(self.last_buy_time, now) < 60 * 30:
                     self.print('Error: buy too frequently')
                     return (False, 0)
             else:
@@ -286,7 +288,7 @@ class BaseStrategy():
                     and self.consecutive_sell_count > 0 \
                     and self.logical_holding <= -orderQty * 2 \
                     and self.last_sell_time is not None \
-                    and self.api.TimeDiff(self.last_sell_time, self.api.CurrentTime()) < 60 * 30:
+                    and self.api.TimeDiff(self.last_sell_time, now) < 60 * 30:
                     self.print('Error: sell too frequently')
                     return (False, 0)
 
@@ -304,11 +306,11 @@ class BaseStrategy():
                 if is_buy:
                     self.consecutive_buy_count += 1
                     self.consecutive_sell_count = 0
-                    self.last_buy_time = self.api.CurrentTime()
+                    self.last_buy_time = now
                 else:
                     self.consecutive_sell_count += 1
                     self.consecutive_buy_count = 0
-                    self.last_sell_time = self.api.CurrentTime()
+                    self.last_sell_time = now
 
             self.send_order_count += 1
 
@@ -675,6 +677,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.update_max_holding()
 
         if self.print_debug:
+            trade_date = self.api.TradeDate()
+            now = self.api.CurrentTime()
             self.print({
                 'b_price': base_price,
                 'r_b_position': buy_position,
@@ -688,8 +692,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 'b_index': self.buy_index,
                 's_index': self.sell_index,
                 'code': code,
-                'current_date': self.api.TradeDate(),
-                'current_time': self.api.CurrentTime(),
+                'current_date': trade_date,
+                'current_time': now,
                 'atr': self.atr,
                 'slope': self.slope,
                 'r_squared': self.r_squared,
@@ -1134,6 +1138,8 @@ class SpreadGridStrategy(BaseStrategy):
         return buy_threshold, False
 
     def print_debug_info(self, base_price, buy_position, sell_position, buy_threshold, sell_threshold, current_price, existing_order, days_above_ma):     # SpreadGridStrategy
+        trade_date = self.api.TradeDate()
+        now = self.api.CurrentTime()
         self.print({
             'b_price': base_price,
             'r_b_position': buy_position,
@@ -1147,8 +1153,8 @@ class SpreadGridStrategy(BaseStrategy):
             'b_index': self.buy_index,
             's_index': self.sell_index,
             'code': self.codes[1],
-            'current_date': self.api.TradeDate(),
-            'current_time': self.api.CurrentTime(),
+            'current_date': trade_date,
+            'current_time': now,
             'atr': self.atr,
             'slope': self.slope,
             'r_squared': self.r_squared,

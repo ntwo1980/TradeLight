@@ -684,7 +684,7 @@ class SimpleGridStrategy(BaseStrategy):
         # if stock == "159985.SZ":
         #     return max(atr * 0.7, price * 0.01)
 
-        return max(atr * 0.7, price * 0.01)
+        return max(atr * 0.5, price * 0.01)
 
     def SaveStrategyState(self):   # SimpleGridStrategy
         stock = self.Stocks[0]

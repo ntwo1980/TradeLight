@@ -109,7 +109,8 @@ class BaseStrategy():
         return atr
 
     def GetDailyPrices(self, codes):  # BaseStrategy
-        if self.DailyPricesDate == self.LastTradeDate():
+        last_trade_date = self.LastTradeDate()
+        if self.DailyPricesDate == last_trade_date:
             return
         for code in codes:
             df = self.fetch_ohlcv(code, 'D')
@@ -126,7 +127,7 @@ class BaseStrategy():
                 self.r_squareds[code] = None
 
             self.DailyPrices[code] = df.iloc[:-1] if self.IsBacktest else df
-            self.DailyPricesDate = self.LastTradeDate()
+            self.DailyPricesDate = last_trade_date
 
     def GetLastPrices(self, codes):  # BaseStrategy
         last_prices = {}

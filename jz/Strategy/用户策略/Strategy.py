@@ -723,8 +723,8 @@ class PairLevelGridStrategy(BaseStrategy):
                 _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
 
                 if current_price >= sell_threshold and not existing_order:
-                    if buy_position > 5 * order_qty:
-                        order_qty = order_qty + 1
+                    # if buy_position > 5 * order_qty:
+                    #     order_qty = order_qty + 1
                     executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
                     if executed:
                         # mark that a trade occurred so RunGridTrading can skip buy

@@ -520,7 +520,7 @@ class SimpleGridStrategy(BaseStrategy):
     def UpdateMarketData(self, C, stocks):   # SimpleGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
             stock = stocks[0]
-            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=30)
+            prices = self.GetHistoricalPrices(C, self.Stocks, fields=['high', 'low', 'close'], period='1d', count=250)
             self.prices_date = self.Yesterday
             self.prices = prices[stock]
             prices = self.prices
@@ -562,8 +562,12 @@ class SimpleGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None or base_price == 0:    # SimpleGridStrategy
-            base_price = max(self.max_price, self.current_price)
+        if base_price is None or base_price == 0 or self.logical_holding is None or self.logical_holding == 0:    # SimpleGridStrategy
+            #base_price = max(self.max_price, self.current_price)
+            price_max = self.prices['close'][-120:].max()
+            price_min = self.prices['close'][-120:].min()
+            price_avg = self.prices['close'][-120:].mean()
+            base_price = min(price_max - (price_max - price_min) * 0.2, price_avg + (price_max - price_min) * 0.3)
 
         if self.current_price > 0 and base_price > 0:
             self.PriceRatio = self.current_price / base_price

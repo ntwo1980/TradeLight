@@ -805,7 +805,7 @@ class PairLevelGridStrategy(BaseStrategy):
             else:
                 order_qty = orderQty * 3
         else:
-            base_price = close_prices.iloc[-1] / 2
+            base_price = current_price / 2
             order_qty = orderQty
 
         return order_qty, base_price, days_above_ma, ma_20_last, close_20

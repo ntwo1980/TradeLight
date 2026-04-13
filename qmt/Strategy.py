@@ -497,7 +497,6 @@ class SimpleGridStrategy(BaseStrategy):
         self.buy_threshold_ratio = buyThresholdRatio
         if self.buy_threshold_ratio > 1:
             self.buy_threshold_ratio = 1
-        self.levels = [1, 1, 2, 3, 5, 8]
 
     def init(self, C):   # SimpleGridStrategy
         super().init(C)
@@ -508,8 +507,6 @@ class SimpleGridStrategy(BaseStrategy):
         self.grid_unit = 0
         self.max_price = 0
         self.yesterday_price = 0
-        self.buy_index = 0
-        self.sell_index = 0
 
         C.set_universe(self.Stocks)
 
@@ -517,11 +514,8 @@ class SimpleGridStrategy(BaseStrategy):
 
         if state is None and not self.IsBacktest:
             self.SaveStrategyState()
-        elif state is not None:
-            self.buy_index = state.get('buy_index', 0)
-            self.sell_index = state.get('sell_index', 0)
 
-        self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
+        self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):   # SimpleGridStrategy
         if self.prices_date is None or self.prices_date != self.Yesterday:
@@ -588,30 +582,29 @@ class SimpleGridStrategy(BaseStrategy):
             'base_price': base_price,
             'rsi': self.rsi,
             'atr': self.atr,
-            'grid_unit': self.grid_unit,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index})
+            'grid_unit': self.grid_unit})
 
-        sell_level = self.levels[min(self.sell_index, len(self.levels) - 1)]
-        buy_level = self.levels[min(self.buy_index, len(self.levels) - 1)]
-
-        if current_holding > 0 and self.current_price >= base_price + self.grid_unit * sell_level * 1.001:
+        if self.current_price >= base_price + self.grid_unit * 1.001:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        #elif self.rsi < 60 and self.current_price <= base_price - (self.grid_unit * buy_level * 1.001 * self.buy_threshold_ratio):
-        elif self.current_price <= base_price - (self.grid_unit * buy_level * 1.001 * self.buy_threshold_ratio):
+        elif self.current_price <= base_price - (self.grid_unit * 1.001 * self.buy_threshold_ratio):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
         if executed:
             self.SaveStrategyState()
 
             if self.base_price is not None:
-                self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
+                self.Print(f"State saved: base_price={self.base_price:.3f}, position={self.logical_holding}")
             else:
-                self.Print(f"State saved: base_price=None, position={self.logical_holding}, buy_index={self.buy_index}, sell_index={self.sell_index}")
+                self.Print(f"State saved: base_price=None, position={self.logical_holding}")
         if self.IsBacktest:
             self.g(C)
+            account = self.GetTradeDetailData(self.Account, self.AccountType, 'account')[0]
+            if account.m_dBalance - account.m_dAvailable > universe.max_position:
+                universe.max_position = account.m_dBalance - account.m_dAvailable
+            self.Print(f"Total position={universe.max_position}")
+
 
     def ExecuteBuy(self, C, stock, current_price):   # SimpleGridStrategy
         available_cash = self.GetAvailableCash()
@@ -632,8 +625,6 @@ class SimpleGridStrategy(BaseStrategy):
             self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             self.logical_holding += unit_to_buy
             self.base_price = current_price
-            self.buy_index += 1
-            self.sell_index = 0
             self.LastBuyDate = self.Today
             self.Print(f"Updated base price to: {self.base_price:.3f}")
             return True
@@ -661,12 +652,10 @@ class SimpleGridStrategy(BaseStrategy):
             self.SellCount += 1
             self.base_price = current_price
             self.LastSellDate = self.Today
-            if self.logical_holding > 0:
-                self.sell_index += 1
-                self.buy_index = 0
-            else:
-                self.sell_index = 0
-                self.buy_index = 0
+            # if self.logical_holding > 0:
+            #     self.base_price = current_price
+            # else:
+            #     self.base_price = None
             self.Print(f"Updated base price to: {self.base_price if self.base_price is not None else 'None'}")
             return True
         return False
@@ -676,26 +665,18 @@ class SimpleGridStrategy(BaseStrategy):
             self.Print(f'g()')
         state = super().LoadStrategyState(self.Stocks, self.StockNames)
 
-        if state is not None:
-            self.buy_index = state.get('buy_index', 0)
-            self.sell_index = state.get('sell_index', 0)
-
         stock = self.Stocks[0]
 
         if self.logical_holding > 0 and self.base_price is not None and abs(self.base_price - self.current_price) > self.atr * 4:
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
-            self.buy_index = 0
-            self.sell_index = 0
 
             self.SaveStrategyState()
             self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
         elif self.logical_holding <= 0 and self.base_price is not None:
             self.logical_holding = 0
             self.base_price = None
-            self.buy_index = 0
-            self.sell_index = 0
 
             self.SaveStrategyState()
 
@@ -722,8 +703,6 @@ class SimpleGridStrategy(BaseStrategy):
         data = {
             'base_price': self.base_price,
             'logical_holding': self.logical_holding,
-            'buy_index': self.buy_index,
-            'sell_index': self.sell_index,
             'sell_count': self.SellCount,
             'last_buy_date': self.LastBuyDate,
             'last_sell_date': self.LastSellDate

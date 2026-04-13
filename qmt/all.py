@@ -1,7 +1,7 @@
 #encoding:gbk
 
 class a():
-    pass
+    max_position = 0
 
 universe = a()
 with open('Strategy.py', "r", encoding="utf-8") as f:

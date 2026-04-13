@@ -492,12 +492,12 @@ class BaseStrategy():
         return msg
 
 class SimpleGridStrategy(BaseStrategy):
-    def __init__(self, buyThresholdRatio = 1, levels = None, **kwargs):
+    def __init__(self, buyThresholdRatio = 1, **kwargs):
         super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
         self.buy_threshold_ratio = buyThresholdRatio
         if self.buy_threshold_ratio > 1:
             self.buy_threshold_ratio = 1
-        self.levels = levels if levels is not None else [1, 1, 2, 3, 5, 8]
+        self.levels = [1, 1, 2, 3, 5, 8]
 
     def init(self, C):   # SimpleGridStrategy
         super().init(C)
@@ -599,6 +599,7 @@ class SimpleGridStrategy(BaseStrategy):
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
+        #elif self.rsi < 60 and self.current_price <= base_price - (self.grid_unit * buy_level * 1.001 * self.buy_threshold_ratio):
         elif self.current_price <= base_price - (self.grid_unit * buy_level * 1.001 * self.buy_threshold_ratio):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
@@ -685,12 +686,16 @@ class SimpleGridStrategy(BaseStrategy):
             original_base_price = self.base_price
             beta = 0.1  # Tracking speed: 0.1~0.3 (larger = faster)
             self.base_price = self.base_price + beta * (self.current_price - self.base_price)
+            self.buy_index = 0
+            self.sell_index = 0
 
             self.SaveStrategyState()
             self.Print(f"Dynamic adjustment of base_price: original={original_base_price:.3f}, new={self.base_price:.3f}, current price={self.current_price:.3f}")
         elif self.logical_holding <= 0 and self.base_price is not None:
             self.logical_holding = 0
             self.base_price = None
+            self.buy_index = 0
+            self.sell_index = 0
 
             self.SaveStrategyState()
 

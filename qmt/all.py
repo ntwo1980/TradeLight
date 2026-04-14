@@ -47,7 +47,7 @@ simpleGridStrategies = [
     {'stocks': ["601949.SH"], 'stockNames':['中国出版'], 'priority': 10, 'buyThresholdRatio': 0.97},  #25000
     {'stocks': ["600017.SH"], 'stockNames':['日照港'], 'priority': 10, 'buyThresholdRatio': 0.97},  #25000
     {'stocks': ["601880.SH"], 'stockNames':['辽港股份'], 'priority': 10, 'buyThresholdRatio': 0.97},  #29000
-    {'stocks': ["601083.SH"], 'stockNames':['锦江航运'], 'priority': 10, 'buyThresholdRatio': 0.97},  #22000
+    #{'stocks': ["601083.SH"], 'stockNames':['锦江航运'], 'priority': 10, 'buyThresholdRatio': 0.97},  #22000
     #{'stocks': ["600508.SH"], 'stockNames':['上海能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #14000
     {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #39000
 ]

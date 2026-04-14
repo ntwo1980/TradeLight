@@ -562,7 +562,7 @@ class SimpleGridStrategy(BaseStrategy):
 
         base_price = self.base_price  # copy a local base_price
 
-        if base_price is None or base_price == 0 or self.logical_holding is None or self.logical_holding == 0:    # SimpleGridStrategy
+        if base_price is None or base_price == 0:    # SimpleGridStrategy
             #base_price = max(self.max_price, self.current_price)
             price_max = self.prices['close'][-120:].max()
             price_min = self.prices['close'][-120:].min()

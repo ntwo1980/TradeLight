@@ -493,7 +493,8 @@ class BaseStrategy():
 
 class SimpleGridStrategy(BaseStrategy):
     def __init__(self, buyThresholdRatio = 1, **kwargs):
-        super().__init__(strategyPrefix='grid', strategyId='a', **kwargs)
+        strategyId = kwargs.get('strategyId', 'a')
+        super().__init__(strategyPrefix='grid', strategyId=strategyId, **kwargs)
         self.buy_threshold_ratio = buyThresholdRatio
         if self.buy_threshold_ratio > 1:
             self.buy_threshold_ratio = 1

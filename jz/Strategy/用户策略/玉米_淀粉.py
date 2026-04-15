@@ -13,8 +13,8 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '玉米_淀粉',
-            'codes': ['SPD|m|C-CS|2605|2605', 'DCE|M|C&CS|2605', 'DCE|F|C|2605', 'DCE|F|CS|2605'],
-            'orderQty': 6,
+            'codes': ['SPD|m|C-CS|2607|2607', 'DCE|M|C&CS|2607', 'DCE|F|C|2607', 'DCE|F|CS|2607'],
+            'orderQty': 8,
             'firstPosition': True,
             'stopLose': False,
             'atr': 10,
@@ -101,6 +101,7 @@ def api():
         StartTrade=StartTrade,
         StopTrade=StopTrade,
         Time=Time,
+        TimeDiff=TimeDiff,
         TradeDate=TradeDate,
         Vol=Vol,
     )

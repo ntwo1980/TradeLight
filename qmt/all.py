@@ -35,7 +35,7 @@ levelGridStrategySettings = [
 simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, strategyId='b'},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b'},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10, 'buyThresholdRatio': 0.97},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'buyThresholdRatio': 0.97},  #52000
     {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #17000

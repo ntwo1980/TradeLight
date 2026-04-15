@@ -233,7 +233,6 @@ class BaseStrategy():
         stockName = stockNames[0]
         state = None
         file = self.GetStateFileName(stock, stockName)
-
         if not os.path.exists(file):
             return None
         try:
@@ -492,8 +491,7 @@ class BaseStrategy():
         return msg
 
 class SimpleGridStrategy(BaseStrategy):
-    def __init__(self, buyThresholdRatio = 1, **kwargs):
-        strategyId = kwargs.get('strategyId', 'a')
+    def __init__(self, buyThresholdRatio = 1, strategyId='a', **kwargs):
         super().__init__(strategyPrefix='grid', strategyId=strategyId, **kwargs)
         self.buy_threshold_ratio = buyThresholdRatio
         if self.buy_threshold_ratio > 1:

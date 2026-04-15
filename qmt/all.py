@@ -122,6 +122,7 @@ for setting in simpleGridStrategies:
     tradingAmount=setting.get('tradingAmount', None),
     firstPositionAmount=setting.get('firstPositionAmount', 1),
     buyThresholdRatio=setting.get('buyThresholdRatio', 1),
+    strategyId=setting.get('strategyId', 'a'),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,

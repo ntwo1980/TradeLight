@@ -261,7 +261,7 @@ class BaseStrategy():
             self.TradingAmount = 40000
             return
         try:
-            with open(file, 'r', encoding='utf-8') as f:-
+            with open(file, 'r', encoding='utf-8') as f:
                 state = self._deserialize_state(file)
                 if self.TradingAmount is None:
                     self.TradingAmount = state.get('trading_amount', 40000)

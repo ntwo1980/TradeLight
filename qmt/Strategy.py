@@ -1365,7 +1365,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.stock_B = self.Stocks[1]
         self.threshold_ratio = threshold_ratio
         self.stop_lose = stop_lose
-        self.monthly_increase = kwargs.get('monthly_increase', None)
+        self.monthly_increase = kwargs.get('monthlyIncrease', None)
         self.monthly_check_month = None
         self.monthly_check_price = None
 

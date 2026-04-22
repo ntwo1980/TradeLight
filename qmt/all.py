@@ -35,7 +35,7 @@ levelGridStrategySettings = [
 simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b'},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b'},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10, 'buyThresholdRatio': 0.97},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'buyThresholdRatio': 0.97},  #52000
     {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #17000
@@ -65,7 +65,7 @@ pairLevelGridStrategies = [
     {'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},      #20000
     {'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},      #34000
     {'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},   #24000
-    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'threshold_ratio':0.02},   #30000
+    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},   #30000
     {'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},  # 55000
     #{'stocks': ["159530.SZ", "159770.SZ"], 'stockNames':['机器人', '机器人']},
     #{'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
@@ -73,8 +73,8 @@ pairLevelGridStrategies = [
     #{'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
     {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},  #35000
     #{'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
-    {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'threshold_ratio':0.02},  #30000
-    {'stocks': ["159201.SZ", "159222.SZ"], 'stockNames':['现金流', '现金流'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False},  # 49000
+    {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},  #30000
+    {'stocks': ["159201.SZ", "159222.SZ"], 'stockNames':['现金流', '现金流'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01 },  # 49000
     #{'stocks': ["513080.SH", "513520.SH"], 'stockNames':['法国CAC40', '日经']},
     #{'stocks': ["601601.SH", "601318.SH"], 'stockNames':['太保', '平安'], 'threshold_ratio':0.02},
 ]
@@ -141,6 +141,7 @@ for setting in pairLevelGridStrategies:
     firstPositionAmount=setting.get('firstPositionAmount', 1),
     threshold_ratio=setting.get('threshold_ratio', 0.01),
     stop_lose=setting.get('stop_lose', True),
+    monthlyIncrease=setting.get('monthlyIncrease', None),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,

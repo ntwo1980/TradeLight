@@ -34,10 +34,10 @@ levelGridStrategySettings = [
 
 simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b'},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.1},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b', 'buyAmountRatio': 1.1},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10, 'buyThresholdRatio': 0.97},
-    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'buyThresholdRatio': 0.97},  #52000
+    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.1},  #52000
     {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #17000
     #{'stocks': ["002267.SZ"], 'stockNames':['陕天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #12000
     {'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
@@ -120,9 +120,9 @@ for setting in simpleGridStrategies:
     stockNames=setting['stockNames'],
     priority=setting.get('priority', 0),
     tradingAmount=setting.get('tradingAmount', None),
+    buyAmountRatio=setting.get('buyAmountRatio', 1),
     firstPositionAmount=setting.get('firstPositionAmount', 1),
     buyThresholdRatio=setting.get('buyThresholdRatio', 1),
-    strategyId=setting.get('strategyId', 'a'),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,
@@ -190,9 +190,3 @@ def f(C):
 def g(C):
     for s in strategies:
         s.g(C)
-
-
-
-
-
-

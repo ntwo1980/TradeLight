@@ -1365,6 +1365,9 @@ class PairLevelGridStrategy(BaseStrategy):
         self.stock_B = self.Stocks[1]
         self.threshold_ratio = threshold_ratio
         self.stop_lose = stop_lose
+        self.monthly_increase = kwargs.get('monthly_increase', None)
+        self.monthly_check_month = None
+        self.monthly_check_price = None
 
     def init(self, C):    # PairLevelGridStrategy
         super().init(C)
@@ -1395,6 +1398,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.buy_index = state['buy_index']
             self.sell_index = state['sell_index']
             self.ClosePositionDate = state.get('close_position_date', None)
+            self.monthly_check_month = state.get('monthly_check_month', None)
+            self.monthly_check_price = state.get('monthly_check_price', None)
 
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, close_position_date={self.ClosePositionDate}, current_held={self.current_held}, buy_index={self.buy_index}, sell_index={self.sell_index}, sell_count={self.SellCount}")
 
@@ -1757,6 +1762,37 @@ class PairLevelGridStrategy(BaseStrategy):
                     self.current_held = None
                     self.base_price = None
 
+        # Monthly increase check
+        if (
+            self.monthly_increase is not None
+            and self.logical_holding > 0
+            and self.base_price is not None
+            and self.current_held is not None
+        ):
+            current_month = self.Today[:6]  # e.g. '202604'
+            check_price = getattr(self, 'current_price', None)
+            if check_price is not None and check_price > 0:
+                if self.monthly_check_month is None:
+                    # First month: record month and price, do not modify base_price
+                    self.monthly_check_month = current_month
+                    self.monthly_check_price = check_price
+                    self.SaveStrategyState()
+                    self.Print(f"Monthly check initialized: month={current_month}, price={check_price:.3f}")
+                elif self.monthly_check_month == current_month:
+                    pass  # Already checked this month
+                else:
+                    # New month: compare price with last month's recorded price
+                    if self.monthly_check_price is not None and self.monthly_check_price > 0:
+                        increase = (check_price - self.monthly_check_price) / self.monthly_check_price
+                        if increase > self.monthly_increase:
+                            old_base_price = self.base_price
+                            self.base_price = self.base_price * (1 + self.monthly_increase)
+                            self.Print(f"Monthly increase triggered: {increase:.2%} > {self.monthly_increase:.2%}, base_price {old_base_price:.3f} -> {self.base_price:.3f}")
+                    self.monthly_check_month = current_month
+                    self.monthly_check_price = check_price
+                    self.SaveStrategyState()
+                    self.Print(f"Monthly check updated: month={current_month}, price={check_price:.3f}")
+
         return  # intended, skip following
 
         if self.logical_holding > 0 and self.base_price is not None:
@@ -1796,7 +1832,9 @@ class PairLevelGridStrategy(BaseStrategy):
             'dynamic_increase_count': self.DynamicIncreaseCount,
             'close_position_date': self.ClosePositionDate,
             'last_buy_date': self.LastBuyDate,
-            'last_sell_date': self.LastSellDate
+            'last_sell_date': self.LastSellDate,
+            'monthly_check_month': self.monthly_check_month,
+            'monthly_check_price': self.monthly_check_price,
         }
 
         super().SaveStrategyState(file, data)

@@ -275,7 +275,7 @@ class BaseStrategy():
                 # Only enforce the "too frequently" cooldown for SpreadGridStrategy
                 if isinstance(self, SpreadGridStrategy) \
                     and self.consecutive_buy_count > 0 \
-                    and self.logical_holding >= orderQty * 2 \
+                    and self.logical_holding >= orderQty * 3 \
                     and self.last_buy_time is not None \
                     and self.api.TimeDiff(self.last_buy_time, now) < 60 * 30:
                     self.print('Error: buy too frequently')
@@ -287,7 +287,7 @@ class BaseStrategy():
 
                 if isinstance(self, SpreadGridStrategy) \
                     and self.consecutive_sell_count > 0 \
-                    and self.logical_holding <= -orderQty * 2 \
+                    and self.logical_holding <= -orderQty * 3 \
                     and self.last_sell_time is not None \
                     and self.api.TimeDiff(self.last_sell_time, now) < 60 * 30:
                     self.print('Error: sell too frequently')
@@ -303,15 +303,6 @@ class BaseStrategy():
             enum_dir = enums['buy'] if is_buy else enums['sell']
             cover_position = sell_position if is_buy else buy_position
             direction, retEnter, EnterOrderID = self.send_live_order(enum_dir, cover_position, quantity, price, code)
-            if retEnter == 0:
-                if is_buy:
-                    self.consecutive_buy_count += 1
-                    self.consecutive_sell_count = 0
-                    self.last_buy_time = now
-                else:
-                    self.consecutive_sell_count += 1
-                    self.consecutive_buy_count = 0
-                    self.last_sell_time = now
 
             self.send_order_count += 1
 
@@ -471,6 +462,15 @@ class BaseStrategy():
 
         enums = self.get_enums()
         verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == enums['buy'] else 'Sell'
+        now = self.api.CurrentTime()
+        if verb == 'Buy':
+            self.consecutive_buy_count += 1
+            self.consecutive_sell_count = 0
+            self.last_buy_time = now
+        else:
+            self.consecutive_sell_count += 1
+            self.consecutive_buy_count = 0
+            self.last_sell_time = now
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
         quantity = self.api.A_OrderFilledLot(order_id)

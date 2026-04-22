@@ -1,10 +1,9 @@
 import bisect
 import datetime
-import json
 import math
 import os
 import time
-
+import ast
 import numpy as np
 import pandas as pd
 import talib
@@ -51,6 +50,7 @@ class BaseStrategy():
         self.PriceDate = None
         self.Prices = None
         self.PriceRatio = 1
+        self.BuyAmountRatio = kwargs.get('buyAmountRatio', 1)
         self.rsi = 0
         self.SellExecuted = False
         self.NotClosePositionStocks = {
@@ -79,6 +79,55 @@ class BaseStrategy():
         uniqueName = self.GetUniqueStrategyName(self.Stocks[0])
         self.Universe.Strategies[uniqueName] = self
         self.Universe.StrategyList.append(self)
+
+    def _serialize_state(self, file, data):
+        """保存为类 JSON 格式（双引号、null、缩进）"""
+        try:
+            def _format(obj, indent=0):
+                prefix = "    " * indent
+                if obj is None:
+                    return "null"
+                elif isinstance(obj, bool):
+                    return "true" if obj else "false"
+                elif isinstance(obj, (int, float)):
+                    return str(obj)
+                elif isinstance(obj, str):
+                    # 转义双引号和反斜杠
+                    escaped = obj.replace('\\', '\\\\').replace('"', '\\"')
+                    return f'"{escaped}"'
+                elif isinstance(obj, list):
+                    if not obj:
+                        return "[]"
+                    items = [f"{_format(item, indent+1)}" for item in obj]
+                    return "[\n" + ",\n".join(f"{'    '*(indent+1)}{item}" for item in items) + f"\n{prefix}]"
+                elif isinstance(obj, dict):
+                    if not obj:
+                        return "{}"
+                    items = [f'{"    "*(indent+1)}{_format(k, indent+1)}: {_format(v, indent+1)}'
+                            for k, v in obj.items()]
+                    return "{\n" + ",\n".join(items) + f"\n{prefix}}}"
+                else:
+                    # 兜底方案，防止出现不支持的类型（如 numpy 的 float64 等）
+                    return _format(str(obj), indent)
+
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write(_format(data))
+        except Exception as e:
+            self.Print(f"Error: Failed to save strategy state: {e}")
+
+    def _deserialize_state(self, file):
+        """读取 JSON 或类 Python 格式"""
+        if not os.path.exists(file):
+            return None
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # 兼容 JSON 格式：替换关键字
+                content = content.replace('null', 'None').replace('true', 'True').replace('false', 'False')
+                return ast.literal_eval(content)  # 安全解析
+        except Exception as e:
+            self.Print(f"Error: Failed to load strategy state: {e}")
+            return None
 
     def FindSellCountIndex(self):
         sell_counts = [s.SellCount for s in self.Universe.Strategies.values() if not isinstance(s, SimpleGridStrategy) ]
@@ -131,7 +180,7 @@ class BaseStrategy():
         # if not self.IsBacktest and maxSellCount > 5 and index < total / 4 and total > 5:
         #     tradingAmount = tradingAmount / 4
 
-        return tradingAmount
+        return tradingAmount * self.BuyAmountRatio
 
     def GetSellTradingAmount(self, stock):
         maxSellCount = self.FindMaxSellCount()
@@ -204,18 +253,16 @@ class BaseStrategy():
             self.IsGlobalClosePosition = False
 
     def LoadGlobalSetting(self):  # BaseStrategy
+        # BaseStrategy
         file = 'global.json'
-
         # if self.TradingAmount is not None:
-        #     return
-
+        # return
         if not os.path.exists(file):
             self.TradingAmount = 40000
             return
         try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-
+            with open(file, 'r', encoding='utf-8') as f:-
+                state = self._deserialize_state(file)
                 if self.TradingAmount is None:
                     self.TradingAmount = state.get('trading_amount', 40000)
                 self.SellMultiplier = state.get('sell_multiplier', 1)
@@ -224,11 +271,10 @@ class BaseStrategy():
             self.Print(f"Error: Failed to load global setting: {e}")
 
 
-    def LoadStrategyState(self, stocks, stockNames):  # BaseStrategy
+    def LoadStrategyState(self, stocks, stockNames):        # BaseStrategy
         if self.IsBacktest:
             self.State = None
             return None
-
         stock = stocks[0]
         stockName = stockNames[0]
         state = None
@@ -236,31 +282,24 @@ class BaseStrategy():
         if not os.path.exists(file):
             return None
         try:
-            with open(file, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-                # Check if state for current stock exists
-
-                self.base_price = state['base_price']
-                self.logical_holding = state['logical_holding']
-                self.SellCount = state.get('sell_count', 0)
-                self.DynamicIncreaseCount = state.get('dynamic_increase_count', 0)
-                self.LastBuyDate = state.get('last_buy_date', None)
-                self.LastSellDate = state.get('last_sell_date', None)
-
-                return state
+            state = self._deserialize_state(file)
+            # Check if state for current stock exists
+            self.base_price = state['base_price']
+            self.logical_holding = state['logical_holding']
+            self.SellCount = state.get('sell_count', 0)
+            self.DynamicIncreaseCount = state.get('dynamic_increase_count', 0)
+            self.LastBuyDate = state.get('last_buy_date', None)
+            self.LastSellDate = state.get('last_sell_date', None)
+            return state
         except Exception as e:
             self.Print(f"Error: Failed to load strategy state: {e}")
             return None
 
-    def SaveStrategyState(self, file, data):   # BaseStrategy
+    def SaveStrategyState(self, file, data):       # BaseStrategy
         if self.IsBacktest:
-            self.Print(json.dumps(data, ensure_ascii=False, indent=4))
+            self.Print(repr(data))
         else:
-            try:
-                with open(file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                self.Print(f"Error: Failed to save strategy state: {e}")
+            self._serialize_state(file, data)
 
 
     def GetUniqueStrategyName(self, stock): # BaseStrategy
@@ -638,7 +677,8 @@ class SimpleGridStrategy(BaseStrategy):
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
 
-        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
+        #if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
+        if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4 and self.BuyAmountRatio < 1.01:
             unit_to_sell = current_holding
 
         if self.logical_holding < unit_to_sell:

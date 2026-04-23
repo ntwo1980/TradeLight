@@ -4,6 +4,7 @@ import math
 import os
 import time
 import ast
+import json
 import numpy as np
 import pandas as pd
 import talib
@@ -253,16 +254,18 @@ class BaseStrategy():
             self.IsGlobalClosePosition = False
 
     def LoadGlobalSetting(self):  # BaseStrategy
-        # BaseStrategy
         file = 'global.json'
+
         # if self.TradingAmount is not None:
-        # return
+        #     return
+
         if not os.path.exists(file):
             self.TradingAmount = 40000
             return
         try:
             with open(file, 'r', encoding='utf-8') as f:
-                state = self._deserialize_state(file)
+                state = json.load(f)
+
                 if self.TradingAmount is None:
                     self.TradingAmount = state.get('trading_amount', 40000)
                 self.SellMultiplier = state.get('sell_multiplier', 1)
@@ -271,10 +274,11 @@ class BaseStrategy():
             self.Print(f"Error: Failed to load global setting: {e}")
 
 
-    def LoadStrategyState(self, stocks, stockNames):        # BaseStrategy
+    def LoadStrategyState(self, stocks, stockNames):  # BaseStrategy
         if self.IsBacktest:
             self.State = None
             return None
+
         stock = stocks[0]
         stockName = stockNames[0]
         state = None
@@ -282,24 +286,31 @@ class BaseStrategy():
         if not os.path.exists(file):
             return None
         try:
-            state = self._deserialize_state(file)
-            # Check if state for current stock exists
-            self.base_price = state['base_price']
-            self.logical_holding = state['logical_holding']
-            self.SellCount = state.get('sell_count', 0)
-            self.DynamicIncreaseCount = state.get('dynamic_increase_count', 0)
-            self.LastBuyDate = state.get('last_buy_date', None)
-            self.LastSellDate = state.get('last_sell_date', None)
-            return state
+            with open(file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+                # Check if state for current stock exists
+
+                self.base_price = state['base_price']
+                self.logical_holding = state['logical_holding']
+                self.SellCount = state.get('sell_count', 0)
+                self.DynamicIncreaseCount = state.get('dynamic_increase_count', 0)
+                self.LastBuyDate = state.get('last_buy_date', None)
+                self.LastSellDate = state.get('last_sell_date', None)
+
+                return state
         except Exception as e:
             self.Print(f"Error: Failed to load strategy state: {e}")
             return None
 
-    def SaveStrategyState(self, file, data):       # BaseStrategy
+    def SaveStrategyState(self, file, data):   # BaseStrategy
         if self.IsBacktest:
-            self.Print(repr(data))
+            self.Print(json.dumps(data, ensure_ascii=False, indent=4))
         else:
-            self._serialize_state(file, data)
+            try:
+                with open(file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                self.Print(f"Error: Failed to save strategy state: {e}")
 
 
     def GetUniqueStrategyName(self, stock): # BaseStrategy

@@ -646,7 +646,7 @@ class SimpleGridStrategy(BaseStrategy):
             'atr': self.atr,
             'grid_unit': self.grid_unit})
 
-        if self.current_price >= base_price + self.grid_unit * 1.001:
+        if self.current_price >= base_price + self.grid_unit * 1.001 and current_holding >= self.logical_holding:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, self.logical_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
@@ -2101,7 +2101,7 @@ class MomentumRotationStrategy(BaseStrategy):
 
         self.SellExecuted = False
         # 检查可用资金
-        if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount=cash_from_sale):
+        if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount=cash_from_sale, isSwitch=True):
             self.base_price = price_new
             self.pending_switch_to = None
             self.pending_switch_cash = 0
@@ -2150,7 +2150,7 @@ class MomentumRotationStrategy(BaseStrategy):
         elif self.current_held != target:
             self.SwitchPosition_Sell(C, self.current_held, self.logical_holding, target, current_prices)
 
-    def ExecuteBuy(self, C, stock, current_price, trading_amount = None):    # MomentumRotationStrategy
+    def ExecuteBuy(self, C, stock, current_price, trading_amount = None, isSwitch = False):    # MomentumRotationStrategy
         available_cash = self.GetAvailableCash()
         if self.Priority < 10:
             available_cash -= self.RetainAmount

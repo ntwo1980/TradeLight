@@ -1338,10 +1338,12 @@ class PairGridStrategy(BaseStrategy):
         if target_stock is None:
             target_stock = self.stock_A
 
+        if self.current_held and self.current_held != target_stock and current_holding != self.logical_holding:
+            self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
         # --- 2. 换仓逻辑：等值转移 ---
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
-        elif self.current_held and self.current_held != target_stock:
+        elif self.current_held and self.current_held != target_stock and current_holding == self.logical_holding:
             self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}")
 
             old_stock = self.current_held
@@ -1351,7 +1353,7 @@ class PairGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)    # PairGridStrategy
             if self.IsBacktest:
                 self.f(C)
         elif self.current_held:
@@ -1759,10 +1761,13 @@ class PairLevelGridStrategy(BaseStrategy):
         if target_stock is None:
             target_stock = self.stock_A
 
+        if self.current_held and self.current_held != target_stock and current_holding != self.logical_holding:
+            self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
+
         # --- 2. 换仓逻辑：等值转移 ---
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
-        elif self.current_held and self.current_held != target_stock:
+        elif self.current_held and self.current_held != target_stock and current_holding == self.logical_holding:
             self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}")
 
             old_stock = self.current_held
@@ -1772,7 +1777,7 @@ class PairLevelGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)
+            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)     # PairLevelGridStrategy
             if self.IsBacktest:
                 self.f(C)
         elif self.current_held:

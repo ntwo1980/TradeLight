@@ -203,7 +203,7 @@ class BaseStrategy():
 
     def is_order_deletion_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily order-deletion window."""
-        return 0.2259 < now < 0.2310
+        return 0.225945 < now < 0.2310
 
     def GetBuyPosition(self, code):    # BaseStrategy
         if self.IsBacktest:

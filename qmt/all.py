@@ -37,12 +37,12 @@ simpleGridStrategies = [
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.2},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b', 'buyAmountRatio': 1.2},
     {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'strategyId':'b'},
+    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'strategyId':'b'},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10, 'buyThresholdRatio': 0.97},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10},  #52000
     {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #17000
     #{'stocks': ["002267.SZ"], 'stockNames':['陕天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #12000
-    {'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
+    #{'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
     #{'stocks': ["601139.SH"], 'stockNames':['深圳燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #21000
     #{'stocks': ["603689.SH"], 'stockNames':['皖天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #14000
     #{'stocks': ["603053.SH"], 'stockNames':['成都燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #14000

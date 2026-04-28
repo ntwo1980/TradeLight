@@ -1339,7 +1339,7 @@ class PairGridStrategy(BaseStrategy):
             target_stock = self.stock_A
 
         if self.current_held and self.current_held != target_stock and current_holding != self.logical_holding:
-            self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
+            self.Print(f"Error: executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
         # --- 2. 换仓逻辑：等值转移 ---
         if self.pending_switch_to is not None:
             self.SwitchPosition_Buy(C, current_prices)
@@ -1762,7 +1762,7 @@ class PairLevelGridStrategy(BaseStrategy):
             target_stock = self.stock_A
 
         if self.current_held and self.current_held != target_stock and current_holding != self.logical_holding:
-            self.Print(f"Executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
+            self.Print(f"Error: executing portfolio rebalancing: {self.current_held} → {target_stock}, but current_holding {current_holding} not equal logical_holding {self.logical_holding}")
 
         # --- 2. 换仓逻辑：等值转移 ---
         if self.pending_switch_to is not None:

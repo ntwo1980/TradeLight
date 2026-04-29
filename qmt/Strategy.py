@@ -513,6 +513,7 @@ class BaseStrategy():
             orders = self.GetTradeDetailData(self.Account, self.AccountType, 'order')
             for order in orders:
                 if order.m_strRemark in self.WaitingList:
+                    self.Print(f"Order {order.m_strRemark} status {order.m_nOrderStatus}")
                     # 处理待确认的状态更新
                     if order.m_strRemark in self.PendingStateUpdates:
                         if order.m_nOrderStatus == 56:  # 已成
@@ -1332,6 +1333,7 @@ class PairGridStrategy(BaseStrategy):
             target_stock = self.stock_A
             self.Print('Switching to A (A is undervalued)')
         else:
+            self.Print('Keep current')
             target_stock = self.current_held  # 维持现状
 
         # 默认持有A（首次启动）

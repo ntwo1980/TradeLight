@@ -376,7 +376,8 @@ class BaseStrategy():
     def CheckWaitingList(self, C): # BaseStrategy
         if not self.IsBacktest:
             self.RefreshWaitingList(C)
-            if self.WaitingList:
+            # if self.WaitingList:
+            if self.WaitingList or self.PendingStateUpdates:
                 self.Print(f"Error: There are pending orders not confirmed: {self.WaitingList}, pause subsequent orders")
                 return False
 

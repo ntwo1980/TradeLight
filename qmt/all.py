@@ -1,4 +1,5 @@
 #encoding:gbk
+import time
 
 class a():
     max_position = 0
@@ -36,23 +37,23 @@ simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.2},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b', 'buyAmountRatio': 1.2},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10},
-    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'strategyId':'b'},
-    {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10, 'buyThresholdRatio': 0.97},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'strategyId':'b', 'buyThresholdRatio': 0.97},
+    {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10},
     {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10},  #52000
-    {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #17000
+    {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10},   #17000
     #{'stocks': ["002267.SZ"], 'stockNames':['陕天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #12000
     #{'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
     #{'stocks': ["601139.SH"], 'stockNames':['深圳燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #21000
     #{'stocks': ["603689.SH"], 'stockNames':['皖天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #14000
     #{'stocks': ["603053.SH"], 'stockNames':['成都燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #14000
-    {'stocks': ["601228.SH"], 'stockNames':['广州港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
-    {'stocks': ["601949.SH"], 'stockNames':['中国出版'], 'priority': 10, 'buyThresholdRatio': 0.97},  #25000
+    #{'stocks': ["601228.SH"], 'stockNames':['广州港'], 'priority': 10},   #25000
+    #{'stocks': ["601949.SH"], 'stockNames':['中国出版'], 'priority': 10, 'buyThresholdRatio': 0.97},  #25000
     #{'stocks': ["600017.SH"], 'stockNames':['日照港'], 'priority': 10, 'buyThresholdRatio': 0.97},  #25000
     #{'stocks': ["601880.SH"], 'stockNames':['辽港股份'], 'priority': 10, 'buyThresholdRatio': 0.97},  #29000
     #{'stocks': ["601083.SH"], 'stockNames':['锦江航运'], 'priority': 10, 'buyThresholdRatio': 0.97},  #22000
     #{'stocks': ["600508.SH"], 'stockNames':['上海能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #14000
-    {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #39000
+    {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10},  #39000
 ]
 
 stockLevelGridStrategies = [
@@ -184,6 +185,7 @@ def f(C):
             s.f(C)
             if s.SellExecuted:
                 executed_flag = True
+                time.sleep(20)
                 break  # 一旦有策略执行成功，立即跳出 for，重新开始 while
         if not executed_flag:
             break  # 本轮无任何策略执行，退出循环

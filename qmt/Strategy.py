@@ -41,6 +41,10 @@ class BaseStrategy():
         self.ClosePositionDate = None
         self.LastBuyDate = None
         self.LastSellDate = None
+        self.LastBuyTime = None
+        self.LastSellTime = None
+        self.ConsecutiveBuyCount = 0
+        self.ConsecutiveSellCount = 0
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func

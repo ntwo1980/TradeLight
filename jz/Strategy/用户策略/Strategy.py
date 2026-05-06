@@ -268,7 +268,7 @@ class BaseStrategy():
 
             orderQty = self.params.get('orderQty', 1)
             if is_buy:
-                if self.consecutive_buy_count >= self.max_consecutive_count:
+                if self.consecutive_buy_count >= self.max_consecutive_count and self.logical_holding >= orderQty * 3:
                     self.print('Error: reach consecutive buy limit')
                     return (False, 0)
 
@@ -281,7 +281,7 @@ class BaseStrategy():
                     self.print('Error: buy too frequently')
                     return (False, 0)
             else:
-                if self.consecutive_sell_count >= self.max_consecutive_count:
+                if self.consecutive_sell_count >= self.max_consecutive_count and self.logical_holding <= -orderQty * 3:
                     self.print('Error: reach consecutive sell limit')
                     return (False, 0)
 

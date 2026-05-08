@@ -37,11 +37,11 @@ simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.2},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b', 'buyAmountRatio': 1.2},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'strategyId':'b', 'buyThresholdRatio': 0.97},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 1},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'strategyId':'b', 'buyThresholdRatio': 1},
     {'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10},
-    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10},  #52000
-    {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10},   #17000
+    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'minUnitPercentage': 0.011},  #52000
+    {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'minUnitPercentage': 0.012},   #17000
     #{'stocks': ["002267.SZ"], 'stockNames':['陕天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #12000
     #{'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
     #{'stocks': ["601139.SH"], 'stockNames':['深圳燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #21000
@@ -53,7 +53,7 @@ simpleGridStrategies = [
     #{'stocks': ["601880.SH"], 'stockNames':['辽港股份'], 'priority': 10, 'buyThresholdRatio': 0.97},  #29000
     #{'stocks': ["601083.SH"], 'stockNames':['锦江航运'], 'priority': 10, 'buyThresholdRatio': 0.97},  #22000
     #{'stocks': ["600508.SH"], 'stockNames':['上海能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #14000
-    {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10},  #39000
+    {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10, 'minUnitPercentage': 0.011},  #39000
 ]
 
 stockLevelGridStrategies = [
@@ -129,6 +129,7 @@ for setting in simpleGridStrategies:
     buyAmountRatio=setting.get('buyAmountRatio', 1),
     firstPositionAmount=setting.get('firstPositionAmount', 1),
     buyThresholdRatio=setting.get('buyThresholdRatio', 1),
+    minUnitPercentage=setting.get('minUnitPercentage', 0.01),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,

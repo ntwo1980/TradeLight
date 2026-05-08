@@ -1524,6 +1524,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.pending_switch_to = None
         self.pending_switch_cash = 0
         self.new_base_price = None
+        self.new_monthly_check_price = None
 
         C.set_universe(self.Stocks)
 
@@ -1572,13 +1573,16 @@ class PairLevelGridStrategy(BaseStrategy):
         # 检查可用资金
         if self.ExecuteBuy(C, self.pending_switch_to, price_new, trading_amount = cash_from_sale, isSwitch = True):
             self.base_price = self.new_base_price
+            if self.new_monthly_check_price is not None:
+                self.monthly_check_price = self.new_monthly_check_price
             self.pending_switch_to = None
             self.pending_switch_cash = 0
             self.new_base_price = None
+            self.new_monthly_check_price = None
             self.Priority = self.OldPriority
             self.SaveStrategyState()
 
-    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairLevelGridStrategy
+    def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price, new_monthly_check_price):    # PairLevelGridStrategy
         self.Print(f'SwitchPosition holding is {current_holding}')
 
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
@@ -1591,6 +1595,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.current_held = None
         self.base_price = None
         self.new_base_price = new_base_price
+        self.new_monthly_check_price = new_monthly_check_price
         self.OldPriority = self.Priority
         self.Priority = 99
         self.SellExecuted = True
@@ -1785,7 +1790,12 @@ class PairLevelGridStrategy(BaseStrategy):
             old_base_price = self.base_price
 
             new_base_price = old_base_price * price_new / price_old
-            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price)     # PairLevelGridStrategy
+            if self.monthly_check_price is not None and self.monthly_check_price > 0:
+                new_monthly_check_price = self.monthly_check_price * price_new / price_old
+            else:
+                new_monthly_check_price = None
+
+            self.SwitchPosition_Sell(C, self.current_held, current_holding, target_stock, current_prices, new_base_price, new_monthly_check_price)     # PairLevelGridStrategy
             if self.IsBacktest:
                 self.f(C)
         elif self.current_held:

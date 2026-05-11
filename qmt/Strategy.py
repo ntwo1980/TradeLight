@@ -1791,7 +1791,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
             new_base_price = old_base_price * price_new / price_old
             if self.monthly_check_price is not None and self.monthly_check_price > 0:
-                new_monthly_check_price = self.monthly_check_price * price_new / price_old
+                new_monthly_check_price = price_new
             else:
                 new_monthly_check_price = None
 

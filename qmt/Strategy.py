@@ -902,8 +902,8 @@ class LevelGridStrategy(BaseStrategy):
         if base_price is None or base_price == 0:       # LevelGridStrategy
             close_ma = talib.MA(self.prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(self.prices['close'][-10:] > close_ma[-10:])
-            days_above_ma_5 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
-            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            days_above_ma_3 = np.sum(self.prices['close'][-3:] > close_ma[-3:])
+            if days_above_ma_10 > 8 and days_above_ma_3 == 3:
                 base_price = max(self.prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = self.prices['close'][-10:].mean() * 1.02
@@ -1636,11 +1636,11 @@ class PairLevelGridStrategy(BaseStrategy):
         if base_price is None or base_price == 0:    # PairLevelGridStrategy
             close_ma = talib.MA(prices['close'], timeperiod=20)
             days_above_ma_10 = np.sum(prices['close'][-10:] > close_ma[-10:])
-            days_above_ma_5 = np.sum(prices['close'][-3:] > close_ma[-3:])
+            days_above_ma_3 = np.sum(prices['close'][-3:] > close_ma[-3:])
             # if rsi > 60:
             #     base_price = prices['close'][-1] * 2
-            # elif days_above_ma_10 > 8 and days_above_ma_5 == 3:
-            if days_above_ma_10 > 8 and days_above_ma_5 == 3:
+            # elif days_above_ma_10 > 8 and days_above_ma_3 == 3:
+            if days_above_ma_10 > 8 and days_above_ma_3 == 3:
                 base_price = max(prices['close'][-10:].max(), self.current_price)
             else:
                 base_price = prices['close'][-10:].mean() * 1.02

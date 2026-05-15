@@ -27,6 +27,8 @@ class BaseStrategy():
         self.Account = "testS"
         self.AccountType = "STOCK"
         self.TradingAmount = kwargs.get('tradingAmount', None)
+        self.BuyTradingAmount = kwargs.get('buyTradingAmount', None)
+        self.SellTradingAmount = kwargs.get('sellTradingAmount', None)
         self.FirstPositionAmount = kwargs.get('firstPositionAmount', 1)
         self.RetainAmount = 0
         self.base_price = None
@@ -170,9 +172,10 @@ class BaseStrategy():
         all_positions = self.GetPositions()[1]
         position = all_positions.get(stock, 0)
         sell_multiplier = self.SellMultiplier
-        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
+        baseTradingAmount = self.BuyTradingAmount if self.BuyTradingAmount is not None else self.TradingAmount
+        tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
         if position > tradingAmount / 2 and limitByAsset:
-            tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * 1 / 100 + 1)
+            tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * 1 / 100 + 1)
 
         yhrl = positions.get('511880.SH', 0)
         cash = self.GetAvailableCash() + yhrl
@@ -193,7 +196,8 @@ class BaseStrategy():
         maxSellCount = self.FindMaxSellCount()
 
         sell_multiplier = 1
-        tradingAmount = self.TradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
+        baseTradingAmount = self.SellTradingAmount if self.SellTradingAmount is not None else self.TradingAmount
+        tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
 
         positions = self.GetPositions()[0]
         yhrl = positions.get('511880.SH', 0)

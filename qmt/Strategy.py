@@ -117,9 +117,7 @@ class BaseStrategy():
         return cash / totalAsset
 
     def GetBuyTradingAmount(self, stock, limitByAsset = True):
-        maxSellCount = self.FindMaxSellCount()
-        positions = self.GetPositions()[0]
-        all_positions = self.GetPositions()[1]
+        positions, all_positions = self.GetPositions()
         position = all_positions.get(stock, 0)
         sell_multiplier = self.SellMultiplier
         baseTradingAmount = self.BuyTradingAmount if self.BuyTradingAmount is not None else self.TradingAmount
@@ -127,41 +125,22 @@ class BaseStrategy():
         if position > tradingAmount / 2 and limitByAsset:
             tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * 1 / 100 + 1)
 
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
         totalAsset = self.GetTotalAsset() - self.RetainAmount
-        index = self.FindSellCountIndex()
-        total = len(self.Universe.Strategies)
 
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
-
-        # if not self.IsBacktest and maxSellCount > 5 and index < total / 4 and total > 5:
-        #     tradingAmount = tradingAmount / 4
 
         return tradingAmount * self.BuyAmountRatio
 
     def GetSellTradingAmount(self, stock):
-        maxSellCount = self.FindMaxSellCount()
-
         sell_multiplier = 1
         baseTradingAmount = self.SellTradingAmount if self.SellTradingAmount is not None else self.TradingAmount
         tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
 
-        positions = self.GetPositions()[0]
-        yhrl = positions.get('511880.SH', 0)
-        cash = self.GetAvailableCash() + yhrl
-
         totalAsset = self.GetTotalAsset() - self.RetainAmount
-        index = self.FindSellCountIndex()
-        total = len(self.Universe.Strategies)
 
         if tradingAmount > totalAsset / 20:
             tradingAmount = totalAsset / 20
-
-        # if not self.IsBacktest and maxSellCount > 5 and index < total / 4 and total > 5:
-        #     tradingAmount = tradingAmount / 4
 
         return tradingAmount
 

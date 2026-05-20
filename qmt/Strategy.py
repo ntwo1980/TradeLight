@@ -535,7 +535,7 @@ class BaseStrategy():
                             self.PendingStateUpdates.pop(order.m_strRemark)
                             self.Print(f"Order cancelled/rejected, state update discarded")
                     # self.Cancel(order.m_strOrderSysID,self.Account,self.AccountType,C)
-                    if order.m_nOrderStatus in {54, 56, 57} or order.m_nOrderStatus not in ignored:  # 已撤, 已成, 废单
+                    if order.m_nOrderStatus in {54, 56, 57} or order.m_strRemark not in ignored:  # 已撤, 已成, 废单
                         foundList.append(order.m_strRemark)
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]

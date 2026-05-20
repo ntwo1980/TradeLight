@@ -498,7 +498,7 @@ class SimpleGridStrategy(BaseStrategy):
         self.buy_threshold_ratio = buyThresholdRatio
         if self.buy_threshold_ratio > 1:
             self.buy_threshold_ratio = 1
-        self.minUnitPercentage = kwargs.get('minUnitPercentage', None)
+        self.minUnitPercentage = kwargs.get('minUnitPercentage', 0.01)
 
     def init(self, C):   # SimpleGridStrategy
         super().init(C)
@@ -1147,9 +1147,8 @@ class PairGridStrategy(BaseStrategy):
             self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price):    # PairGridStrategy
-        self.Print(f'SwitchPosition holding is {current_holding}')
-
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        self.Print(f'SwitchPosition holding is {current_holding}')
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)
@@ -1516,9 +1515,8 @@ class PairLevelGridStrategy(BaseStrategy):
             self.SaveStrategyState()
 
     def SwitchPosition_Sell(self, C, old_stock, current_holding, new_stock, current_prices, new_base_price, new_monthly_check_price):    # PairLevelGridStrategy
-        self.Print(f'SwitchPosition holding is {current_holding}')
-
         """执行等值换仓：平掉旧股票，用所得资金买入新股票"""
+        self.Print(f'SwitchPosition holding is {current_holding}')
         strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
         price_old = current_prices[old_stock]
         self.Sell(C, old_stock, current_holding, price_old, strategy_name)

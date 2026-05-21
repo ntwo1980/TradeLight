@@ -878,7 +878,8 @@ class LevelGridStrategy(BaseStrategy):
                     else:
                         diff = base_price * level / 100
                 else:
-                    level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                    sell_idx = self.sell_index + 1 if good_up and self.sell_index + 1 < len(self.levels) else self.sell_index
+                    level = self.levels[sell_idx]
                     diff = base_price * level / 100
 
                 sell_threshold = base_price + diff * 1.001
@@ -900,7 +901,8 @@ class LevelGridStrategy(BaseStrategy):
                     else:
                         diff = base_price * level / 100
                 else:
-                    level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
+                    buy_idx = self.buy_index + 1 if bad_down and self.buy_index + 1 < len(self.levels) else self.buy_index
+                    level = self.levels[buy_idx]
                     diff = base_price * level / 100
 
                 buy_threshold = base_price - diff * 1.001
@@ -1619,7 +1621,8 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[self.sell_index]
                     diff = max(self.atr, base_price * level / 100)
                 else:
-                    level = self.levels[self.sell_index if not good_up else self.sell_index + 1]
+                    sell_idx = self.sell_index + 1 if good_up and self.sell_index + 1 < len(self.levels) else self.sell_index
+                    level = self.levels[sell_idx]
                     diff = base_price * level / 100
 
                 sell_threshold = base_price + diff * 1.001
@@ -1638,7 +1641,8 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[self.buy_index]
                     diff = max(self.atr, base_price * level / 100)
                 else:
-                    level = self.levels[self.buy_index if not bad_down else self.buy_index + 1]
+                    buy_idx = self.buy_index + 1 if bad_down and self.buy_index + 1 < len(self.levels) else self.buy_index
+                    level = self.levels[buy_idx]
                     diff = base_price * level / 100
 
                 buy_threshold = base_price - diff * 1.001

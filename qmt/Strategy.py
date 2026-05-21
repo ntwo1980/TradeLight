@@ -1255,7 +1255,7 @@ class PairGridStrategy(BaseStrategy):
         price_A =  current_prices[self.stock_A]
         price_B =  current_prices[self.stock_B]
 
-            # --- 1. 配对逻辑：选择被低估的资产（便宜的那个）---
+        # --- 1. 配对逻辑：选择被低估的资产（便宜的那个）---
         close_A = np.array(self.prices[self.stock_A]['close'][-20:])
         close_B = np.array(self.prices[self.stock_B]['close'][-20:])
         ratio_series = close_A / close_B

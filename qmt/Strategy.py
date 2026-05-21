@@ -1552,7 +1552,8 @@ class PairLevelGridStrategy(BaseStrategy):
         self.atr = talib.ATR(high, low, close, timeperiod=4)[-1]
         x = np.arange(len(prices['close'].values))
         log_prices = np.log(np.array(prices['close'].values))
-        self.slope, self.r_squared = np.polyfit(x, log_prices, 1)
+        self.slope, intercept = np.polyfit(x, log_prices, 1)
+        self.r_squared = 1 - (sum((log_prices - (self.slope * x + intercept))**2) / ((len(log_prices) - 1) * np.var(log_prices, ddof=1)))
         days_above_sma = np.sum(all_prices['close'].values[-30:] > sma_30[-30:])
         days_above_ma120 = np.sum(all_prices['close'].values[-30:] > ma_120[-30:])
         days_above_ma250 = np.sum(all_prices['close'].values[-30:] > ma_250[-30:])

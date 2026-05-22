@@ -1181,7 +1181,7 @@ class SpreadGridStrategy(BaseStrategy):
             enums = self.get_enums()
             if self.waiting_has_enum(enums['buy']):
                 return False
-        return self.place_order_and_commit(self.Buy, code, quantity, price, self.build_buy_changes)
+        return self.place_order_and_commit(self.Buy, code, quantity, price, True, self.build_buy_changes)
 
     def build_buy_changes(self, new_holding, price, cross_zero, orderQty):     # SpreadGridStrategy
         """Build the `changes` dict used after a buy order is accepted.
@@ -1201,21 +1201,22 @@ class SpreadGridStrategy(BaseStrategy):
             enums = self.get_enums()
             if self.waiting_has_enum(enums['sell']):
                 return False
-        return self.place_order_and_commit(self.Sell, code, quantity, price, self.build_sell_changes)
+        return self.place_order_and_commit(self.Sell, code, quantity, price, False, self.build_sell_changes)
 
-    def place_order_and_commit(self, trade_func, code, quantity, price, build_changes_fn):     # SpreadGridStrategy
+    def place_order_and_commit(self, trade_func, code, quantity, price, is_buy, build_changes_fn):     # SpreadGridStrategy
         """Place an order via `trade_func` and, on success, build and commit changes.
 
         - `trade_func` must return (succeed: bool, order_id:int)
+        - `is_buy` determines whether the new holding increases (buy) or decreases (sell)
         - `build_changes_fn` is called with the computed new_holding, price, cross_zero, orderQty
         """
         succeed, order_id = trade_func(code, quantity, price)
         if not succeed:
             return False
 
-        # compute new holding depending on whether trade_func is Buy or Sell
+        # compute new holding depending on trade direction
         # Use trade_quantity which is set by the successful trade call
-        if trade_func == self.Buy:
+        if is_buy:
             new_holding = self.logical_holding + self.trade_quantity
         else:
             new_holding = self.logical_holding - self.trade_quantity

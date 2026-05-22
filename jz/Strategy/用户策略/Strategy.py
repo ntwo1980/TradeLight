@@ -87,7 +87,7 @@ class BaseStrategy():
         shift = values.min() - 1e-6
         y = np.log(values - shift)
         slope, intercept = np.polyfit(x, y, 1)
-        r_squared = 1 - (sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
+        r_squared = 1 - (np.sum((y - (slope * x + intercept))**2) / ((len(y) - 1) * np.var(y, ddof=1)))
         return slope, r_squared
 
     def fetch_ohlcv(self, code, period):   # BaseStrategy

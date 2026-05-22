@@ -837,6 +837,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
         self.double_first_position = self.params.get('doubleFirstPosition', True)
+        self.stop_new_position = self.params.get('stopNewPosition', False)
         self.stop_lose = self.params.get('stopLose', True)
 
         for code in self.codes:
@@ -934,6 +935,9 @@ class SpreadGridStrategy(BaseStrategy):
         ma_20_last = context['ma_20_last']
         days_above_ma = context['days_above_ma']
 
+        if self.stop_new_position and self.logical_holding == 0:
+            return None
+
         # Case: initial entry when flat
         if self.logical_holding == 0 and self.slope < 0.3 and current_price <= base_price + self.atr:
             if days_above_ma <= 14 or self.ignore_days_above_ma:
@@ -975,6 +979,9 @@ class SpreadGridStrategy(BaseStrategy):
         sell_position = context['sell_position']
         ma_20_last = context['ma_20_last']
         days_above_ma = context['days_above_ma']
+
+        if self.stop_new_position and self.logical_holding == 0:
+            return None
 
         # Case: initial entry when flat
         if self.logical_holding == 0 and self.slope > -0.3 and current_price >= base_price - self.atr:

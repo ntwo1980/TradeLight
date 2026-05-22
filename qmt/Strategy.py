@@ -199,7 +199,8 @@ class BaseStrategy():
         #     return
 
         if not os.path.exists(file):
-            self.TradingAmount = 40000
+            if self.TradingAmount is None:
+                self.TradingAmount = 40000
             return
         try:
             with open(file, 'r', encoding='utf-8') as f:

@@ -408,10 +408,7 @@ class BaseStrategy():
             for i, col in enumerate(header):
                 val = fields[i].strip().strip('"')
                 if i == 0:  # 日期列
-                    try:
-                        row['date'] = val
-                    except:
-                        continue  # 无效日期跳过
+                    row['date'] = val
                 else:
                     try:
                         row[col] = float(val) if val else None
@@ -740,8 +737,6 @@ class LevelGridStrategy(BaseStrategy):
         self.prices_date = None
         self.simple_stocks = ['159518.SZ', '513350.SH']
         self.levels = [2, 2, 4, 8, 12, 22]
-        if self.Stocks[0] in self.simple_stocks:
-            self.levels = [2, 2, 4, 8, 12, 22]
         self.buy_index = 0
         self.sell_index = 0
         self.atr = 0
@@ -2284,12 +2279,13 @@ class JointquantEmailStrategy(BaseStrategy):
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
 
-        if  unit_to_buy > 0:
+        if unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             # self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
             # self.Print({'stock': stock, 'unit_to_buy': unit_to_buy, 'current_price': current_price, 'strategy_name': strategy_name})
             self.logical_holding += unit_to_buy
             return True
+        return False
 
     def SellYHRL(self, C, target_cash, holdings):     # JointquantEmailStrategy
         stock = '511880.SH'
@@ -2308,12 +2304,11 @@ class JointquantEmailStrategy(BaseStrategy):
         sell_units = min(units_needed, current_holding // 100)
         sell_volume = sell_units * 100
 
-        if sell_volume <=0 :
+        if sell_volume <= 0:
             self.Print(f"Insufficient funds to sell 100 shares; no action taken for now.")
             return
 
-        if sell_volume > 0:
-            self.PassOrder(24, 1101, self.Account, stock, 14, -1, sell_volume, '', 2, '', C)
+        self.PassOrder(24, 1101, self.Account, stock, 14, -1, sell_volume, '', 2, '', C)
 
     def ExecuteSell(self, C, stock, current_holding):     # JointquantEmailStrategy
         sell_amount = self.TradingAmount

@@ -461,7 +461,8 @@ class BaseStrategy():
         self.save_strategy_state()
 
         enums = self.get_enums()
-        verb = 'Buy' if self.api.A_OrderBuyOrSell(order_id) == enums['buy'] else 'Sell'
+        order_side = self.api.A_OrderBuyOrSell(order_id)
+        verb = 'Buy' if order_side == enums['buy'] else 'Sell'
         now = self.api.CurrentTime()
         if verb == 'Buy':
             self.consecutive_buy_count += 1

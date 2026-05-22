@@ -594,6 +594,7 @@ class PairLevelGridStrategy(BaseStrategy):
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
+        self.stop_new_position = self.params.get('stopNewPosition', False)
         self.buy_levels = list(self.DEFAULT_LEVELS)
         self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
@@ -753,6 +754,9 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
             buy_threshold, _ = self.compute_thresholds(base_price, level, self.atr)
+
+            if self.stop_new_position and self.logical_holding == 0:
+                return buy_threshold, False
 
             if current_price <= buy_threshold and not existing_order:
                 self.ExecuteBuy(code, current_price, order_qty)

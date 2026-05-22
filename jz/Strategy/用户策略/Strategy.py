@@ -52,8 +52,7 @@ class BaseStrategy():
         self.context = context
         self.params = kwargs['params']
         self.api = kwargs['api']
-        # prepare enum cache container and populate once to avoid repeated API calls
-        self._cached_enums = None
+        # populate enum cache once to avoid repeated API calls
         self.get_enums()
         self.IsBacktest = context.strategyStatus() != 'C'
 

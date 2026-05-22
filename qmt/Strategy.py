@@ -464,7 +464,7 @@ class BaseStrategy():
                             self.PendingStateUpdates.pop(order.m_strRemark)
                             self.Print(f"Order cancelled/rejected, state update discarded")
                     # self.Cancel(order.m_strOrderSysID,self.Account,self.AccountType,C)
-                    if order.m_nOrderStatus in {54, 56, 57} or order.m_strRemark not in ignored:  # 已撤, 已成, 废单
+                    if order.m_nOrderStatus in {54, 56, 57} or order.m_strRemark in ignored:  # 已撤, 已成, 废单
                         foundList.append(order.m_strRemark)
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
@@ -1967,7 +1967,7 @@ class MomentumRotationStrategy(BaseStrategy):
     def __init__(self, strategyId='a', days=25, rank=1, **kwargs):
         super().__init__(strategyPrefix='momrot', strategyId=strategyId, **kwargs)
         self.days = days
-        self.rank = 1
+        self.rank = rank
 
     def init(self, C):    # MomentumRotationStrategy
         super().init(C)
@@ -2166,7 +2166,6 @@ class MomentumRotationStrategy(BaseStrategy):
             new_logical_holding = self.logical_holding - unit_to_sell
             if self.IsBacktest:
                 self.logical_holding = new_logical_holding
-                self.base_price = current_price
                 self.LastSellDate = self.Today
                 if self.logical_holding > 0:
                     self.base_price = current_price

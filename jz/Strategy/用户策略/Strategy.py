@@ -204,6 +204,26 @@ class BaseStrategy():
         """Return True if `now` is within the daily order-deletion window."""
         return 0.225945 < now < 0.2310
 
+    def effective_time_diff_excluding_mid_pause(self, start_time, end_time):   # BaseStrategy
+        """Return elapsed seconds excluding the 10:15-10:30 pause window.
+
+        The platform uses float-style intraday times, so we compute overlap
+        against [10:15, 10:30] directly and subtract it from `TimeDiff`.
+        """
+        if start_time is None:
+            return 0
+
+        elapsed = self.api.TimeDiff(start_time, end_time)
+        pause_start = 0.1015
+        pause_end = 0.1030
+
+        overlap_start = max(start_time, pause_start)
+        overlap_end = min(end_time, pause_end)
+        if overlap_end > overlap_start:
+            elapsed -= self.api.TimeDiff(overlap_start, overlap_end)
+
+        return max(0, elapsed)
+
     def GetBuyPosition(self, code):    # BaseStrategy
         if self.IsBacktest:
             return self.api.BuyPosition(code)
@@ -276,7 +296,7 @@ class BaseStrategy():
                     and self.consecutive_buy_count > 0 \
                     and self.logical_holding >= orderQty * 3 \
                     and self.last_buy_time is not None \
-                    and self.api.TimeDiff(self.last_buy_time, now) < 60 * 30:
+                    and self.effective_time_diff_excluding_mid_pause(self.last_buy_time, now) < 60 * 30:
                     self.print('Error: buy too frequently')
                     return (False, 0)
             else:
@@ -288,7 +308,7 @@ class BaseStrategy():
                     and self.consecutive_sell_count > 0 \
                     and self.logical_holding <= -orderQty * 3 \
                     and self.last_sell_time is not None \
-                    and self.api.TimeDiff(self.last_sell_time, now) < 60 * 30:
+                    and self.effective_time_diff_excluding_mid_pause(self.last_sell_time, now) < 60 * 30:
                     self.print('Error: sell too frequently')
                     return (False, 0)
 

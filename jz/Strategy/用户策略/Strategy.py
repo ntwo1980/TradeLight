@@ -667,9 +667,17 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_position = self.GetBuyPosition(code)
         sell_position = self.GetSellPosition(code)
 
+        close_prices = self.DailyPrices[code]['Close']
+        rsi = talib.RSI(close_prices.values, timeperiod=6)[-1] if len(close_prices) >= 6 else None
+        if rsi is not None and np.isnan(rsi):
+            rsi = None
+
         # compute MA-based base price and suggested order quantity when flat
         if self.logical_holding == 0 and buy_position == 0:
             order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
+
+        buy_order_qty = order_qty + 1 if (rsi is not None and rsi < 30) else order_qty
+        sell_order_qty = order_qty + 1 if (rsi is not None and rsi > 70 and buy_position >= orderQty * 5) else order_qty
 
         sell_threshold = 0
         buy_threshold = 0
@@ -679,11 +687,14 @@ class PairLevelGridStrategy(BaseStrategy):
             'base_price': base_price,
             'orderQty': orderQty,
             'order_qty': order_qty,
+            'buy_order_qty': buy_order_qty,
+            'sell_order_qty': sell_order_qty,
             'current_price': current_price,
             'existing_buy_order': existing_buy_order,
             'existing_sell_order': existing_sell_order,
             'buy_position': buy_position,
             'sell_position': sell_position,
+            'rsi': rsi,
         }
 
         sell_threshold, should_return = self.handle_sell_trading(trading_context)
@@ -719,6 +730,9 @@ class PairLevelGridStrategy(BaseStrategy):
                 'atr': self.atr,
                 'slope': self.slope,
                 'r_squared': self.r_squared,
+                'rsi': rsi,
+                'buy_order_qty': buy_order_qty,
+                'sell_order_qty': sell_order_qty,
             })
 
     def handle_sell_trading(self, context):     # PairLevelGridStrategy
@@ -730,7 +744,7 @@ class PairLevelGridStrategy(BaseStrategy):
         code = context['code']
         base_price = context['base_price']
         orderQty = context['orderQty']
-        order_qty = context['order_qty']
+        order_qty = context['sell_order_qty']
         current_price = context['current_price']
         existing_buy_order = context['existing_buy_order']
         existing_sell_order = context['existing_sell_order']
@@ -763,7 +777,7 @@ class PairLevelGridStrategy(BaseStrategy):
         code = context['code']
         base_price = context['base_price']
         orderQty = context['orderQty']
-        order_qty = context['order_qty']
+        order_qty = context['buy_order_qty']
         current_price = context['current_price']
         existing_buy_order = context['existing_buy_order']
         existing_sell_order = context['existing_sell_order']

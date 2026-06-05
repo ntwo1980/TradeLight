@@ -747,9 +747,7 @@ class PairLevelGridStrategy(BaseStrategy):
         orderQty = context['orderQty']
         order_qty = context['sell_order_qty']
         current_price = context['current_price']
-        existing_buy_order = context['existing_buy_order']
         existing_sell_order = context['existing_sell_order']
-        existing_order = existing_buy_order or existing_sell_order
         buy_position = context['buy_position']
 
         sell_threshold = 0
@@ -758,10 +756,15 @@ class PairLevelGridStrategy(BaseStrategy):
                 level = self.sell_levels[self.sell_index]
                 _, sell_threshold = self.compute_thresholds(base_price, level, self.atr)
 
-                if current_price >= sell_threshold and not existing_order:
+                if not existing_sell_order:
                     # if buy_position > 5 * order_qty:
                     #     order_qty = order_qty + 1
-                    executed = self.ExecuteSell(code, current_price, order_qty if buy_position >= order_qty else buy_position)
+                    executed = self.execute_pair_sell_with_waiting(
+                        code,
+                        current_price,
+                        sell_threshold,
+                        order_qty if buy_position >= order_qty else buy_position,
+                    )
                     if executed:
                         # mark that a trade occurred so RunGridTrading can skip buy
                         context['executed'] = True
@@ -823,6 +826,21 @@ class PairLevelGridStrategy(BaseStrategy):
             "buy_index": self.next_clamped_index(self.buy_index, self.buy_levels),
             "sell_index": 0,
         }
+
+    def execute_pair_sell_with_waiting(self, code, current_price, sell_threshold, quantity):     # PairLevelGridStrategy
+        """Execute pair-level sell with immediate order placement in live mode.
+
+        - Backtest: preserve original behavior, only sell after threshold is reached.
+        - Live: place a sell order immediately at max(current_price, sell_threshold)
+          so the order can rest and wait for matching.
+        """
+        if self.IsBacktest:
+            if current_price < sell_threshold:
+                return False
+            return self.ExecuteSell(code, current_price, quantity)
+
+        target_price = max(current_price, sell_threshold)
+        return self.ExecuteSell(code, target_price, quantity)
 
     def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
         return self.place_pair_order_and_commit(self.Sell, code, price, quantity, False, self.build_pair_sell_changes)

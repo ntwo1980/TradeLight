@@ -13,10 +13,8 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '豆粕',
-            'codes': ['DCE|F|M|2605'],
-            'orderQty': 5,
-            'limit': 2700,
-            'threshold': 0.025,
+            'codes': ['DCE|F|M|2609'],
+            'orderQty': 2,
         },
         api = api()
     )
@@ -44,6 +42,7 @@ def api():
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
+        A_DeleteOrder=A_DeleteOrder,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,

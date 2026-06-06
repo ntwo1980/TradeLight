@@ -14,12 +14,13 @@ def initialize(context):
         params = {
             'name': '玉米_淀粉',
             'codes': ['SPD|m|C-CS|2607|2607', 'DCE|M|C&CS|2607', 'DCE|F|C|2607', 'DCE|F|CS|2607'],
-            'orderQty': 20,
+            'orderQty': 12,
             'firstPosition': True,
             'stopLose': False,
             'atr': 10,
             'fixedAtr': True,
-            'ignoreDaysAboveMa': True
+            'ignoreDaysAboveMa': True,
+            'stopNewPosition': True
         },
         api = api()
     )

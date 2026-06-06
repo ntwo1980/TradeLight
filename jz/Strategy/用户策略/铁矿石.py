@@ -12,9 +12,9 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '菜粕',
-            'codes': ['ZCE|F|RM|609'],
-            'orderQty': 3,
+            'name': '铁矿石',
+            'codes': ['DCE|F|I|2609'],
+            'orderQty': 1,
         },
         api = api()
     )

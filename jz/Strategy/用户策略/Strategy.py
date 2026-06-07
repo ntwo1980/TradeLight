@@ -615,6 +615,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.codes = self.params['codes']
         self.name = self.params['name']
         self.stop_new_position = self.params.get('stopNewPosition', False)
+        self.min_buy_index = self.params.get('minBuyIndex', 0)
         self.buy_levels = list(self.DEFAULT_LEVELS)
         self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
@@ -873,7 +874,7 @@ class PairLevelGridStrategy(BaseStrategy):
             "base_price": trade_price,
             "last_sell_date": self.today_str(),
             "sell_index": self.next_clamped_index(self.sell_index, self.sell_levels),
-            "buy_index": 0,
+            "buy_index": max(self.min_buy_index, 0),
         }
 
     def hisover_callback(self, context):   # PairLevelGridStrategy

@@ -15,6 +15,7 @@ def initialize(context):
             'name': '铁矿石',
             'codes': ['DCE|F|I|2609'],
             'orderQty': 1,
+            'minBuyIndex': 4
         },
         api = api()
     )

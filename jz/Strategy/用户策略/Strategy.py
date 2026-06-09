@@ -10,7 +10,7 @@ import talib
 
 
 class BaseStrategy():
-    STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index']
+    STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index', 'no_trade_days']
     DEFAULT_LEVELS = [0.6, 0.7, 0.8, 1, 1.5, 2, 4, 6, 8, 14, 22]
 
     def __init__(self, **kwargs):   # BaseStrategy
@@ -26,6 +26,7 @@ class BaseStrategy():
         self.base_price = 0
         self.buy_index = 0
         self.sell_index = 0
+        self.no_trade_days = 0
         self.last_buy_date = None
         self.last_buy_time = None
         self.last_sell_date = None
@@ -47,6 +48,7 @@ class BaseStrategy():
         self.order_deleted = False
         self.position_closed = False
         self._cached_enums = None
+        self._last_no_trade_days_check_date = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -159,6 +161,9 @@ class BaseStrategy():
 
         now = self.api.CurrentTime()
 
+        if not self.IsBacktest:
+            self.apply_no_trade_days_adjustment(now)
+
         if context.triggerType() == 'N':
             if context.triggerData()['ServerType'] == 'T':# 交易
                 if context.triggerData()['EventType'] == 1:# 交易连接
@@ -203,6 +208,47 @@ class BaseStrategy():
     def is_order_deletion_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily order-deletion window."""
         return 0.225945 < now < 0.2310
+
+    def is_no_trade_days_check_period(self, now):   # BaseStrategy
+        """Return True if `now` is within the daily NoTradeDays check window (9:00-9:01)."""
+        return 0.0900 <= now < 0.0901
+
+    def apply_no_trade_days_adjustment(self, now):   # BaseStrategy
+        """Apply once-daily NoTradeDays based adjustment to buy/sell indexes.
+
+        On the first daily check, increment `no_trade_days` and persist state.
+        When no_trade_days > 5, decrease the larger index by 1 (clamped at 0)
+        and reset no_trade_days to 0.
+        """
+        if not self.is_no_trade_days_check_period(now):
+            return
+
+        today = self.today_str()
+        if self._last_no_trade_days_check_date == today:
+            return
+
+        self.load_strategy_state()
+
+        # Count one more no-trade day at the first check window each day.
+        self.no_trade_days += 1
+        changed = True
+
+        if self.no_trade_days > 5:
+            if self.buy_index > self.sell_index and self.buy_index > 0:
+                self.buy_index -= 1
+                changed = True
+            elif self.sell_index > self.buy_index and self.sell_index > 0:
+                self.sell_index -= 1
+                changed = True
+
+            if self.no_trade_days != 0:
+                self.no_trade_days = 0
+                changed = True
+
+        self._last_no_trade_days_check_date = today
+
+        if changed:
+            self.save_strategy_state()
 
     def effective_time_diff_excluding_mid_pause(self, start_time, end_time):   # BaseStrategy
         """Return elapsed seconds excluding the 10:15-10:30 pause window.
@@ -477,6 +523,7 @@ class BaseStrategy():
         and call ordering.
         """
         self.apply_changes(changes)
+        self.no_trade_days = 0
         self.save_strategy_state()
 
         enums = self.get_enums()
@@ -526,7 +573,8 @@ class BaseStrategy():
             self.save_strategy_state()
         elif not self.IsBacktest:
             for field in self.STATE_FIELDS:
-                setattr(self, field, state[field])
+                if field in state:
+                    setattr(self, field, state[field])
 
     def save_strategy_state(self):   # BaseStrategy
         data = {field: getattr(self, field) for field in self.STATE_FIELDS}
@@ -580,6 +628,7 @@ class BaseStrategy():
         """Apply changes and persist state for a filled order without sending DingDing.
         """
         self.apply_changes(changes)
+        self.no_trade_days = 0
         self.save_strategy_state()
         self.print(f"Order {order_id} filled, applied changes")
 

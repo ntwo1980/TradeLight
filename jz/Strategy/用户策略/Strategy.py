@@ -101,6 +101,9 @@ class BaseStrategy():
         })
 
     def adjust_atr(self, atr):   # BaseStrategy
+        if atr is None or np.isnan(atr):
+            return atr
+
         atr_config = self.params.get('atr')
         if atr_config is not None:
             if self.params.get('fixedAtr', False):
@@ -108,6 +111,53 @@ class BaseStrategy():
             elif atr > atr_config * 1.3 or atr < atr_config * 0.7:
                 return atr_config
         return atr
+
+    def compute_robust_atr(self, df, timeperiod=10, exclude_outlier=True, outlier_quantile=0.95):   # BaseStrategy
+        """Compute ATR with optional high-low outlier clipping.
+
+        - exclude_outlier: whether to clip high-low outliers
+        - outlier_quantile: clipping quantile in (0, 1)
+        """
+        high = df['High'].values.astype(float)
+        low = df['Low'].values.astype(float)
+        close = df['Close'].values.astype(float)
+
+        if len(close) == 0:
+            return None
+
+        hl_range = high - low
+        hl_for_tr = hl_range.copy()
+        if exclude_outlier:
+            q = outlier_quantile
+            try:
+                q = float(q)
+            except Exception:
+                q = 0.95
+
+            if 0 < q < 1:
+                cap = np.quantile(hl_for_tr, q)
+                hl_for_tr = np.minimum(hl_for_tr, cap)
+
+        tr = np.empty_like(close)
+        tr[0] = hl_for_tr[0]
+        if len(close) > 1:
+            prev_close = close[:-1]
+            tr[1:] = np.maximum(
+                hl_for_tr[1:],
+                np.maximum(
+                    np.abs(high[1:] - prev_close),
+                    np.abs(low[1:] - prev_close)
+                )
+            )
+
+        atr = talib.EMA(tr, timeperiod=timeperiod)[-1]
+        if np.isnan(atr):
+            # Fallback to the standard ATR when the robust series is not ready.
+            atr = talib.ATR(high, low, close, timeperiod=timeperiod)[-1]
+
+        if np.isnan(atr):
+            return None
+        return float(atr)
 
     def GetDailyPrices(self, codes):  # BaseStrategy
         last_trade_date = self.LastTradeDate()
@@ -117,7 +167,15 @@ class BaseStrategy():
             df = self.fetch_ohlcv(code, 'D')
 
             if len(df) >= 4:
-                atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
+                # Keep these local so ATR behavior is edited in this file directly.
+                atr_exclude_outlier = True
+                atr_outlier_quantile = 0.95
+                atr = self.compute_robust_atr(
+                    df,
+                    timeperiod=10,
+                    exclude_outlier=atr_exclude_outlier,
+                    outlier_quantile=atr_outlier_quantile,
+                )
                 self.ATRs[code] = self.adjust_atr(atr)
                 slope, r_squared = self.calc_log_regression(df['Close'].values[-20:])
                 self.slopes[code] = slope

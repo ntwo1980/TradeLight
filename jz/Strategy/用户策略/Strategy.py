@@ -117,7 +117,7 @@ class BaseStrategy():
             df = self.fetch_ohlcv(code, 'D')
 
             if len(df) >= 4:
-                atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=10)[-1]
+                atr = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=5)[-1]
                 self.ATRs[code] = self.adjust_atr(atr)
                 slope, r_squared = self.calc_log_regression(df['Close'].values[-20:])
                 self.slopes[code] = slope

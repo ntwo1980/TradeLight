@@ -920,7 +920,12 @@ class PairLevelGridStrategy(BaseStrategy):
         """
         orderQty = self.params.get('orderQty', 1)
         new_logical_holding = self.logical_holding - self.trade_quantity
-        min_buy_index = 1 if new_logical_holding >= 5 * orderQty else 0
+        if new_logical_holding >= 8 * orderQty:
+            min_buy_index = 2
+        elif new_logical_holding >= 5 * orderQty:
+            min_buy_index = 1
+        else:
+            min_buy_index = 0
         return {
             "logical_holding": new_logical_holding,
             "base_price": trade_price,

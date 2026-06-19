@@ -15,6 +15,7 @@ def initialize(context):
             'name': '菜粕',
             'codes': ['ZCE|F|RM|609'],
             'orderQty': 3,
+            'disableMinBuyIndex': True
         },
         api = api()
     )

@@ -14,9 +14,7 @@ def initialize(context):
         params = {
             'name': '红枣',
             'codes': ['ZCE|F|CJ|609'],
-            'orderQty': 2,
-            'limit': 9250,
-            'threshold': 0.025,
+            'orderQty': 1,
         },
         api = api()
     )

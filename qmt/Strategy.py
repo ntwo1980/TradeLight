@@ -46,6 +46,7 @@ class BaseStrategy():
         self.LastSellTime = None
         self.ConsecutiveBuyCount = 0
         self.ConsecutiveSellCount = 0
+        self.MaxConsecutiveCount = 2
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func
@@ -468,6 +469,12 @@ class BaseStrategy():
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
 
     def Buy(self, C, stock, quantity, price, strategy_name, order_type=2):  # BaseStrategy
+        if self.ConsecutiveBuyCount >= self.MaxConsecutiveCount:
+            return None
+
+        self.ConsecutiveBuyCount += 1
+        self.ConsecutiveSellCount = 0
+
         timestamp = int(time.time())
         msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
         self.PassOrder(23, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
@@ -480,6 +487,12 @@ class BaseStrategy():
         return msg
 
     def Sell(self, C, stock, quantity, price, strategy_name, order_type=2):  # BaseStrategy
+        if self.ConsecutiveSellCount >= self.MaxConsecutiveCount:
+            return None
+
+        self.ConsecutiveBuyCount = 0
+        self.ConsecutiveSellCount += 1
+
         timestamp = int(time.time())
         msg = f"{strategy_name}_sell_{quantity}_{timestamp}"
         self.PassOrder(24, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
@@ -624,6 +637,9 @@ class SimpleGridStrategy(BaseStrategy):
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(stock)
             msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.logical_holding += unit_to_buy
                 self.base_price = current_price
@@ -657,6 +673,9 @@ class SimpleGridStrategy(BaseStrategy):
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
             msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.logical_holding -= unit_to_sell
                 self.SellCount += 1
@@ -933,6 +952,9 @@ class LevelGridStrategy(BaseStrategy):
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(stock)
             msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.logical_holding += unit_to_buy
                 self.base_price = current_price
@@ -973,6 +995,9 @@ class LevelGridStrategy(BaseStrategy):
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(stock)
             msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            if msg is None:
+                return False
+
             new_logical_holding = self.logical_holding - unit_to_sell
             if self.IsBacktest:
                 self.logical_holding = new_logical_holding
@@ -1320,6 +1345,9 @@ class PairGridStrategy(BaseStrategy):
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.current_held = stock
                 self.logical_holding += unit_to_buy
@@ -1332,6 +1360,7 @@ class PairGridStrategy(BaseStrategy):
                     'base_price': current_price,
                     'LastBuyDate': self.Today,
                 }
+
             self.Print(f"Updated base price to: {current_price:.3f}")
             return True
         else:
@@ -1354,6 +1383,9 @@ class PairGridStrategy(BaseStrategy):
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.logical_holding -= unit_to_sell
                 self.SellCount += 1
@@ -1758,6 +1790,9 @@ class PairLevelGridStrategy(BaseStrategy):
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.current_held = stock
                 self.logical_holding += unit_to_buy
@@ -1804,6 +1839,9 @@ class PairLevelGridStrategy(BaseStrategy):
             #     return False
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            if msg is None:
+                return False
+
             new_logical_holding = self.logical_holding - unit_to_sell
             if self.IsBacktest:
                 self.logical_holding = new_logical_holding
@@ -2125,6 +2163,9 @@ class MomentumRotationStrategy(BaseStrategy):
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            if msg is None:
+                return False
+
             if self.IsBacktest:
                 self.current_held = stock
                 self.logical_holding += unit_to_buy
@@ -2159,6 +2200,9 @@ class MomentumRotationStrategy(BaseStrategy):
         if unit_to_sell > 0:    # Ensure at least 100 shares
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
             msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+            if msg is None:
+                return False
+
             new_logical_holding = self.logical_holding - unit_to_sell
             if self.IsBacktest:
                 self.logical_holding = new_logical_holding

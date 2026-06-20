@@ -46,7 +46,7 @@ class BaseStrategy():
         self.LastSellTime = None
         self.ConsecutiveBuyCount = 0
         self.ConsecutiveSellCount = 0
-        self.MaxConsecutiveCount = 2
+        self.MaxConsecutiveCount = 1
         self.WaitingList = []
         self.GetTradeDetailData = get_trade_detail_data_func
         self.PassOrder = pass_order_func

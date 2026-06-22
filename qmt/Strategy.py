@@ -597,7 +597,7 @@ class SimpleGridStrategy(BaseStrategy):
             'atr': self.atr,
             'grid_unit': self.grid_unit})
 
-        if self.current_price >= base_price + self.grid_unit * 1.000001 and current_holding >= self.logical_holding:
+        if self.current_price >= base_price + self.grid_unit * 1.000001:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, self.logical_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)

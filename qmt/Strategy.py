@@ -597,11 +597,11 @@ class SimpleGridStrategy(BaseStrategy):
             'atr': self.atr,
             'grid_unit': self.grid_unit})
 
-        if self.current_price >= base_price + self.grid_unit * 1.001 and current_holding >= self.logical_holding:
+        if self.current_price >= base_price + self.grid_unit * 1.000001 and current_holding >= self.logical_holding:
             executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, self.logical_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - (self.grid_unit * 1.001 * self.buy_threshold_ratio):
+        elif self.current_price <= base_price - (self.grid_unit * 1.000001 * self.buy_threshold_ratio):
             executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
         if executed:
@@ -897,7 +897,7 @@ class LevelGridStrategy(BaseStrategy):
                     level = self.levels[sell_idx]
                     diff = base_price * level / 100
 
-                sell_threshold = base_price + diff * 1.001
+                sell_threshold = base_price + diff * 1.000001
                 if self.current_price >= sell_threshold and np.sum(self.all_prices['close'].values[-10:] > talib.SMA(self.prices['close'], timeperiod=10)[-10:]) < 10:
                     executed = self.ExecuteSell(C, self.Stocks[0], self.current_price, current_holding)
                     self.SellExecuted = executed
@@ -920,7 +920,7 @@ class LevelGridStrategy(BaseStrategy):
                     level = self.levels[buy_idx]
                     diff = base_price * level / 100
 
-                buy_threshold = base_price - diff * 1.001
+                buy_threshold = base_price - diff * 1.000001
                 if self.current_price <= buy_threshold:
                     executed = self.ExecuteBuy(C, self.Stocks[0], self.current_price)
 
@@ -1230,11 +1230,11 @@ class PairGridStrategy(BaseStrategy):
         current_holding = holdings.get(stock, 0)
 
         executed = False
-        if self.current_price >= base_price + grid_unit * 1.001:
+        if self.current_price >= base_price + grid_unit * 1.000001:
             executed = self.ExecuteSell(C, stock, self.current_price, current_holding)
             self.SellExecuted = executed
         # Price drops below grid: buy one unit (based on amount)
-        elif self.current_price <= base_price - grid_unit * 1.001:
+        elif self.current_price <= base_price - grid_unit * 1.000001:
             executed = self.ExecuteBuy(C, stock, self.current_price)
 
         if executed:
@@ -1653,7 +1653,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[sell_idx]
                     diff = base_price * level / 100
 
-                sell_threshold = base_price + diff * 1.001
+                sell_threshold = base_price + diff * 1.000001
                 if self.current_price >= sell_threshold and np.sum(prices['close'].values[-10:] > talib.SMA(prices['close'], timeperiod=10)[-10:]) < 10:
                     executed = self.ExecuteSell(C, stock, self.current_price, current_holding, False, rsi)
                     self.SellExecuted = executed
@@ -1673,7 +1673,7 @@ class PairLevelGridStrategy(BaseStrategy):
                     level = self.levels[buy_idx]
                     diff = base_price * level / 100
 
-                buy_threshold = base_price - diff * 1.001
+                buy_threshold = base_price - diff * 1.000001
                 if self.current_price <= buy_threshold:
                     executed = self.ExecuteBuy(C, stock, self.current_price)
 

@@ -123,8 +123,6 @@ class BaseStrategy():
         sell_multiplier = self.SellMultiplier
         baseTradingAmount = self.BuyTradingAmount if self.BuyTradingAmount is not None else self.TradingAmount
         tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
-        if position > tradingAmount / 2 and limitByAsset:
-            tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * 1 / 100 + 1)
 
         totalAsset = self.GetTotalAsset() - self.RetainAmount
 
@@ -134,7 +132,7 @@ class BaseStrategy():
         return tradingAmount * self.BuyAmountRatio
 
     def GetSellTradingAmount(self, stock):
-        sell_multiplier = 1
+        sell_multiplier = self.SellMultiplier
         baseTradingAmount = self.SellTradingAmount if self.SellTradingAmount is not None else self.TradingAmount
         tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)
 

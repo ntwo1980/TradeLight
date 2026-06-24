@@ -118,8 +118,6 @@ class BaseStrategy():
         return cash / totalAsset
 
     def GetBuyTradingAmount(self, stock, limitByAsset = True):
-        positions, all_positions = self.GetPositions()
-        position = all_positions.get(stock, 0)
         sell_multiplier = self.SellMultiplier
         baseTradingAmount = self.BuyTradingAmount if self.BuyTradingAmount is not None else self.TradingAmount
         tradingAmount = baseTradingAmount * ((self.SellCount + self.DynamicIncreaseCount / 4) * sell_multiplier / 100 + 1)

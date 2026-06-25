@@ -231,24 +231,19 @@ class BaseStrategy():
 
         # Count one more no-trade day at the first check window each day.
         self.no_trade_days += 1
-        changed = True
 
         if self.no_trade_days > 5:
             if self.buy_index > self.sell_index and self.buy_index > 0:
                 self.buy_index -= 1
-                changed = True
             elif self.sell_index > self.buy_index and self.sell_index > 0:
                 self.sell_index -= 1
-                changed = True
 
             if self.no_trade_days != 0:
                 self.no_trade_days = 0
-                changed = True
 
         self._last_no_trade_days_check_date = today
 
-        if changed:
-            self.save_strategy_state()
+        self.save_strategy_state()
 
     def effective_time_diff_excluding_mid_pause(self, start_time, end_time):   # BaseStrategy
         """Return elapsed seconds excluding the 10:15-10:30 pause window.

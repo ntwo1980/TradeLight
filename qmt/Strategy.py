@@ -110,7 +110,7 @@ class BaseStrategy():
 
     def GetCashPercent(self):
         positions = self.GetPositions()[0]
-        yhrl = positions.get('511880.SH', 0)
+        yhrl = positions.get('511360.SH', 0)
         cash = self.GetAvailableCash() + yhrl
 
         totalAsset = self.GetTotalAsset() - self.RetainAmount
@@ -438,7 +438,6 @@ class BaseStrategy():
     def RefreshWaitingList(self, C):  # BaseStrategy
         ignored = [
             'levelgrid_518880SH_a_buy_2200_1762124836',
-            'levelgrid_513090SH_a_buy_9400_1762124835',
         ]
 
         if self.WaitingList:
@@ -2329,16 +2328,16 @@ class JointquantEmailStrategy(BaseStrategy):
         return False
 
     def SellYHRL(self, C, target_cash, holdings):     # JointquantEmailStrategy
-        stock = '511880.SH'
+        stock = '511360.SH'
         current_holding = holdings.get(stock, 0)
 
         if current_holding <= 0:
-            self.Print(f"No position in 511880.SH")
+            self.Print(f"No position in 511360.SH")
             return
 
         current_price = 100
 
-        # 计算每100股价值（511880.SH通常100股起卖）
+        # 计算每100股价值（511360.SH通常100股起卖）
         value_per_100 = current_price * 100
 
         units_needed = int((target_cash + value_per_100 - 1) / value_per_100)  # 向上取整

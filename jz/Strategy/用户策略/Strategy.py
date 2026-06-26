@@ -407,7 +407,7 @@ class BaseStrategy():
 
     def position_limit_exceeded(self, buy_position, sell_position):   # BaseStrategy
         orderQty = self.params.get('orderQty', 1)
-        maxPositionMultiplier = self.params.get('maxPositionMultiplier', 10)
+        maxPositionMultiplier = self.params.get('maxPositionMultiplier', 20)
         return abs(buy_position - sell_position) > orderQty * maxPositionMultiplier
 
     def update_max_holding(self):   # BaseStrategy
@@ -918,7 +918,8 @@ class PairLevelGridStrategy(BaseStrategy):
         new_logical_holding = self.logical_holding - self.trade_quantity
 
         min_buy_index = 0
-        if disableMinBuyIndex:
+        close_20 = self.DailyPrices[self.codes[0]]['Close'].iloc[-20:]
+        if disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
             pass
         elif new_logical_holding >= 8 * orderQty:
             min_buy_index = 2

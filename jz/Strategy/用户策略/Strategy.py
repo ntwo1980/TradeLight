@@ -921,6 +921,8 @@ class PairLevelGridStrategy(BaseStrategy):
         close_20 = self.DailyPrices[self.codes[0]]['Close'].iloc[-20:]
         if disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
             pass
+        elif new_logical_holding >= 10 * orderQty:
+            min_buy_index = 3
         elif new_logical_holding >= 8 * orderQty:
             min_buy_index = 2
         elif new_logical_holding >= 5 * orderQty:

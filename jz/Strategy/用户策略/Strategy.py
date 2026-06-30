@@ -186,6 +186,7 @@ class BaseStrategy():
             self.send_order_count = 0
             self.consecutive_buy_count = 0
             self.consecutive_sell_count = 0
+            self.waiting_list = []
 
             return False
 
@@ -193,11 +194,6 @@ class BaseStrategy():
             if not self.order_deleted:
                 self.order_deleted = True
                 self.delete_orders()
-            return False
-
-        if not self.IsBacktest and 0.145945 < now < 0.150010:
-            self.waiting_list = []
-
             return False
 
         return True

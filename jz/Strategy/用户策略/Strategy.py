@@ -193,6 +193,10 @@ class BaseStrategy():
             if not self.order_deleted:
                 self.order_deleted = True
                 self.delete_orders()
+            return False
+
+        if not self.IsBacktest and 0.145945 < now < 0.150010:
+            self.waiting_list = []
 
             return False
 

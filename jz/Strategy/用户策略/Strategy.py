@@ -233,9 +233,9 @@ class BaseStrategy():
         self.no_trade_days += 1
 
         if self.no_trade_days > 5:
-            if self.buy_index > self.sell_index and self.buy_index > 0:
+            if self.buy_index > 0:
                 self.buy_index -= 1
-            elif self.sell_index > self.buy_index and self.sell_index > 0:
+            if self.sell_index > 0:
                 self.sell_index -= 1
 
             if self.no_trade_days != 0:

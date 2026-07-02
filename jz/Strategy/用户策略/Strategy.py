@@ -862,12 +862,21 @@ class PairLevelGridStrategy(BaseStrategy):
     def build_pair_buy_changes(self, trade_price):     # PairLevelGridStrategy
         """Return the changes dict used after a pair-level buy is accepted.
         """
+        orderQty = self.params.get('orderQty', 1)
+        new_logical_holding = self.logical_holding + self.trade_quantity
+
+        min_sell_index = 0
+        if new_logical_holding < 3 * orderQty:
+            min_sell_index = 3
+        elif new_logical_holding < 5 * orderQty:
+            min_sell_index = 2
+
         return {
-            "logical_holding": self.logical_holding + self.trade_quantity,
+            "logical_holding": new_logical_holding,
             "base_price": trade_price,
             "last_buy_date": self.today_str(),
             "buy_index": self.next_clamped_index(self.buy_index, self.buy_levels),
-            "sell_index": 0,
+            "sell_index": min_sell_index,
         }
 
     def execute_pair_sell_with_waiting(self, code, current_price, sell_threshold, quantity):     # PairLevelGridStrategy

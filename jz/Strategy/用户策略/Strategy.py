@@ -866,7 +866,15 @@ class PairLevelGridStrategy(BaseStrategy):
         new_logical_holding = self.logical_holding + self.trade_quantity
 
         min_sell_index = 0
-        if new_logical_holding < 3 * orderQty:
+        disableMinBuyIndex = self.params.get('disableMinBuyIndex', False)
+        if disableMinBuyIndex:
+            if new_logical_holding < 2 * orderQty:
+                min_sell_index = 3
+            elif new_logical_holding < 3 * orderQty:
+                min_sell_index = 2
+            elif new_logical_holding < 4 * orderQty:
+                min_sell_index = 1
+        elif new_logical_holding < 3 * orderQty:
             min_sell_index = 3
         elif new_logical_holding < 5 * orderQty:
             min_sell_index = 2

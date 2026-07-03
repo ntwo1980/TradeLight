@@ -49,6 +49,7 @@ class BaseStrategy():
         self.position_closed = False
         self._cached_enums = None
         self._last_no_trade_days_check_date = None
+        self.inited = False
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -177,7 +178,7 @@ class BaseStrategy():
 
                     return False
 
-        if not self.IsBacktest and self.is_intraday_reset_period(now):
+        if not self.IsBacktest and self.is_intraday_reset_period(now) and not self.inited:
             if self.order_deleted:
                 self.order_deleted = False
             if self.position_closed:
@@ -187,6 +188,7 @@ class BaseStrategy():
             self.consecutive_buy_count = 0
             self.consecutive_sell_count = 0
             self.waiting_list = []
+            self.inited = True
 
             return False
 
@@ -203,7 +205,7 @@ class BaseStrategy():
 
         These windows reset counters and flags but do not alter semantics.
         """
-        return (0.0859 < now < 0.090000) or (0.2059 < now < 0.210000)
+        return (0.0859 < now < 0.090000) or (0.2059 < now < 0.210005)
 
     def is_order_deletion_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily order-deletion window."""

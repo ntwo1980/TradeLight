@@ -719,8 +719,10 @@ class PairLevelGridStrategy(BaseStrategy):
         if rsi is not None and np.isnan(rsi):
             rsi = None
 
+        recent_5_not_month_low = close_prices.iloc[-5:].min() != close_prices.iloc[-20:].min()
+
         # compute MA-based base price and suggested order quantity when flat
-        if self.logical_holding == 0 and buy_position == 0:
+        if self.logical_holding == 0 and buy_position == 0 and recent_5_not_month_low:
             order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         rsi_qty_increment = max(1, math.ceil(order_qty * 0.5))

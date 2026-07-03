@@ -219,7 +219,7 @@ class BaseStrategy():
         """Apply once-daily NoTradeDays based adjustment to buy/sell indexes.
 
         On the first daily check, increment `no_trade_days` and persist state.
-        When no_trade_days > 5, decrease the larger index by 1 (clamped at 0)
+        When no_trade_days > 3, decrease the larger index by 1 (clamped at 0)
         and reset no_trade_days to 0.
         """
         if not self.is_no_trade_days_check_period(now):
@@ -234,7 +234,7 @@ class BaseStrategy():
         # Count one more no-trade day at the first check window each day.
         self.no_trade_days += 1
 
-        if self.no_trade_days > 5:
+        if self.no_trade_days > 3:
             if self.buy_index > 0:
                 self.buy_index -= 1
             if self.sell_index > 0:

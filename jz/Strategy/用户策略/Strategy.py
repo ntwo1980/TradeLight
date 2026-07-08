@@ -205,11 +205,11 @@ class BaseStrategy():
 
         These windows reset counters and flags but do not alter semantics.
         """
-        return (0.0859 < now < 0.090000) or (0.2059 < now < 0.210005)
+        return (0.0859 < now < 0.090000) or (0.2059 < now < 0.210010)
 
     def is_order_deletion_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily order-deletion window."""
-        return 0.225945 < now < 0.2310
+        return 0.225950 < now < 0.2310
 
     def is_no_trade_days_check_period(self, now):   # BaseStrategy
         """Return True if `now` is within the daily NoTradeDays check window (9:00-9:01)."""

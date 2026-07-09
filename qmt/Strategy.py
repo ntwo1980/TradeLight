@@ -631,8 +631,15 @@ class SimpleGridStrategy(BaseStrategy):
 
         buy_amount = self.GetBuyTradingAmount(stock)
         self.Print(f"premium rate {current_price / self.NetValue}")
-        if current_price / self.NetValue > 1.05:
+        ratio = current_price / self.NetValue
+        if ratio > 1.065:
+            buy_amount = buy_amount / 3
+        elif ratio > 1.045:
             buy_amount = buy_amount / 2
+        elif ratio < 1.01:
+            buy_amount = buy_amount * 1.5
+        elif ratio < 1.02:
+            buy_amount = buy_amount * 1.2
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
@@ -668,12 +675,15 @@ class SimpleGridStrategy(BaseStrategy):
     def ExecuteSell(self, C, stock, current_price, current_holding):   # SimpleGridStrategy
         sell_amount = self.GetSellTradingAmount(stock)
         self.Print(f"premium rate {current_price / self.NetValue}")
-        if current_price / self.NetValue > 1.05:
-            sell_amount = sell_amount / 2
-
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100
         unit_to_sell = min(unit_to_sell, current_holding)
+        if current_price / self.NetValue > 1.05 and current_holding <= unit_to_sell * 2:
+            sell_amount = sell_amount / 2
+
+            unit_to_sell = int(sell_amount / current_price)
+            unit_to_sell = (unit_to_sell // 100) * 100
+            unit_to_sell = min(unit_to_sell, current_holding)
 
         #if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4:
         if 0 < (current_holding - unit_to_sell) * current_price < sell_amount * 0.4 and self.BuyAmountRatio < 1.01:

@@ -62,6 +62,7 @@ class BaseStrategy():
         self.rsi = 0
         self.SellExecuted = False
         self.PendingStateUpdates = {}
+        self.NetValue = 0
         self.NotClosePositionStocks = {
             '159985.SZ',    # 豆粕
             '159980.SZ',    # 有色
@@ -523,6 +524,14 @@ class SimpleGridStrategy(BaseStrategy):
         if state is None and not self.IsBacktest:
             self.SaveStrategyState()
 
+        if self.Stocks[0] == "159985.SZ":
+            try:
+                with open('159985SZ.json', 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                self.NetValue = data['net_value']
+            except Exception as e:
+                pass
+
         self.Print(f"Loaded state from file: base_price={self.base_price}, position={self.logical_holding}, sell_count={self.SellCount}")
 
     def UpdateMarketData(self, C, stocks):   # SimpleGridStrategy
@@ -621,10 +630,15 @@ class SimpleGridStrategy(BaseStrategy):
             available_cash -= self.RetainAmount
 
         buy_amount = self.GetBuyTradingAmount(stock)
+        self.Print(f"premium rate {current_price / self.NetValue}")
+        if current_price / self.NetValue > 1.05:
+            buy_amount = buy_amount / 2
 
         unit_to_buy = int(buy_amount / current_price)
         unit_to_buy = (unit_to_buy // 100) * 100  # 取整到100的倍数
         max_amount = self.GetMaxAmount(stock)
+        if self.Stocks[0] == "159985.SZ":
+            max_amount = max_amount * 2
 
         if current_price * (unit_to_buy + self.logical_holding) >= max_amount:
             self.Print("Error: Reach max amount")
@@ -653,6 +667,9 @@ class SimpleGridStrategy(BaseStrategy):
 
     def ExecuteSell(self, C, stock, current_price, current_holding):   # SimpleGridStrategy
         sell_amount = self.GetSellTradingAmount(stock)
+        self.Print(f"premium rate {current_price / self.NetValue}")
+        if current_price / self.NetValue > 1.05:
+            sell_amount = sell_amount / 2
 
         unit_to_sell = int(sell_amount / current_price)
         unit_to_sell = (unit_to_sell // 100) * 100

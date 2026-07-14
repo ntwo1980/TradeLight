@@ -876,9 +876,9 @@ class PairLevelGridStrategy(BaseStrategy):
                 min_sell_index = 2
             elif new_logical_holding < 4 * orderQty:
                 min_sell_index = 1
-        elif new_logical_holding < 3 * orderQty:
+        elif new_logical_holding < 2 * orderQty:
             min_sell_index = 3
-        elif new_logical_holding < 5 * orderQty:
+        elif new_logical_holding < 3 * orderQty:
             min_sell_index = 2
 
         return {

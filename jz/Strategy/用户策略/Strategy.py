@@ -889,6 +889,32 @@ class PairLevelGridStrategy(BaseStrategy):
             "sell_index": min_sell_index,
         }
 
+    def build_pair_sell_changes(self, trade_price):     # PairLevelGridStrategy
+        """Return the changes dict used after a pair-level sell is accepted.
+        """
+        orderQty = self.params.get('orderQty', 1)
+        disableMinBuyIndex = self.params.get('disableMinBuyIndex', False)
+        new_logical_holding = self.logical_holding - self.trade_quantity
+
+        min_buy_index = 0
+        close_20 = self.DailyPrices[self.codes[0]]['Close'].iloc[-20:]
+        if disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
+            pass
+        elif new_logical_holding >= 10 * orderQty:
+            min_buy_index = 3
+        elif new_logical_holding >= 8 * orderQty:
+            min_buy_index = 2
+        elif new_logical_holding >= 5 * orderQty:
+            min_buy_index = 1
+
+        return {
+            "logical_holding": new_logical_holding,
+            "base_price": trade_price,
+            "last_sell_date": self.today_str(),
+            "sell_index": self.next_clamped_index(self.sell_index, self.sell_levels),
+            "buy_index": min_buy_index,
+        }
+
     def execute_pair_sell_with_waiting(self, code, current_price, sell_threshold, quantity):     # PairLevelGridStrategy
         """Execute pair-level sell with immediate order placement in live mode.
 
@@ -928,32 +954,6 @@ class PairLevelGridStrategy(BaseStrategy):
             order_qty = orderQty
 
         return order_qty, base_price, days_above_ma, ma_20_last, close_20
-
-    def build_pair_sell_changes(self, trade_price):     # PairLevelGridStrategy
-        """Return the changes dict used after a pair-level sell is accepted.
-        """
-        orderQty = self.params.get('orderQty', 1)
-        disableMinBuyIndex = self.params.get('disableMinBuyIndex', False)
-        new_logical_holding = self.logical_holding - self.trade_quantity
-
-        min_buy_index = 0
-        close_20 = self.DailyPrices[self.codes[0]]['Close'].iloc[-20:]
-        if disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
-            pass
-        elif new_logical_holding >= 10 * orderQty:
-            min_buy_index = 3
-        elif new_logical_holding >= 8 * orderQty:
-            min_buy_index = 2
-        elif new_logical_holding >= 5 * orderQty:
-            min_buy_index = 1
-
-        return {
-            "logical_holding": new_logical_holding,
-            "base_price": trade_price,
-            "last_sell_date": self.today_str(),
-            "sell_index": self.next_clamped_index(self.sell_index, self.sell_levels),
-            "buy_index": min_buy_index,
-        }
 
     def hisover_callback(self, context):   # PairLevelGridStrategy
         self.reset_price_cache()

@@ -82,6 +82,10 @@ pairLevelGridStrategies = [
     #{'stocks': ["601601.SH", "601318.SH"], 'stockNames':['太保', '平安'], 'threshold_ratio':0.02},
 ]
 
+dynamicBalancePairStrategies = [
+    # { 'stocks': ["159851.SZ", "516860.SH"], 'stockNames': ['金融科技', '金融科技'], 'threshold_ratio': 0.02, 'target_stock_ratio': 0.05, 'rebalance_threshold': 0.005, },
+]
+
 strategies = []
 
 for setting in levelGridStrategySettings:
@@ -158,6 +162,29 @@ for setting in pairLevelGridStrategies:
     threshold_ratio=setting.get('threshold_ratio', 0.01),
     stop_lose=setting.get('stop_lose', True),
     monthlyIncrease=setting.get('monthlyIncrease', None),
+    get_trade_detail_data_func = get_trade_detail_data,
+    pass_order_func = passorder,
+    cancel_func = cancel,
+    timetag_to_datetime_func = timetag_to_datetime,
+    download_history_data_func = download_history_data)
+
+    strategies.append(strategy)
+
+for setting in dynamicBalancePairStrategies:
+    strategy = DynamicBalancePairStrategy(
+    universe = universe,
+    stocks=setting['stocks'],
+    stockNames=setting['stockNames'],
+    strategyId=setting.get('strategyId', 'a'),
+    priority=setting.get('priority', 0),
+    tradingAmount=setting.get('tradingAmount', None),
+    buyTradingAmount=setting.get('buyTradingAmount', None),
+    sellTradingAmount=setting.get('sellTradingAmount', None),
+    firstPositionAmount=setting.get('firstPositionAmount', 1),
+    threshold_ratio=setting.get('threshold_ratio', 0.02),
+    target_stock_ratio=setting.get('target_stock_ratio', 0.05),
+    rebalance_threshold=setting.get('rebalance_threshold', 0.005),
+    lookback_days=setting.get('lookback_days', 20),
     get_trade_detail_data_func = get_trade_detail_data,
     pass_order_func = passorder,
     cancel_func = cancel,

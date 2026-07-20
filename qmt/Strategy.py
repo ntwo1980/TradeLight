@@ -2016,6 +2016,324 @@ class PairLevelGridStrategy(BaseStrategy):
 
         super().SaveStrategyState(file, data)
 
+class DynamicBalancePairStrategy(BaseStrategy):
+    def __init__(
+        self,
+        strategyId='a',
+        threshold_ratio=0.02,
+        target_stock_ratio=0.05,
+        rebalance_threshold=0.005,
+        lookback_days=20,
+        **kwargs,
+    ):
+        super().__init__(strategyPrefix='pairdynbal', strategyId=strategyId, **kwargs)
+        self.stock_A = self.Stocks[0]
+        self.stock_B = self.Stocks[1]
+        self.threshold_ratio = threshold_ratio
+        self.target_stock_ratio = target_stock_ratio
+        self.rebalance_threshold = rebalance_threshold
+        self.lookback_days = lookback_days
+
+    def init(self, C):
+        super().init(C)
+
+        self.prices = None
+        self.prices_date = None
+        self.current_held = None
+        self.pending_switch_to = None
+
+        C.set_universe(self.Stocks)
+
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
+        if state is None and not self.IsBacktest:
+            self.SaveStrategyState()
+        elif state is not None:
+            self.current_held = state.get('current_held', None)
+            self.pending_switch_to = state.get('pending_switch_to', None)
+
+        self.Print(
+            f"Loaded state from file: current_held={self.current_held}, pending_switch_to={self.pending_switch_to}, logical_holding={self.logical_holding}, base_price={self.base_price}"
+        )
+
+    def UpdateMarketData(self, C):
+        if self.prices_date is None or self.prices_date != self.Yesterday:
+            count = max(self.lookback_days + 1, 25)
+            self.prices = self.GetHistoricalPrices(C, self.Stocks, fields=['close'], period='1d', count=count)
+            self.prices_date = self.Yesterday
+
+    def SelectTargetStock(self, current_prices):
+        if self.pending_switch_to is not None:
+            return self.pending_switch_to
+
+        close_A = np.array(self.prices[self.stock_A]['close'][-(self.lookback_days + 1):])
+        close_B = np.array(self.prices[self.stock_B]['close'][-(self.lookback_days + 1):])
+        if len(close_A) < self.lookback_days + 1 or len(close_B) < self.lookback_days + 1:
+            self.Print("Error: Insufficient lookback data, keep current holding")
+            return self.current_held if self.current_held else self.stock_A
+
+        ret_A = current_prices[self.stock_A] / close_A[0] - 1
+        ret_B = current_prices[self.stock_B] / close_B[0] - 1
+        relative_diff = ret_A - ret_B
+
+        if relative_diff <= -self.threshold_ratio:
+            target_stock = self.stock_A
+            self.Print(
+                f"Pair signal: A underperformed B by {abs(relative_diff):.2%}, target={self.stock_A}"
+            )
+        elif relative_diff >= self.threshold_ratio:
+            target_stock = self.stock_B
+            self.Print(
+                f"Pair signal: B underperformed A by {abs(relative_diff):.2%}, target={self.stock_B}"
+            )
+        else:
+            target_stock = self.current_held if self.current_held else self.stock_A
+            self.Print(
+                f"Pair signal neutral: diff={relative_diff:.2%}, keep target={target_stock}"
+            )
+
+        return target_stock
+
+    def ExecuteBuyByValue(self, C, stock, current_price, buy_value):
+        available_cash = self.GetAvailableCash()
+        if self.Priority < 10:
+            available_cash -= self.RetainAmount
+
+        buy_value = min(buy_value, available_cash)
+        if buy_value <= 0:
+            self.Print("Error: no available cash for rebalancing buy")
+            return False
+
+        unit_to_buy = int(buy_value / current_price)
+        unit_to_buy = (unit_to_buy // 100) * 100
+        if unit_to_buy <= 0:
+            self.Print("Rebalance buy skipped: amount less than 100 shares")
+            return False
+
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+        if msg is None:
+            return False
+
+        if self.IsBacktest:
+            self.current_held = stock
+            self.pending_switch_to = None
+            self.logical_holding += unit_to_buy
+            self.base_price = current_price
+            self.LastBuyDate = self.Today
+            self.SaveStrategyState()
+        else:
+            self.PendingStateUpdates[msg] = {
+                'current_held': stock,
+                'pending_switch_to': None,
+                'logical_holding': self.logical_holding + unit_to_buy,
+                'base_price': current_price,
+                'LastBuyDate': self.Today,
+            }
+
+        self.Print(
+            f"Rebalance buy: {stock}, quantity={unit_to_buy}, value={unit_to_buy * current_price:.2f}"
+        )
+        return True
+
+    def ExecuteSellByValue(self, C, stock, current_price, sell_value, sellable_holding):
+        unit_to_sell = int(sell_value / current_price)
+        unit_to_sell = (unit_to_sell // 100) * 100
+        unit_to_sell = min(unit_to_sell, sellable_holding)
+
+        if unit_to_sell <= 0:
+            self.Print("Rebalance sell skipped: no sellable 100-share lot")
+            return False
+
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+        if msg is None:
+            return False
+
+        new_logical_holding = max(0, self.logical_holding - unit_to_sell)
+        if self.IsBacktest:
+            self.logical_holding = new_logical_holding
+            self.base_price = current_price if new_logical_holding > 0 else None
+            self.LastSellDate = self.Today
+            if new_logical_holding == 0:
+                self.current_held = None
+            self.SaveStrategyState()
+        else:
+            changes = {
+                'logical_holding': new_logical_holding,
+                'base_price': current_price if new_logical_holding > 0 else None,
+                'LastSellDate': self.Today,
+            }
+            if new_logical_holding == 0:
+                changes['current_held'] = None
+            self.PendingStateUpdates[msg] = changes
+
+        self.Print(
+            f"Rebalance sell: {stock}, quantity={unit_to_sell}, value={unit_to_sell * current_price:.2f}"
+        )
+        self.SellExecuted = True
+        return True
+
+    def CloseHoldingForSwitch(self, C, stock, current_price, sellable_holding, target_stock):
+        unit_to_sell = min(sellable_holding, self.logical_holding)
+        unit_to_sell = (unit_to_sell // 100) * 100
+        if unit_to_sell <= 0:
+            self.Print("Switch skipped: no sellable 100-share lot")
+            return False
+
+        strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
+        msg = self.Sell(C, stock, unit_to_sell, current_price, strategy_name)
+        if msg is None:
+            return False
+
+        self.pending_switch_to = target_stock
+        self.SaveStrategyState()
+        new_logical_holding = max(0, self.logical_holding - unit_to_sell)
+        if self.IsBacktest:
+            self.logical_holding = new_logical_holding
+            if self.logical_holding == 0:
+                self.current_held = None
+                self.base_price = None
+            self.LastSellDate = self.Today
+            self.SaveStrategyState()
+        else:
+            changes = {
+                'logical_holding': new_logical_holding,
+                'LastSellDate': self.Today,
+            }
+            if new_logical_holding == 0:
+                changes['current_held'] = None
+                changes['base_price'] = None
+            self.PendingStateUpdates[msg] = changes
+
+        self.SellExecuted = True
+        self.Print(f"Switch out: {stock}, quantity={unit_to_sell}, price={current_price:.3f}")
+        return True
+
+    def RebalanceStock(self, C, stock, current_price, all_holdings, sellable_holdings):
+        total_asset = self.GetTotalAsset()
+        if total_asset <= 0:
+            self.Print("Error: total_asset <= 0, skip rebalancing")
+            return False
+
+        current_holding = self.logical_holding if self.current_held == stock else 0
+        sellable_holding = min(sellable_holdings.get(stock, 0), current_holding)
+        current_value = current_holding * current_price
+        current_ratio = current_value / total_asset
+
+        lower_ratio = max(0, self.target_stock_ratio - self.rebalance_threshold)
+        upper_ratio = min(1, self.target_stock_ratio + self.rebalance_threshold)
+        target_value = total_asset * self.target_stock_ratio
+
+        self.Print(
+            {
+                'target_stock': stock,
+                'current_price': current_price,
+                'current_holding': current_holding,
+                'current_value': current_value,
+                'total_asset': total_asset,
+                'current_ratio': current_ratio,
+                'target_ratio': self.target_stock_ratio,
+                'rebalance_band': [lower_ratio, upper_ratio],
+            }
+        )
+
+        if current_ratio < lower_ratio:
+            buy_value = target_value - current_value
+            return self.ExecuteBuyByValue(C, stock, current_price, buy_value)
+
+        if current_ratio > upper_ratio:
+            sell_value = current_value - target_value
+            return self.ExecuteSellByValue(C, stock, current_price, sell_value, sellable_holding)
+
+        return False
+
+    def f(self, C):
+        super().f(C)
+
+        if not self.IsBacktest and not self.IsTradingTime():
+            return
+
+        if not self.CheckWaitingList(C):
+            return
+
+        self.UpdateMarketData(C)
+        if self.prices is None or len(self.prices) < 2:
+            self.Print("Error: insufficient market data for pair strategy")
+            return
+
+        current_prices = self.GetCurrentPrice(self.Stocks, C)
+        target_stock = self.SelectTargetStock(current_prices)
+
+        sellable_holdings, all_holdings = self.GetPositions()
+
+        if self.current_held and self.current_held != target_stock:
+            current_holding = all_holdings.get(self.current_held, 0)
+            sellable_holding = sellable_holdings.get(self.current_held, 0)
+            if current_holding != self.logical_holding:
+                self.Print(
+                    f"Error: switch paused because position={current_holding} does not match logical_holding={self.logical_holding}"
+                )
+                return
+            if current_holding > 0 and sellable_holding > 0:
+                self.Print(f"Switching holding: {self.current_held} -> {target_stock}")
+                self.CloseHoldingForSwitch(
+                    C,
+                    self.current_held,
+                    current_prices[self.current_held],
+                    sellable_holding,
+                    target_stock,
+                )
+                return
+            if current_holding > 0 and sellable_holding == 0:
+                self.Print(f"Switch paused: {self.current_held} has position but no sellable shares")
+                return
+            self.current_held = None
+
+        self.RebalanceStock(C, target_stock, current_prices[target_stock], all_holdings, sellable_holdings)
+
+        if self.IsBacktest:
+            self.g(C)
+
+    def g(self, C):
+        if not self.IsBacktest:
+            self.Print('g()')
+
+        state = super().LoadStrategyState(self.Stocks, self.StockNames)
+        if state is not None and not self.IsBacktest:
+            self.current_held = state.get('current_held', None)
+            self.pending_switch_to = state.get('pending_switch_to', None)
+
+        if self.current_held is not None:
+            positions = self.GetPositions()[1]
+            position = positions.get(self.current_held, 0)
+            if position != self.logical_holding:
+                self.Print(
+                    f"Error Positions doesn't match: position={position}, logical_holding={self.logical_holding}"
+                )
+                if self.IsBacktest:
+                    self.logical_holding = position
+                    if position == 0:
+                        self.current_held = None
+                        self.base_price = None
+
+    def SaveStrategyState(self):
+        stock = self.Stocks[0]
+        stockName = self.StockNames[0]
+        file = self.GetStateFileName(stock, stockName)
+
+        data = {
+            'current_held': self.current_held,
+            'pending_switch_to': self.pending_switch_to,
+            'base_price': self.base_price,
+            'logical_holding': self.logical_holding,
+            'sell_count': self.SellCount,
+            'dynamic_increase_count': self.DynamicIncreaseCount,
+            'last_buy_date': self.LastBuyDate,
+            'last_sell_date': self.LastSellDate,
+        }
+
+        super().SaveStrategyState(file, data)
+
 class StockLevelGridStrategy(LevelGridStrategy):
     def init(self, C):
         super().init(C)

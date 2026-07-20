@@ -660,6 +660,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.name = self.params['name']
         self.stop_new_position = self.params.get('stopNewPosition', False)
         self.min_buy_index = self.params.get('minBuyIndex', 0)
+        self.buy_direct_order = self.params.get('buyDirectOrder', True)
         self.buy_levels = list(self.DEFAULT_LEVELS)
         self.sell_levels = list(self.DEFAULT_LEVELS)
         self.buy_index = 0
@@ -841,14 +842,20 @@ class PairLevelGridStrategy(BaseStrategy):
             if self.stop_new_position and self.logical_holding == 0:
                 return buy_threshold, False
 
-            if current_price <= buy_threshold and not existing_buy_order:
-                self.ExecuteBuy(code, current_price, order_qty)
+            if not existing_buy_order:
+                if self.buy_direct_order:
+                    self.execute_pair_buy_with_waiting(code, current_price, buy_threshold, order_qty)
+                elif current_price <= buy_threshold:
+                    self.ExecuteBuy(code, current_price, order_qty)
         else:
             self.print(f'Error: buy_index error')
 
         return buy_threshold, False
     def ExecuteBuy(self, code, price, quantity):    # PairLevelGridStrategy
         return self.place_pair_order_and_commit(self.Buy, code, price, quantity, True, self.build_pair_buy_changes)
+
+    def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
+        return self.place_pair_order_and_commit(self.Sell, code, price, quantity, False, self.build_pair_sell_changes)
 
     def place_pair_order_and_commit(self, trade_func, code, price, quantity, is_buy, build_changes_fn):     # PairLevelGridStrategy
         """Place a pair-level order (tick-adjusted) and commit changes on success.
@@ -930,8 +937,14 @@ class PairLevelGridStrategy(BaseStrategy):
         target_price = max(current_price, sell_threshold)
         return self.ExecuteSell(code, target_price, quantity)
 
-    def ExecuteSell(self, code, price, quantity):    # PairLevelGridStrategy
-        return self.place_pair_order_and_commit(self.Sell, code, price, quantity, False, self.build_pair_sell_changes)
+    def execute_pair_buy_with_waiting(self, code, current_price, buy_threshold, quantity):     # PairLevelGridStrategy
+        if self.IsBacktest:
+            if current_price > buy_threshold:
+                return False
+            return self.ExecuteBuy(code, current_price, quantity)
+
+        target_price = min(current_price, buy_threshold)
+        return self.ExecuteBuy(code, target_price, quantity)
 
     def compute_base_price_from_ma(self, code, atr, orderQty, limit, current_price):     # PairLevelGridStrategy
         """Compute base price and suggested order quantity from MA/close series.

@@ -692,7 +692,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if self.IsBacktest and self.api.CurrentBar() == 1:   # PairLevelGridStrategy
             return
 
-        self.RunGridTrading(self.codes[0])
+        self.RunGridTrading(codes[0])
 
     def RunGridTrading(self, code):    # PairLevelGridStrategy
         # Follow the same structure as SpreadGridStrategy.RunGridTrading: build

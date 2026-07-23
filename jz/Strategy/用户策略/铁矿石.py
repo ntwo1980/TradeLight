@@ -13,9 +13,9 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '铁矿石',
-            'codes': ['DCE|F|I|2609'],
+            'codes': ['DCE|F|I|2701'],
             'orderQty': 1,
-            'minBuyIndex': 0
+            'minBuyIndex': 2
         },
         api = api()
     )
@@ -70,6 +70,7 @@ def api():
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,
+        GetTrendContract=GetTrendContract,
         High=High,
         IsInSession=IsInSession,
         LogDebug=LogDebug,

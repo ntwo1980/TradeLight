@@ -14,7 +14,7 @@ def initialize(context):
         params = {
             'name': '菜粕',
             'codes': ['ZCE|F|RM|609'],
-            'orderQty': 3,
+            'orderQty': 10,
             'disableMinBuyIndex': True
         },
         api = api()
@@ -70,6 +70,7 @@ def api():
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
         ExchangeStatus=ExchangeStatus,
+        GetTrendContract=GetTrendContract,
         High=High,
         IsInSession=IsInSession,
         LogDebug=LogDebug,

@@ -68,6 +68,7 @@ def api():
         Enum_FillPart=Enum_FillPart,
         Enum_Sell=Enum_Sell,
         ExchangeName=ExchangeName,
+        GetTrendContract=GetTrendContract,
         ExchangeStatus=ExchangeStatus,
         High=High,
         IsInSession=IsInSession,

@@ -718,11 +718,15 @@ class PairLevelGridStrategy(BaseStrategy):
         if rsi is not None and np.isnan(rsi):
             rsi = None
 
-        recent_5_not_month_low = close_prices.iloc[-5:].min() != close_prices.iloc[-20:].min()
 
         # compute MA-based base price and suggested order quantity when flat
-        if self.logical_holding == 0 and buy_position == 0 and recent_5_not_month_low:
-            order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
+        if self.logical_holding == 0 and buy_position == 0:
+            recent_5_month_low = close_prices.iloc[-5:].min() == close_prices.iloc[-20:].min()
+            if recent_5_month_low:
+                self.print('recent_5_month_low')
+                return
+            else:
+                order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         rsi_qty_increment = max(1, math.ceil(order_qty * 0.5))
         buy_order_qty = order_qty + rsi_qty_increment if (rsi is not None and rsi < 30  and buy_position <= orderQty * 5) else order_qty
@@ -952,7 +956,9 @@ class PairLevelGridStrategy(BaseStrategy):
         Returns (order_qty, base_price, days_above_ma, ma_20_last, close_20)
         """
         close_prices, close_20, ma, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
+
         if days_above_ma >= 6 and (limit is None or current_price < limit):
+            self.print(111)
             base_price = close_20.min() + 2 * atr
             if atr > 0:
                 order_qty = int((close_20.max() - close_20.min()) / atr) * orderQty

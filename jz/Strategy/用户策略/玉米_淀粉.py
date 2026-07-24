@@ -13,9 +13,9 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '玉米_淀粉',
-            'codes': ['SPD|m|C-CS|2607|2607', 'DCE|M|C&CS|2607', 'DCE|F|C|2607', 'DCE|F|CS|2607'],
-            'orderQty': 12,
-            'firstPosition': True,
+            'codes': ['SPD|m|C-CS|2609|2609', 'DCE|M|C&CS|2609', 'DCE|F|C|2609', 'DCE|F|CS|2609'],
+            'orderQty': 10,
+            'firstPosition': False,
             'stopLose': False,
             'atr': 10,
             'fixedAtr': True,

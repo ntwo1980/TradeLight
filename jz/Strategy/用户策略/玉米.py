@@ -13,10 +13,9 @@ def initialize(context):
     strategy.initialize(context,
         params = {
             'name': '玉米',
-            'codes': ['DCE|F|C|2605'],
+            'codes': ['DCE|F|C|2609'],
             'orderQty': 1,
-            'limit': 2100,
-            'threshold': 0.025,
+            'disableMinBuyIndex': True
         },
         api = api()
     )

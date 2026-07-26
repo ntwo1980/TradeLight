@@ -1026,10 +1026,12 @@ class SpreadGridStrategy(BaseStrategy):
                 orderQuantity = 2
         if orderQty > 1:
             if for_sell and self.logical_holding > 3 * orderQty:
-                increments = orderQty // 3
+                # increments = orderQty // 3
+                increments = 1
                 orderQuantity = orderQuantity + increments
             if (not for_sell) and self.logical_holding < -3 * orderQty:
-                increments = orderQty // 3
+                # increments = orderQty // 3
+                increments = 1
                 orderQuantity = orderQuantity + increments
 
         return orderQuantity
@@ -1113,8 +1115,8 @@ class SpreadGridStrategy(BaseStrategy):
             if current_price >= trigger:
                 return orderQuantity, sell_threshold
             return orderQuantity, max(trigger, sell_threshold)
-        elif sell_threshold > ma_20_last:
-            return self.logical_holding, sell_threshold
+        # elif sell_threshold > ma_20_last:
+        #     return self.logical_holding, sell_threshold
         else:
             return orderQuantity, sell_threshold
 
@@ -1158,8 +1160,8 @@ class SpreadGridStrategy(BaseStrategy):
             if current_price <= trigger:
                 return orderQuantity, buy_threshold
             return orderQuantity, min(trigger, buy_threshold)
-        elif buy_threshold < ma_20_last:
-            return abs(self.logical_holding), buy_threshold
+        # elif buy_threshold < ma_20_last:
+        #     return abs(self.logical_holding), buy_threshold
         else:
             return orderQuantity, buy_threshold
 

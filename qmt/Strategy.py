@@ -44,6 +44,7 @@ class BaseStrategy():
         self.LastSellDate = None
         self.LastBuyTime = None
         self.LastSellTime = None
+        self.LastBuyIsSwitch = False
         self.ConsecutiveBuyCount = 0
         self.ConsecutiveSellCount = 0
         self.MaxConsecutiveCount = 3
@@ -317,6 +318,12 @@ class BaseStrategy():
                 self.Print(f"Error: There are pending orders not confirmed: {self.WaitingList}, pause subsequent orders")
                 return False
 
+            if self.LastBuyTime is not None and not self.LastBuyIsSwitch:
+                elapsed = time.time() - self.LastBuyTime
+                if elapsed < 10:
+                    self.Print(f"Error: Last non-switch buy was {elapsed:.1f} seconds ago, pause subsequent orders")
+                    return False
+
         return True
 
     def GetTicketPrices(self, stocks, C): # BaseStrategy
@@ -464,15 +471,16 @@ class BaseStrategy():
 
             self.WaitingList = [i for i in self.WaitingList if i not in foundList]
 
-    def Buy(self, C, stock, quantity, price, strategy_name, order_type=2):  # BaseStrategy
+    def Buy(self, C, stock, quantity, price, strategy_name, order_type=2, isSwitch=False):  # BaseStrategy
         if self.ConsecutiveBuyCount > self.MaxConsecutiveCount:
             return None
 
         self.ConsecutiveBuyCount += 1
         self.ConsecutiveSellCount = 0
 
-        timestamp = int(time.time())
-        msg = f"{strategy_name}_buy_{quantity}_{timestamp}"
+        self.LastBuyTime = time.time()
+        self.LastBuyIsSwitch = isSwitch
+        msg = f"{strategy_name}_buy_{quantity}_{int(self.LastBuyTime)}"
         self.PassOrder(23, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
         self.WaitingList.append(msg)
 
@@ -489,8 +497,8 @@ class BaseStrategy():
         self.ConsecutiveBuyCount = 0
         self.ConsecutiveSellCount += 1
 
-        timestamp = int(time.time())
-        msg = f"{strategy_name}_sell_{quantity}_{timestamp}"
+        self.LastSellTime = time.time()
+        msg = f"{strategy_name}_sell_{quantity}_{int(self.LastSellTime)}"
         self.PassOrder(24, 1101, self.Account, stock, 14, -1, quantity, strategy_name, order_type, msg, C)
         self.WaitingList.append(msg)
         if price > 0:
@@ -1368,7 +1376,7 @@ class PairGridStrategy(BaseStrategy):
             return False
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name, isSwitch=isSwitch)
             if msg is None:
                 return False
 
@@ -1813,7 +1821,7 @@ class PairLevelGridStrategy(BaseStrategy):
             return False
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name, isSwitch=isSwitch)
             if msg is None:
                 return False
 
@@ -2504,7 +2512,7 @@ class MomentumRotationStrategy(BaseStrategy):
             return False
         elif available_cash >= current_price * unit_to_buy and unit_to_buy > 0:
             strategy_name = self.GetUniqueStrategyName(self.Stocks[0])
-            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name)
+            msg = self.Buy(C, stock, unit_to_buy, current_price, strategy_name, isSwitch=isSwitch)
             if msg is None:
                 return False
 

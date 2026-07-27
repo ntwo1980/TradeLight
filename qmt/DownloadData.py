@@ -1,68 +1,32 @@
 import requests
-import re
 import json
 from bs4 import BeautifulSoup
-import pandas as pd
-from datetime import datetime  # 新增：导入datetime模块
 
-# 1. 设置请求参数
+# 1. 设置基金页面地址
 fund_code = "159985"
-url = "http://fund.eastmoney.com/f10/F10DataApi.aspx"
-params = {
-    "type": "lsjz",
-    "code": fund_code,
-    "page": 1,
-    "per": 20
-}
+url = "https://www.chinaamc.com/fund/159985/index.shtml"
 
 # 2. 发送请求
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
-response = requests.get(url, params=params, headers=headers)
+response = requests.get(url, headers=headers, timeout=20)
+response.raise_for_status()
 
-# 3. 提取 HTML 表格字符串
-raw_content = response.content
-# 使用字节正则匹配提取 content 中的内容
-content_match = re.search(rb'content\s*:\s*"(.+?)"\s*,\s*records', raw_content, re.DOTALL)
-if not content_match:
-    print("未找到数据，请检查基金代码或网络")
-    exit()
-
-html_bytes = content_match.group(1)
-
-# 4. 修复转义字符并解码为 UTF-8 字符串
-html_bytes = html_bytes.replace(b'\\"', b'"')
-html_bytes = html_bytes.replace(b'\\\\', b'\\')
-html_string = html_bytes.decode('utf-8')
-
-# ---------------------------------------------------------
-# 🔴 核心修复：使用 BeautifulSoup 解析 HTML 表格
-# ---------------------------------------------------------
 try:
-    # 使用 BeautifulSoup 解析 HTML
-    soup = BeautifulSoup(html_string, 'html.parser')
-    table = soup.find('table')
+    # 华夏基金页面的 table2 为“历史净值”表，第一行是最新净值记录。
+    soup = BeautifulSoup(response.content, 'html.parser')
+    latest_row = soup.select_one('.table2 .tb .tr')
+    if latest_row is None:
+        raise ValueError("未找到历史净值表的最新记录")
 
-    # 提取表头
-    headers_th = table.find_all('th')
-    columns = [th.get_text() for th in headers_th]
+    cells = [cell.get_text(strip=True) for cell in latest_row.select('.td')]
+    if len(cells) < 2:
+        raise ValueError("最新净值记录格式不完整")
 
-    # 提取表格数据行
-    rows = []
-    for tr in table.find_all('tr')[1:]: # 跳过表头行
-        tds = tr.find_all('td')
-        row = [td.get_text() for td in tds]
-        rows.append(row)
-
-    # 转换为 Pandas DataFrame
-    data = pd.DataFrame(rows, columns=columns)
-
-    # 5. 数据清洗与格式化
-    data["净值日期"] = pd.to_datetime(data["净值日期"])
-
-    latest_nav = data.iloc[0]['单位净值']
-    print("第一条记录的单位净值为：", latest_nav)
+    nav_date, latest_nav = cells[0], cells[1]
+    latest_nav = float(latest_nav)
+    print(f"最新净值：{latest_nav}（{nav_date}）")
 
     # ---------------------------------------------------------
     # 🔴 新增逻辑：获取当前日期并覆盖写入 JSON 文件
@@ -70,13 +34,10 @@ try:
     # 定义目标文件路径
     file_path = r"D:\君弘君智交易系统\bin.x64\159985SZ.json"
 
-    # 获取当前日期并格式化为字符串 (例如: "2026-07-09")
-    current_date = datetime.now().strftime("%Y-%m-%d")
-
     # 构造要写入的 JSON 数据字典
     json_data = {
-        "net_value": float(latest_nav),
-        "date": current_date  # 新增：写入当前日期
+        "net_value": latest_nav,
+        "date": nav_date
     }
 
     try:
@@ -84,7 +45,7 @@ try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(json_data, f, ensure_ascii=False, indent=4)
 
-        print(f"成功：已将最新净值 {latest_nav} 和日期 {current_date} 覆盖写入 {file_path}")
+        print(f"成功：已将最新净值 {latest_nav} 和日期 {nav_date} 覆盖写入 {file_path}")
 
     except PermissionError:
         print(f"权限错误：无法写入文件，请检查文件是否被交易系统占用或权限设置。")

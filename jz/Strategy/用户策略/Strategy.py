@@ -1103,7 +1103,8 @@ class SpreadGridStrategy(BaseStrategy):
         # Already short: adjust aggressiveness for deeply negative exposure
         if self.logical_holding < 0:
             if self.logical_holding < -orderQty * 4:
-                orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+                # orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+                orderQuantity = 2 if orderQty == 1 else orderQuantity - 1
             return orderQuantity, sell_threshold
 
         # Building or flipping to short when currently non-negative
@@ -1148,7 +1149,8 @@ class SpreadGridStrategy(BaseStrategy):
         # Already long: reduce aggressiveness if deeply exposed
         if self.logical_holding > 0:
             if self.logical_holding > orderQty * 4:
-                orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+                # orderQuantity = 2 if orderQty == 1 else orderQuantity - orderQty // 3
+                orderQuantity = 2 if orderQty == 1 else orderQuantity - 1
             return orderQuantity, buy_threshold
 
         # Building or flipping to long when currently non-positive

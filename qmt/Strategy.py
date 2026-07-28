@@ -645,9 +645,9 @@ class SimpleGridStrategy(BaseStrategy):
                 buy_amount = buy_amount / 3
             elif ratio > 1.045:
                 buy_amount = buy_amount / 2
-            elif ratio < 1.01:
+            elif ratio < 1.01 and current_price < 2.05:
                 buy_amount = buy_amount * 1.5
-            elif ratio < 1.02:
+            elif ratio < 1.02 and current_price < 2.05:
                 buy_amount = buy_amount * 1.2
 
         unit_to_buy = int(buy_amount / current_price)

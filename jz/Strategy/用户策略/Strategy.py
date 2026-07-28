@@ -990,6 +990,7 @@ class SpreadGridStrategy(BaseStrategy):
         self.sell_index = 0
         self.ignore_days_above_ma = self.params.get('ignoreDaysAboveMa', False)
         self.double_first_position = self.params.get('doubleFirstPosition', True)
+        self.double_first_position = False
         self.stop_new_position = self.params.get('stopNewPosition', False)
         self.stop_lose = self.params.get('stopLose', True)
 

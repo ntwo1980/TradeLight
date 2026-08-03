@@ -5,7 +5,7 @@ import datetime
 
 """
 策略说明：资金管理策略
-当可用资金小于100,000时，卖出511880.SH以补足资金
+当可用资金小于100,000时，卖出511360.SH以补足资金
 """
 
 class a():
@@ -15,7 +15,7 @@ A = a()  # 创建空类实例，用于保存状态
 
 def init(C):
     A.stradegy_name = 'yhrl_ohwaaatlfl'
-    A.stock = '511880.SH'
+    A.stock = '511360.SH'
     A.acct = account  # 账号（需在模型交易界面选择）
     A.acct_type = accountType  # 账号类型
     A.target_cash = 100000  # 目标最低可用资金
@@ -70,9 +70,9 @@ def handlebar(C):
 
     current_holding = holdings.get(A.stock, 0)
 
-    # === 核心逻辑：资金不足时卖出511880.SH ===
+    # === 核心逻辑：资金不足时卖出511360.SH ===
     if current_holding <= 0:
-        print(f"资金不足 {A.target_cash}，但无511880.SH持仓，无法补足")
+        print(f"资金不足 {A.target_cash}，但无511360.SH持仓，无法补足")
         return
 
     # 获取当前市价（使用最新收盘价）
@@ -82,7 +82,7 @@ def handlebar(C):
         return
     current_price = data[A.stock]['lastPrice']
 
-    # 计算每100股价值（511880.SH通常100股起卖）
+    # 计算每100股价值（511360.SH通常100股起卖）
     value_per_100 = current_price * 100
     if value_per_100 <= 0:
         print(f"价格异常 {current_price}，跳过卖出")

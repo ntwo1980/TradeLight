@@ -1,7 +1,8 @@
-#encoding:gbk
+#encoding:utf-8
 import pandas as pd
 import numpy as np
 import datetime
+import time
 
 """
 策略说明：资金管理策略
@@ -18,9 +19,10 @@ def init(C):
     A.stock = '511360.SH'
     A.acct = account  # 账号（需在模型交易界面选择）
     A.acct_type = accountType  # 账号类型
-    A.target_cash = 100000  # 目标最低可用资金
+    A.target_cash = 200000  # 目标最低可用资金
     A.waiting_list = []  # 未确认的委托，防止重复下单
     A.sold_out = False  # 标记是否已卖光（避免重复卖空）
+    A.last_handlebar_time = 0
 
     # 订阅行情
     C.set_universe([A.stock])
@@ -48,6 +50,11 @@ def handlebar(C):
     if available_cash >= A.target_cash:
         # print(f"当前可用资金 {available_cash:.0f} ≥ {A.target_cash}，无需操作")
         return
+
+    current_time = time.time()
+    if current_time - A.last_handlebar_time < 10:
+        return
+    A.last_handlebar_time = current_time
 
     if A.waiting_list:
         found_list = []

@@ -2037,6 +2037,7 @@ class DynamicBalancePairStrategy(BaseStrategy):
         super().__init__(strategyPrefix='pairdynbal', strategyId=strategyId, **kwargs)
         self.stock_A = self.Stocks[0]
         self.stock_B = self.Stocks[1]
+        self.is_same_stock_pair = self.stock_A == self.stock_B
         self.threshold_ratio = threshold_ratio
         self.target_stock_ratio = target_stock_ratio
         self.rebalance_threshold = rebalance_threshold
@@ -2070,6 +2071,9 @@ class DynamicBalancePairStrategy(BaseStrategy):
             self.prices_date = self.Yesterday
 
     def SelectTargetStock(self, current_prices):
+        if self.is_same_stock_pair:
+            return self.stock_A
+
         if self.pending_switch_to is not None:
             return self.pending_switch_to
 
@@ -2265,7 +2269,8 @@ class DynamicBalancePairStrategy(BaseStrategy):
             return
 
         self.UpdateMarketData(C)
-        if self.prices is None or len(self.prices) < 2:
+        min_price_keys = 1 if self.is_same_stock_pair else 2
+        if self.prices is None or len(self.prices) < min_price_keys:
             self.Print("Error: insufficient market data for pair strategy")
             return
 
@@ -2274,7 +2279,7 @@ class DynamicBalancePairStrategy(BaseStrategy):
 
         sellable_holdings, all_holdings = self.GetPositions()
 
-        if self.current_held and self.current_held != target_stock:
+        if not self.is_same_stock_pair and self.current_held and self.current_held != target_stock:
             current_holding = all_holdings.get(self.current_held, 0)
             sellable_holding = sellable_holdings.get(self.current_held, 0)
             if current_holding != self.logical_holding:
@@ -2296,6 +2301,9 @@ class DynamicBalancePairStrategy(BaseStrategy):
                 self.Print(f"Switch paused: {self.current_held} has position but no sellable shares")
                 return
             self.current_held = None
+
+        if self.is_same_stock_pair and self.current_held != target_stock:
+            self.current_held = target_stock
 
         self.RebalanceStock(C, target_stock, current_prices[target_stock], all_holdings, sellable_holdings)
 

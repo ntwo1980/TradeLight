@@ -77,7 +77,7 @@ pairLevelGridStrategies = [
     #{'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
     #{'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},  #35000
     #{'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
-    {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},  #30000
+    {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'priority': 10,  'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},  #30000
     #{'stocks': ["159201.SZ", "159222.SZ"], 'stockNames':['现金流', '现金流'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01 },  # 49000
     #{'stocks': ["513080.SH", "513520.SH"], 'stockNames':['法国CAC40', '日经']},
     #{'stocks': ["601601.SH", "601318.SH"], 'stockNames':['太保', '平安'], 'threshold_ratio':0.02},
@@ -85,7 +85,7 @@ pairLevelGridStrategies = [
 
 dynamicBalancePairStrategies = [
     # { 'stocks': ["159851.SZ", "516860.SH"], 'stockNames': ['金融科技', '金融科技'], 'threshold_ratio': 0.02, 'target_stock_ratio': 0.05, 'rebalance_threshold': 0.005, },
-    { 'stocks': ["159552.SZ", "159552.SZ"], 'stockNames': ['中证2000', '中证2000'], 'threshold_ratio': 0.02, 'target_stock_ratio': 0.1, 'rebalance_threshold': 0.01, },
+    { 'stocks': ["159552.SZ", "159552.SZ"], 'stockNames': ['中证2000', '中证2000'], 'priority': 10, 'threshold_ratio': 0.02, 'target_stock_ratio': 0.1, 'rebalance_threshold': 0.01, },
 ]
 
 strategies = []

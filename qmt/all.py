@@ -36,12 +36,13 @@ levelGridStrategySettings = [
 simpleGridStrategies = [
     #{'stocks': ["159980.SZ"], 'stockNames':['有色'], 'priority': 9},
     #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 0.97, 'buyAmountRatio': 1.2},
-    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 0.97, 'strategyId':'b', 'buyAmountRatio': 1.2},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 1},
-    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'buyTradingAmount': 60000, 'sellTradingAmount': 90000, 'priority': 10, 'strategyId':'b', 'buyThresholdRatio': 1},
+    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 1, 'strategyId':'b', 'buyAmountRatio': 1},
+    {'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'tradingAmount': 100000, 'priority': 10, 'buyThresholdRatio': 1, 'buyAmountRatio': 1},
+    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'priority': 10, 'buyThresholdRatio': 1},
+    #{'stocks': ["159985.SZ"], 'stockNames':['豆粕'], 'buyTradingAmount': 60000, 'sellTradingAmount': 90000, 'priority': 10, 'strategyId':'b', 'buyThresholdRatio': 1},
     #s{'stocks': ["159766.SZ"], 'stockNames':['旅游'], 'priority': 10},
-    {'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'minUnitPercentage': 0.011},  #52000
-    {'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'minUnitPercentage': 0.012},   #17000
+    #{'stocks': ["601111.SH"], 'stockNames':['中国国航'], 'priority': 10, 'minUnitPercentage': 0.011},  #52000
+    #{'stocks': ["000088.SZ"], 'stockNames':['盐田港'], 'priority': 10, 'minUnitPercentage': 0.012},   #17000
     #{'stocks': ["002267.SZ"], 'stockNames':['陕天然气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #12000
     #{'stocks': ["000507.SZ"], 'stockNames':['珠海港'], 'priority': 10, 'buyThresholdRatio': 0.97},   #25000
     #{'stocks': ["601139.SH"], 'stockNames':['深圳燃气'], 'priority': 10, 'buyThresholdRatio': 0.97},   #21000
@@ -53,7 +54,7 @@ simpleGridStrategies = [
     #{'stocks': ["601880.SH"], 'stockNames':['辽港股份'], 'priority': 10, 'buyThresholdRatio': 0.97},  #29000
     #{'stocks': ["601083.SH"], 'stockNames':['锦江航运'], 'priority': 10, 'buyThresholdRatio': 0.97},  #22000
     #{'stocks': ["600508.SH"], 'stockNames':['上海能源'], 'priority': 10, 'buyThresholdRatio': 0.97},  #14000
-    {'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10, 'minUnitPercentage': 0.011},  #39000
+    #{'stocks': ["000027.SZ"], 'stockNames':['深圳能源'], 'priority': 10, 'minUnitPercentage': 0.011},  #39000
 ]
 
 stockLevelGridStrategies = [
@@ -64,20 +65,20 @@ stockLevelGridStrategies = [
 pairLevelGridStrategies = [
     #{'stocks': ["159562.SZ", "517520.SH"], 'stockNames':['黄金股', '黄金股']},
     #{'stocks': ["515070.SH", "159819.SZ"], 'stockNames':['人工智能', '人工智能']},
-    #{'stocks': ["513350.SH", "159518.SZ"], 'stockNames':['标普油气', '标普油气'], 'priority': 10, 'tradingAmount': 20000, 'threshold_ratio':0.02},
-    {'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},      #20000
-    {'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},      #34000
-    {'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},   #24000
-    {'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},   #30000
-    {'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},  # 55000
+    {'stocks': ["513350.SH", "159518.SZ"], 'stockNames':['标普油气', '标普油气'], 'priority': 10, 'threshold_ratio':0.02},
+    #{'stocks': ["512660.SH", "512710.SH"], 'stockNames':['军工', '军工']},      #20000
+    #{'stocks': ["516780.SH", "159713.SZ"], 'stockNames':['稀土', '稀土']},      #34000
+    #{'stocks': ["516160.SH", "159875.SZ"], 'stockNames':['新能源', '新能源']},   #24000
+    #{'stocks': ["513920.SH", "520990.SH"], 'stockNames':['央企红利', '央企红利'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},   #30000
+    #{'stocks': ["515050.SH", "515880.SH"], 'stockNames':['通信', '通信']},  # 55000
     #{'stocks': ["159530.SZ", "159770.SZ"], 'stockNames':['机器人', '机器人']},
     #{'stocks': ["159851.SZ", "516860.SH"], 'stockNames':['金融科技', '金融科技']},
     #{'stocks': ["513050.SH", "159605.SZ"], 'stockNames':['中概互联', '中概互联']},
     #{'stocks': ["588200.SH", "159995.SZ"], 'stockNames':['芯片', '芯片']},
-    {'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},  #35000
+    #{'stocks': ["588020.SH", "159967.SZ"], 'stockNames':['创业板成长', '创业板成长'], 'threshold_ratio':0.02},  #35000
     #{'stocks': ["513290.SH", "159502.SZ"], 'stockNames':['生物科技', '生物科技'], 'threshold_ratio':0.02},
     {'stocks': ["159207.SZ", "159758.SZ"], 'stockNames':['红利质量', '红利质量'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01, 'threshold_ratio':0.02},  #30000
-    {'stocks': ["159201.SZ", "159222.SZ"], 'stockNames':['现金流', '现金流'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01 },  # 49000
+    #{'stocks': ["159201.SZ", "159222.SZ"], 'stockNames':['现金流', '现金流'], 'tradingAmount': 80000, 'firstPositionAmount':3, 'stop_lose': False, 'monthlyIncrease': 0.01 },  # 49000
     #{'stocks': ["513080.SH", "513520.SH"], 'stockNames':['法国CAC40', '日经']},
     #{'stocks': ["601601.SH", "601318.SH"], 'stockNames':['太保', '平安'], 'threshold_ratio':0.02},
 ]

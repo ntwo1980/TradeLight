@@ -2043,6 +2043,9 @@ class DynamicBalancePairStrategy(BaseStrategy):
         self.rebalance_threshold = rebalance_threshold
         self.lookback_days = lookback_days
 
+    def IsTradingTime(self):
+        return super().IsTradingTime() and datetime.datetime.now().strftime('%H%M%S') <= '145000'
+
     def init(self, C):
         super().init(C)
 

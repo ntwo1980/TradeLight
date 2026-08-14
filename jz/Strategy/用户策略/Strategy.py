@@ -660,6 +660,7 @@ class PairLevelGridStrategy(BaseStrategy):
         self.name = self.params['name']
         self.stop_new_position = self.params.get('stopNewPosition', False)
         self.min_buy_index = self.params.get('minBuyIndex', 0)
+        self.disable_position_index_adjustment = self.params.get('disablePositionIndexAdjustment', False)
         self.buy_direct_order = self.params.get('buyDirectOrder', True)
         self.buy_levels = list(self.DEFAULT_LEVELS)
         self.sell_levels = list(self.DEFAULT_LEVELS)
@@ -879,18 +880,19 @@ class PairLevelGridStrategy(BaseStrategy):
         new_logical_holding = self.logical_holding + self.trade_quantity
 
         min_sell_index = 0
-        disableMinBuyIndex = self.params.get('disableMinBuyIndex', False)
-        if disableMinBuyIndex:
-            if new_logical_holding < 2 * orderQty:
+        if not self.disable_position_index_adjustment:
+            disableMinBuyIndex = self.params.get('disableMinBuyIndex', False)
+            if disableMinBuyIndex:
+                if new_logical_holding < 2 * orderQty:
+                    min_sell_index = 3
+                elif new_logical_holding < 3 * orderQty:
+                    min_sell_index = 2
+                elif new_logical_holding < 4 * orderQty:
+                    min_sell_index = 1
+            elif new_logical_holding < 2 * orderQty:
                 min_sell_index = 3
             elif new_logical_holding < 3 * orderQty:
                 min_sell_index = 2
-            elif new_logical_holding < 4 * orderQty:
-                min_sell_index = 1
-        elif new_logical_holding < 2 * orderQty:
-            min_sell_index = 3
-        elif new_logical_holding < 3 * orderQty:
-            min_sell_index = 2
 
         return {
             "logical_holding": new_logical_holding,
@@ -909,7 +911,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         min_buy_index = 0
         close_20 = self.DailyPrices[self.codes[0]]['Close'].iloc[-20:]
-        if disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
+        if self.disable_position_index_adjustment or disableMinBuyIndex or close_20.iloc[-10:].min() != close_20.min():
             pass
         elif new_logical_holding >= 10 * orderQty:
             min_buy_index = 3

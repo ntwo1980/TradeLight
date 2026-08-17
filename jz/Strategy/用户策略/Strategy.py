@@ -465,19 +465,19 @@ class BaseStrategy():
         Enum_Filled = enums['filled']
         Enum_Canceled = enums['canceled']
 
-        for order_id, changes in self.waiting_list:
+        for order_id, changes, trade_price in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
             if status != Enum_Filled and status != Enum_Canceled:
-                remaining_orders.append((order_id, changes))
+                remaining_orders.append((order_id, changes, trade_price))
                 self.print(f"Order {order_id} status={status} existing")
             else:
                 if status == Enum_Filled:
                     any_filled = True
-                    self.handle_filled_order(order_id, changes)
+                    self.handle_filled_order(order_id, changes, trade_price)
                 self.print(f"Order {order_id} status={status} removed from waiting list")
 
         if any_filled and remaining_orders:
-            for order_id, changes in remaining_orders:
+            for order_id, changes, trade_price in remaining_orders:
                 self.api.A_DeleteOrder(order_id)
                 self.print(f"Order {order_id} deleted due to other order filled")
             remaining_orders = []
@@ -487,7 +487,7 @@ class BaseStrategy():
     def waiting_has_enum(self, enum_value):   # BaseStrategy
         """Return True if any order in `waiting_list` has buy/sell kind equal to `enum_value`.
         """
-        for order_id, _ in self.waiting_list:
+        for order_id, _, _ in self.waiting_list:
             if self.api.A_OrderBuyOrSell(order_id) == enum_value:
                 return True
         return False
@@ -498,7 +498,7 @@ class BaseStrategy():
         existing_buy_order = False
         existing_sell_order = False
         enums = self.get_enums()
-        for order_id, _ in orders:
+        for order_id, _, _ in orders:
             kind = self.api.A_OrderBuyOrSell(order_id)
             if kind == enums['buy']:
                 existing_buy_order = True
@@ -511,7 +511,7 @@ class BaseStrategy():
 
         return (existing_buy_order, existing_sell_order)
 
-    def handle_filled_order(self, order_id, changes):   # BaseStrategy
+    def handle_filled_order(self, order_id, changes, trade_price):   # BaseStrategy
         """Apply state changes and send notification for a filled order.
 
         Extracted to improve readability while preserving existing side-effects
@@ -535,6 +535,8 @@ class BaseStrategy():
             self.last_sell_time = now
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
+        if price == 0:
+            price = trade_price
         quantity = self.api.A_OrderFilledLot(order_id)
         buy_position, sell_position = self.resolve_positions_for_order()
 
@@ -580,11 +582,11 @@ class BaseStrategy():
         except Exception as e:
             self.print(f"Error: Failed to save strategy state: {e}")
 
-    def commit_changes(self, order_id, changes):   # BaseStrategy
+    def commit_changes(self, order_id, changes, trade_price):   # BaseStrategy
         if self.IsBacktest:
             self.apply_changes(changes)
         else:
-            self.waiting_list.append((order_id, changes))
+            self.waiting_list.append((order_id, changes, trade_price))
 
     def reset_price_cache(self):   # BaseStrategy
         self.DailyPricesDate = None
@@ -609,7 +611,7 @@ class BaseStrategy():
     def delete_orders(self):   # BaseStrategy
         enums = self.get_enums()
 
-        for order_id, changes in self.waiting_list:
+        for order_id, changes, trade_price in self.waiting_list:
             status = self.api.A_OrderStatus(order_id)
             if status == enums['filled']:
                 self.apply_filled_no_notify(order_id, changes)
@@ -870,7 +872,7 @@ class PairLevelGridStrategy(BaseStrategy):
         if not succeed:
             return False
         changes = build_changes_fn(trade_price)
-        self.commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes, trade_price)
         return True
 
     def build_pair_buy_changes(self, trade_price):     # PairLevelGridStrategy
@@ -1380,7 +1382,7 @@ class SpreadGridStrategy(BaseStrategy):
         orderQty = self.params.get('orderQty', 1)
 
         changes = build_changes_fn(new_holding, price, cross_zero, orderQty)
-        self.commit_changes(order_id, changes)
+        self.commit_changes(order_id, changes, price)
         return True
 
     def build_sell_changes(self, new_holding, price, cross_zero, orderQty):     # SpreadGridStrategy

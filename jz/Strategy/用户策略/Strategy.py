@@ -1400,3 +1400,250 @@ class SpreadGridStrategy(BaseStrategy):
         self.reset_price_cache()
         self.close_all_positions(self.codes[1], self.codes[0])
         self.print('max position:' + str(self.max_logical_holding))
+
+
+class AdxTrendMomentumStrategy(BaseStrategy):
+    """Bidirectional implementation of the ADX trend-momentum setup."""
+
+    STATE_FIELDS = BaseStrategy.STATE_FIELDS + [
+        'entry_price', 'entry_atr', 'initial_stop', 'trailing_stop',
+        'trail_reference', 'target1_hit'
+    ]
+
+    def initialize(self, context, **kwargs):
+        super().initialize(context, **kwargs)
+        self.code = self.params['code']
+        self.codes = [self.code]
+        self.name = self.params.get('name', 'ADX Trend Momentum')
+        self.direction = self.params.get('direction', 'both').lower()
+        if self.direction not in ('long', 'short', 'both'):
+            raise ValueError("direction must be 'long', 'short', or 'both'")
+
+        self.adx_period = self.params.get('adxPeriod', 14)
+        self.adx_threshold = self.params.get('adxThreshold', 25)
+        self.ma_period = self.params.get('maPeriod', 50)
+        self.atr_period = self.params.get('atrPeriod', 14)
+        self.swing_period = self.params.get('swingPeriod', 10)
+        self.stop_atr_multiple = self.params.get('stopAtrMultiple', 1.5)
+        self.target_atr_multiple = self.params.get('targetAtrMultiple', 2.0)
+        self.trailing_atr_multiple = self.params.get('trailingAtrMultiple', 1.5)
+
+        self.entry_price = 0
+        self.entry_atr = 0
+        self.initial_stop = 0
+        self.trailing_stop = 0
+        self.trail_reference = 0
+        self.target1_hit = False
+
+        self.api.SetBarInterval(self.code, 'M', 1, 1)
+        self.api.SetBarInterval(self.code, 'D', 1, 100)
+        self.api.SetActual()
+
+    def GetPositionCode(self):
+        return self.code
+
+    def handle_data(self, context):
+        if not super().handle_data(context) or not self.check_in_session():
+            return
+
+        self.load_strategy_state()
+        existing_buy_order, existing_sell_order = self.existing_order()
+        if existing_buy_order or existing_sell_order:
+            return
+
+        self.GetDailyPrices([self.code])
+        self.GetLastPrices([self.code])
+        prices = self.DailyPrices[self.code]
+        minimum_bars = max(self.ma_period, self.adx_period + 3, self.swing_period) + 1
+        if len(prices) < minimum_bars:
+            return
+
+        current_price = self.LastPrices[self.code]
+        indicators = self.calculate_indicators(prices)
+        if indicators is None:
+            return
+
+        buy_position, sell_position = self.resolve_positions_for_order()
+        if buy_position > 0:
+            self.manage_long_position(current_price, prices, indicators)
+        elif sell_position > 0:
+            self.manage_short_position(current_price, prices, indicators)
+        elif self.logical_holding == 0:
+            self.open_position(current_price, prices, indicators)
+
+        if self.print_debug:
+            self.print_debug_info(current_price, prices, indicators, buy_position, sell_position)
+
+    def calculate_indicators(self, prices):
+        high = prices['High'].values.astype(float)
+        low = prices['Low'].values.astype(float)
+        close = prices['Close'].values.astype(float)
+        adx = talib.ADX(high, low, close, timeperiod=self.adx_period)
+        plus_di = talib.PLUS_DI(high, low, close, timeperiod=self.adx_period)
+        minus_di = talib.MINUS_DI(high, low, close, timeperiod=self.adx_period)
+        atr = talib.ATR(high, low, close, timeperiod=self.atr_period)
+        sma = talib.SMA(close, timeperiod=self.ma_period)
+
+        values = [adx[-1], adx[-2], adx[-3], plus_di[-1], plus_di[-2], minus_di[-1], minus_di[-2], atr[-1], sma[-1]]
+        if not np.all(np.isfinite(values)):
+            return None
+        return {
+            'adx': adx, 'plus_di': plus_di, 'minus_di': minus_di, 'atr': atr[-1],
+            'sma': sma[-1]
+        }
+
+    def open_position(self, current_price, prices, indicators):
+        long_signal, short_signal = self.entry_signals(prices, indicators)
+        if long_signal:
+            stop = min(current_price - self.stop_atr_multiple * indicators['atr'], prices['Low'].iloc[-self.swing_period:].min())
+            self.enter_position(True, current_price, indicators['atr'], stop)
+        elif short_signal:
+            stop = max(current_price + self.stop_atr_multiple * indicators['atr'], prices['High'].iloc[-self.swing_period:].max())
+            self.enter_position(False, current_price, indicators['atr'], stop)
+
+    def entry_signals(self, prices, indicators):
+        adx_rising = indicators['adx'][-1] > indicators['adx'][-2] > indicators['adx'][-3]
+        if indicators['adx'][-1] <= self.adx_threshold or not adx_rising:
+            return False, False
+
+        latest = prices.iloc[-1]
+        upper_half = latest['Close'] >= (latest['High'] + latest['Low']) / 2
+        lower_half = latest['Close'] <= (latest['High'] + latest['Low']) / 2
+        long_gap = indicators['plus_di'][-1] - indicators['minus_di'][-1]
+        short_gap = indicators['minus_di'][-1] - indicators['plus_di'][-1]
+        previous_long_gap = indicators['plus_di'][-2] - indicators['minus_di'][-2]
+        previous_short_gap = indicators['minus_di'][-2] - indicators['plus_di'][-2]
+        long_signal = self.direction in ('long', 'both') and long_gap > 0 and long_gap > previous_long_gap \
+            and latest['Close'] > indicators['sma'] and upper_half
+        short_signal = self.direction in ('short', 'both') and short_gap > 0 and short_gap > previous_short_gap \
+            and latest['Close'] < indicators['sma'] and lower_half
+        return long_signal, short_signal
+
+    def print_debug_info(self, current_price, prices, indicators, buy_position, sell_position):
+        long_signal, short_signal = self.entry_signals(prices, indicators)
+        target1_long = self.entry_price + self.target_atr_multiple * self.entry_atr if self.entry_price else 0
+        target1_short = self.entry_price - self.target_atr_multiple * self.entry_atr if self.entry_price else 0
+        self.print({
+            'strategy': self.name,
+            'code': self.code,
+            'current_date': self.api.TradeDate(),
+            'current_time': self.api.CurrentTime(),
+            'c_price': current_price,
+            'close': prices['Close'].iloc[-1],
+            'adx': indicators['adx'][-1],
+            'plus_di': indicators['plus_di'][-1],
+            'minus_di': indicators['minus_di'][-1],
+            'atr': indicators['atr'],
+            'sma': indicators['sma'],
+            'long_signal': long_signal,
+            'short_signal': short_signal,
+            'r_b_position': buy_position,
+            'r_s_position': sell_position,
+            'l_holding': self.logical_holding,
+            'entry_price': self.entry_price,
+            'initial_stop': self.initial_stop,
+            'trailing_stop': self.trailing_stop,
+            'target1_long': target1_long,
+            'target1_short': target1_short,
+            'target1_hit': self.target1_hit,
+        })
+
+    def enter_position(self, is_long, price, atr, stop):
+        quantity = self.params.get('orderQty', 1)
+        order = self.Buy if is_long else self.Sell
+        succeeded, order_id = order(self.code, quantity, price)
+        if not succeeded:
+            return
+        holding = self.trade_quantity if is_long else -self.trade_quantity
+        self.commit_changes(order_id, {
+            'logical_holding': holding,
+            'base_price': price,
+            'entry_price': price,
+            'entry_atr': atr,
+            'initial_stop': stop,
+            'trailing_stop': stop,
+            'trail_reference': price,
+            'target1_hit': False,
+        }, price)
+
+    def manage_long_position(self, current_price, prices, indicators):
+        exit_reason = None
+        if current_price <= max(self.initial_stop, self.trailing_stop):
+            exit_reason = 'stop_loss_or_trailing_stop'
+        elif not self.target1_hit and indicators['minus_di'][-1] > indicators['plus_di'][-1]:
+            exit_reason = 'minus_di_above_plus_di'
+        elif self.target1_hit and indicators['adx'][-1] < 20:
+            exit_reason = 'adx_below_20'
+        if exit_reason:
+            self.print({'strategy': self.name, 'action': 'exit_long', 'reason': exit_reason, 'price': current_price})
+            self.exit_position(False, current_price, self.GetBuyPosition(self.code), True)
+            return
+
+        if not self.target1_hit and current_price >= self.entry_price + self.target_atr_multiple * self.entry_atr:
+            self.print({'strategy': self.name, 'action': 'target1_long', 'price': current_price})
+            self.take_first_target(False, current_price)
+            return
+
+        if self.target1_hit:
+            self.trail_reference = max(self.trail_reference, prices['High'].iloc[-1], current_price)
+            self.trailing_stop = max(self.trailing_stop, self.trail_reference - self.trailing_atr_multiple * indicators['atr'])
+            self.save_strategy_state()
+
+    def manage_short_position(self, current_price, prices, indicators):
+        exit_reason = None
+        if current_price >= min(self.initial_stop, self.trailing_stop):
+            exit_reason = 'stop_loss_or_trailing_stop'
+        elif not self.target1_hit and indicators['plus_di'][-1] > indicators['minus_di'][-1]:
+            exit_reason = 'plus_di_above_minus_di'
+        elif self.target1_hit and indicators['adx'][-1] < 20:
+            exit_reason = 'adx_below_20'
+        if exit_reason:
+            self.print({'strategy': self.name, 'action': 'exit_short', 'reason': exit_reason, 'price': current_price})
+            self.exit_position(True, current_price, self.GetSellPosition(self.code), True)
+            return
+
+        if not self.target1_hit and current_price <= self.entry_price - self.target_atr_multiple * self.entry_atr:
+            self.print({'strategy': self.name, 'action': 'target1_short', 'price': current_price})
+            self.take_first_target(True, current_price)
+            return
+
+        if self.target1_hit:
+            self.trail_reference = min(self.trail_reference, prices['Low'].iloc[-1], current_price)
+            self.trailing_stop = min(self.trailing_stop, self.trail_reference + self.trailing_atr_multiple * indicators['atr'])
+            self.save_strategy_state()
+
+    def take_first_target(self, is_short, price):
+        position = self.GetSellPosition(self.code) if is_short else self.GetBuyPosition(self.code)
+        quantity = position // 2
+        if quantity == 0:
+            self.target1_hit = True
+            self.save_strategy_state()
+            return
+        self.exit_position(is_short, price, quantity, False)
+
+    def exit_position(self, is_short, price, quantity, close_all):
+        if quantity <= 0:
+            return
+        order = self.Buy if is_short else self.Sell
+        succeeded, order_id = order(self.code, quantity, price)
+        if not succeeded:
+            return
+        holding = self.logical_holding + self.trade_quantity if is_short else self.logical_holding - self.trade_quantity
+        changes = {'logical_holding': holding}
+        if close_all:
+            changes.update({
+                'base_price': 0,
+                'entry_price': 0,
+                'entry_atr': 0,
+                'initial_stop': 0,
+                'trailing_stop': 0,
+                'trail_reference': 0,
+                'target1_hit': False,
+            })
+        else:
+            changes['target1_hit'] = True
+        self.commit_changes(order_id, changes, price)
+
+    def hisover_callback(self, context):
+        self.reset_price_cache()
+        self.close_all_positions(self.code, self.code)

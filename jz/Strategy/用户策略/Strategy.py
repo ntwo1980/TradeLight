@@ -1407,7 +1407,7 @@ class AdxTrendMomentumStrategy(BaseStrategy):
 
     STATE_FIELDS = BaseStrategy.STATE_FIELDS + [
         'entry_price', 'entry_atr', 'initial_stop', 'trailing_stop',
-        'trail_reference', 'target1_hit'
+        'trail_reference', 'target1_hit', 'last_entry_signal_date'
     ]
 
     def initialize(self, context, **kwargs):
@@ -1434,6 +1434,7 @@ class AdxTrendMomentumStrategy(BaseStrategy):
         self.trailing_stop = 0
         self.trail_reference = 0
         self.target1_hit = False
+        self.last_entry_signal_date = None
 
         self.api.SetBarInterval(self.code, 'M', 1, 1)
         self.api.SetBarInterval(self.code, 'D', 1, 100)
@@ -1493,13 +1494,27 @@ class AdxTrendMomentumStrategy(BaseStrategy):
         }
 
     def open_position(self, current_price, prices, indicators):
+        signal_date = self.LastTradeDate()
+        if self.last_entry_signal_date == signal_date:
+            return
+
         long_signal, short_signal = self.entry_signals(prices, indicators)
         if long_signal:
-            stop = min(current_price - self.stop_atr_multiple * indicators['atr'], prices['Low'].iloc[-self.swing_period:].min())
-            self.enter_position(True, current_price, indicators['atr'], stop)
+            stop = self.calculate_initial_stop(True, current_price, prices, indicators['atr'])
+            self.enter_position(True, current_price, indicators['atr'], stop, signal_date)
         elif short_signal:
-            stop = max(current_price + self.stop_atr_multiple * indicators['atr'], prices['High'].iloc[-self.swing_period:].max())
-            self.enter_position(False, current_price, indicators['atr'], stop)
+            stop = self.calculate_initial_stop(False, current_price, prices, indicators['atr'])
+            self.enter_position(False, current_price, indicators['atr'], stop, signal_date)
+
+    def calculate_initial_stop(self, is_long, price, prices, atr):
+        if is_long:
+            atr_stop = price - self.stop_atr_multiple * atr
+            swing_stop = prices['Low'].iloc[-self.swing_period:].min()
+            return max(atr_stop, swing_stop) if swing_stop < price else atr_stop
+
+        atr_stop = price + self.stop_atr_multiple * atr
+        swing_stop = prices['High'].iloc[-self.swing_period:].max()
+        return min(atr_stop, swing_stop) if swing_stop > price else atr_stop
 
     def entry_signals(self, prices, indicators):
         adx_rising = indicators['adx'][-1] > indicators['adx'][-2] > indicators['adx'][-3]
@@ -1548,7 +1563,7 @@ class AdxTrendMomentumStrategy(BaseStrategy):
             'target1_hit': self.target1_hit,
         })
 
-    def enter_position(self, is_long, price, atr, stop):
+    def enter_position(self, is_long, price, atr, stop, signal_date):
         quantity = self.params.get('orderQty', 1)
         order = self.Buy if is_long else self.Sell
         succeeded, order_id = order(self.code, quantity, price)
@@ -1564,6 +1579,7 @@ class AdxTrendMomentumStrategy(BaseStrategy):
             'trailing_stop': stop,
             'trail_reference': price,
             'target1_hit': False,
+            'last_entry_signal_date': signal_date,
         }, price)
 
     def manage_long_position(self, current_price, prices, indicators):

@@ -962,7 +962,6 @@ class PairLevelGridStrategy(BaseStrategy):
         close_prices, close_20, ma, ma_20_last, days_above_ma = self.daily_close_ma_and_days(code)
 
         if days_above_ma >= 6 and (limit is None or current_price < limit):
-            self.print(111)
             base_price = close_20.min() + 2 * atr
             if atr > 0:
                 order_qty = int((close_20.max() - close_20.min()) / atr) * orderQty

@@ -1,47 +1,50 @@
 import types
 
-from Strategy import AdxTrendMomentumStrategy
-
+import talib
+from Strategy import PairLevelGridStrategy, SpreadGridStrategy
 
 strategy = None
 strategis = []
 
-
+# 策略开始运行时执行该函数一次
 def initialize(context):
-    strategy = AdxTrendMomentumStrategy()
+    strategy = PairLevelGridStrategy()
+
     strategy.initialize(context,
-        params={
-            'name': 'ADX趋势动量_淀粉',
-            'code': 'DCE|F|C|2609',
-            'orderQty': 2,
-            'direction': 'both',
+        params = {
+            'name': '豆油',
+            'codes': ['DCE|F|Y|2609'],
+            'orderQty': 1,
+            'limit': 8000,
+            'threshold': 0.025,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
         },
-        api=api()
+        api = api()
     )
+
     strategis.append(strategy)
 
 
+# 策略触发事件每次触发时都会执行该函数
 def handle_data(context):
-    for strategy in strategis:
-        strategy.handle_data(context)
+    for s in strategis:
+        s.handle_data(context)
 
-
+# 历史回测阶段结束时执行该函数一次
 def hisover_callback(context):
-    for strategy in strategis:
-        strategy.hisover_callback(context)
+    for s in strategis:
+        s.hisover_callback(context)
 
-
+# 策略退出前执行该函数一次
 def exit_callback(context):
-    for strategy in strategis:
-        strategy.exit_callback(context)
-
+    pass
 
 def api():
-    return types.SimpleNamespace(
+    api = types.SimpleNamespace(
         A_Available=A_Available,
         A_BuyPosition=A_BuyPosition,
         A_BuyPositionCanCover=A_BuyPositionCanCover,
-        A_DeleteOrder=A_DeleteOrder,
         A_SellPosition=A_SellPosition,
         A_SellPositionCanCover=A_SellPositionCanCover,
         A_SendOrder=A_SendOrder,
@@ -87,6 +90,7 @@ def api():
         Q_LowLimit=Q_LowLimit,
         Q_UpperLimit=Q_UpperLimit,
         Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
         SellShort=SellShort,
         SellPosition=SellPosition,
         SetActual=SetActual,
@@ -101,3 +105,5 @@ def api():
         TradeDate=TradeDate,
         Vol=Vol,
     )
+
+    return api

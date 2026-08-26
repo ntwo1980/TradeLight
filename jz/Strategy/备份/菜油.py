@@ -1,0 +1,109 @@
+import types
+
+import talib
+from Strategy import PairLevelGridStrategy, SpreadGridStrategy
+
+strategy = None
+strategis = []
+
+# 策略开始运行时执行该函数一次
+def initialize(context):
+    strategy = PairLevelGridStrategy()
+
+    strategy.initialize(context,
+        params = {
+            'name': '菜油',
+            'codes': ['ZCE|F|OI|607'],
+            'orderQty': 1,
+            'limit': 9100,
+            'threshold': 0.025,
+            'useLogicalHolding': True,
+            'suspendOnOrder': False,
+        },
+        api = api()
+    )
+
+    strategis.append(strategy)
+
+
+# 策略触发事件每次触发时都会执行该函数
+def handle_data(context):
+    for s in strategis:
+        s.handle_data(context)
+
+# 历史回测阶段结束时执行该函数一次
+def hisover_callback(context):
+    for s in strategis:
+        s.hisover_callback(context)
+
+# 策略退出前执行该函数一次
+def exit_callback(context):
+    pass
+
+def api():
+    api = types.SimpleNamespace(
+        A_Available=A_Available,
+        A_BuyPosition=A_BuyPosition,
+        A_BuyPositionCanCover=A_BuyPositionCanCover,
+        A_SellPosition=A_SellPosition,
+        A_SellPositionCanCover=A_SellPositionCanCover,
+        A_SendOrder=A_SendOrder,
+        A_OrderBuyOrSell=A_OrderBuyOrSell,
+        A_OrderEntryOrExit=A_OrderEntryOrExit,
+        A_OrderFilledLot=A_OrderFilledLot,
+        A_OrderFilledPrice=A_OrderFilledPrice,
+        A_OrderStatus=A_OrderStatus,
+        A_TotalPosition=A_TotalPosition,
+        Buy=Buy,
+        BuyToCover=BuyToCover,
+        BuyPosition=BuyPosition,
+        Close=Close,
+        CurrentBar=CurrentBar,
+        CurrentTime=CurrentTime,
+        DeleteAllOrders=DeleteAllOrders,
+        Enum_Buy=Enum_Buy,
+        Enum_Canceled=Enum_Canceled,
+        Enum_Entry=Enum_Entry,
+        Enum_Exit=Enum_Exit,
+        Enum_ExitToday=Enum_ExitToday,
+        Enum_Filled=Enum_Filled,
+        Enum_FillPart=Enum_FillPart,
+        Enum_Sell=Enum_Sell,
+        ExchangeName=ExchangeName,
+        ExchangeStatus=ExchangeStatus,
+        GetTrendContract=GetTrendContract,
+        High=High,
+        IsInSession=IsInSession,
+        LogDebug=LogDebug,
+        LogError=LogError,
+        LogInfo=LogInfo,
+        LogWarn=LogWarn,
+        Low=Low,
+        MarketPosition=MarketPosition,
+        Open=Open,
+        PriceTick=PriceTick,
+        Q_AskPrice=Q_AskPrice,
+        Q_BidPrice=Q_BidPrice,
+        Q_Close=Q_Close,
+        Q_Last=Q_Last,
+        Q_LastDate=Q_LastDate,
+        Q_LowLimit=Q_LowLimit,
+        Q_UpperLimit=Q_UpperLimit,
+        Sell=Sell,
+        SetAFunUseForHis=SetAFunUseForHis,
+        SellShort=SellShort,
+        SellPosition=SellPosition,
+        SetActual=SetActual,
+        SetBarInterval=SetBarInterval,
+        SetOrderWay=SetOrderWay,
+        SetTriggerType=SetTriggerType,
+        SetUserNo=SetUserNo,
+        StartTrade=StartTrade,
+        StopTrade=StopTrade,
+        Time=Time,
+        TimeDiff=TimeDiff,
+        TradeDate=TradeDate,
+        Vol=Vol,
+    )
+
+    return api

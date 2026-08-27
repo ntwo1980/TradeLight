@@ -711,6 +711,7 @@ class PairLevelGridStrategy(BaseStrategy):
 
         base_price = self.base_price
         orderQty = self.params.get('orderQty', 1)
+        enableRsiCheck = self.params.get('enableRsiCheck', True)
         limit = self.params.get('limit')
         order_qty = orderQty
         buy_position = self.GetBuyPosition(code)
@@ -732,8 +733,12 @@ class PairLevelGridStrategy(BaseStrategy):
                 order_qty, base_price, _, _, _ = self.compute_base_price_from_ma(code, self.atr, orderQty, limit, current_price)
 
         rsi_qty_increment = max(1, math.ceil(order_qty * 0.5))
-        buy_order_qty = order_qty + rsi_qty_increment if (rsi is not None and rsi < 30  and buy_position <= orderQty * 5) else order_qty
-        sell_order_qty = order_qty + rsi_qty_increment if (rsi is not None and rsi > 70 and buy_position >= orderQty * 5) else order_qty
+        buy_order_qty = order_qty + rsi_qty_increment if (
+            enableRsiCheck and rsi is not None and rsi < 30 and buy_position <= orderQty * 5
+        ) else order_qty
+        sell_order_qty = order_qty + rsi_qty_increment if (
+            enableRsiCheck and rsi is not None and rsi > 70 and buy_position >= orderQty * 5
+        ) else order_qty
 
         sell_threshold = 0
         buy_threshold = 0

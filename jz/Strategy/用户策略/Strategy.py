@@ -34,7 +34,9 @@ class BaseStrategy():
         self.send_order_count = 0
         self.consecutive_buy_count = 0
         self.consecutive_sell_count = 0
-        self.max_consecutive_count = 5
+        self.consecutive_buy_limit_notified = False
+        self.consecutive_sell_limit_notified = False
+        self.max_consecutive_count = 3
         self.max_send_order_count = 20
         self.deal = False
         self.is_state_loaded = False
@@ -54,6 +56,8 @@ class BaseStrategy():
         self.context = context
         self.params = kwargs['params']
         self.api = kwargs['api']
+        self.max_consecutive_count = self.params.get('maxConsecutiveCount', 3)
+        self.max_send_order_count = self.params.get('maxSendOrderCount', 20)
         # populate enum cache once to avoid repeated API calls
         self.get_enums()
         self.IsBacktest = context.strategyStatus() != 'C'
@@ -186,6 +190,8 @@ class BaseStrategy():
             self.send_order_count = 0
             self.consecutive_buy_count = 0
             self.consecutive_sell_count = 0
+            self.consecutive_buy_limit_notified = False
+            self.consecutive_sell_limit_notified = False
             self.waiting_list = []
 
             return False
@@ -299,6 +305,13 @@ class BaseStrategy():
         """
         return f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
 
+    def notify_consecutive_limit(self, side):   # BaseStrategy
+        notified_field = f'consecutive_{side}_limit_notified'
+        msg = f"Name: {self.name}\nError: reach consecutive {side} limit\ncount:{self.max_consecutive_count}\nposition:{self.logical_holding}"
+        if not getattr(self, notified_field):
+            self.dingding(msg)
+            setattr(self, notified_field, True)
+
     def execute_order(self, is_buy, code, quantity, price):    # BaseStrategy
         retEnter = 0
         EnterOrderID = 0
@@ -330,6 +343,7 @@ class BaseStrategy():
             if is_buy:
                 if self.consecutive_buy_count >= self.max_consecutive_count and self.logical_holding >= orderQty * 3:
                     self.print('Error: reach consecutive buy limit')
+                    self.notify_consecutive_limit('buy')
                     return (False, 0)
 
                 # Only enforce the "too frequently" cooldown for SpreadGridStrategy
@@ -343,6 +357,7 @@ class BaseStrategy():
             else:
                 if self.consecutive_sell_count >= self.max_consecutive_count and self.logical_holding <= -orderQty * 3:
                     self.print('Error: reach consecutive sell limit')
+                    self.notify_consecutive_limit('sell')
                     return (False, 0)
 
                 if isinstance(self, SpreadGridStrategy) \
@@ -528,11 +543,17 @@ class BaseStrategy():
         if verb == 'Buy':
             self.consecutive_buy_count += 1
             self.consecutive_sell_count = 0
+            self.consecutive_sell_limit_notified = False
             self.last_buy_time = now
+            if self.consecutive_buy_count == self.max_consecutive_count:
+                self.notify_consecutive_limit('buy')
         else:
             self.consecutive_sell_count += 1
             self.consecutive_buy_count = 0
+            self.consecutive_buy_limit_notified = False
             self.last_sell_time = now
+            if self.consecutive_sell_count == self.max_consecutive_count:
+                self.notify_consecutive_limit('sell')
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
         price = self.api.A_OrderFilledPrice(order_id)
         if price == 0:

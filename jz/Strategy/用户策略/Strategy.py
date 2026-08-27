@@ -303,7 +303,7 @@ class BaseStrategy():
     def build_trade_message(self, verb, direction, code, quantity, price):   # BaseStrategy
         """Construct the human-readable trade message used for DingDing.
         """
-        return f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}"
+        return f"Name: {self.name}\n{verb.lower()}{direction}: {code}\nquantity: {quantity}\nprice: {price:.1f}\nbase:{self.base_price}\nposition:{self.logical_holding}"
 
     def notify_consecutive_limit(self, side):   # BaseStrategy
         notified_field = f'consecutive_{side}_limit_notified'

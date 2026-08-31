@@ -424,8 +424,11 @@ class BaseStrategy():
         if levels is not None:
             level_index = levels.index(level)
             min_half_spread_increment = self.params.get('minLevelSpreadIncrement', 1) / 2
-            for index in range(1, level_index + 1):
-                diff = max(atr * levels[index], diff + min_half_spread_increment)
+            if level_index >= 2:
+                previous_diff = atr * levels[1]
+                for index in range(2, level_index):
+                    previous_diff = max(atr * levels[index], previous_diff + min_half_spread_increment)
+                diff = max(diff, previous_diff + min_half_spread_increment)
         return base_price - diff, base_price + diff
 
     def position_limit_exceeded(self, buy_position, sell_position):   # BaseStrategy

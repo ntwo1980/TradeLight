@@ -11,7 +11,7 @@ import talib
 
 class BaseStrategy():
     STATE_FIELDS = ['base_price', 'logical_holding', 'buy_index', 'sell_index', 'no_trade_days']
-    DEFAULT_LEVELS = [0.6, 0.7, 0.8, 1, 1.2, 1.5, 2, 4, 6, 8, 14, 22]
+    DEFAULT_LEVELS = [0.4, 0.6, 0.7, 0.8, 1, 1.2, 1.5, 2, 4, 6, 8, 14, 22]
 
     def __init__(self, **kwargs):   # BaseStrategy
         self.context = None

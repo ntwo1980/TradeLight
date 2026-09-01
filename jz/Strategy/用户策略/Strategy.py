@@ -36,8 +36,8 @@ class BaseStrategy():
         self.consecutive_sell_count = 0
         self.consecutive_buy_limit_notified = False
         self.consecutive_sell_limit_notified = False
-        self.max_consecutive_count = 6
-        self.max_send_order_count = 60
+        self.max_consecutive_count = 7
+        self.max_send_order_count = 200
         self.deal = False
         self.is_state_loaded = False
         self.print_debug = True

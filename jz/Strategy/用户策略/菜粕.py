@@ -25,6 +25,7 @@ def initialize(context):
 
 # 策略触发事件每次触发时都会执行该函数
 def handle_data(context):
+    return
     for s in strategis:
         s.handle_data(context)
 

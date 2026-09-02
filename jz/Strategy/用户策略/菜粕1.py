@@ -14,11 +14,14 @@ def initialize(context):
         params = {
             'name': '菜粕1',
             'codes': ['ZCE|F|RM|701'],
-            'orderQty': 2,
+            'orderQty': 1,
             'disableMinBuyIndex': True,
             'disablePositionIndexAdjustment': True,
+            'enableRsiCheck': False,
+            'maxConsecutiveCount': 10,
+            'maxSendOrderCount': 100,
             'fixedAtr': True,
-            'atr': 10
+            'atr': 5
         },
         api = api()
     )

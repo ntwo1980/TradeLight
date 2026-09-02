@@ -620,6 +620,14 @@ class BaseStrategy():
     def close_all_positions(self, trade_code, price_code):   # BaseStrategy
         buy_position = self.api.BuyPosition(trade_code)
         sell_position = self.api.SellPosition(trade_code)
+
+        if buy_position == 0 and sell_position == 0:
+            return
+
+        if price_code not in self.LastPrices:
+            self.print(f"price not in LastPrices")
+            return
+
         last_price = self.LastPrices[price_code]
         if buy_position > 0:
             self.api.Sell(buy_position, last_price, trade_code)

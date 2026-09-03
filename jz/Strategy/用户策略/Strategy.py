@@ -879,12 +879,13 @@ class PairLevelGridStrategy(BaseStrategy):
         buy_threshold = 0
         if self.buy_index < len(self.buy_levels):
             level = self.buy_levels[self.buy_index]
-            low_position_atr = self.params.get('lowPositionAtr')
-            atr = low_position_atr if (
+            low_position_atrs = self.params.get('lowPositionAtr', [])
+            atr = self.atr
+            if (
                 self.params.get('fixedAtr', False)
-                and buy_position <= 3
-                and low_position_atr is not None
-            ) else self.atr
+                and 0 < buy_position <= len(low_position_atrs)
+            ):
+                atr = low_position_atrs[buy_position - 1]
             buy_threshold, _ = self.compute_thresholds(base_price, level, atr)
 
             if self.stop_new_position and self.logical_holding == 0:

@@ -85,7 +85,8 @@ pairLevelGridStrategies = [
 
 dynamicBalancePairStrategies = [
     # { 'stocks': ["159851.SZ", "516860.SH"], 'stockNames': ['金融科技', '金融科技'], 'threshold_ratio': 0.02, 'target_stock_ratio': 0.05, 'rebalance_threshold': 0.005, },
-    { 'stocks': ["159552.SZ", "159552.SZ"], 'stockNames': ['中证2000', '中证2000'], 'priority': 10, 'threshold_ratio': 0.02, 'target_stock_ratio': 0.1, 'rebalance_threshold': 0.01, },
+    {'stocks': ["159552.SZ", "159552.SZ"], 'stockNames': ['中证2000', '中证2000'], 'priority': 10, 'threshold_ratio': 0.02, 'target_stock_ratio': 0.14, 'rebalance_threshold': 0.007},
+    {'stocks': ["600011.SH", "600011.SH"], 'stockNames': ['华能国际', '华能国际'], 'priority': 10, 'threshold_ratio': 0.02, 'target_stock_ratio': 0.043, 'rebalance_threshold': 0.002, },
 ]
 
 strategies = []

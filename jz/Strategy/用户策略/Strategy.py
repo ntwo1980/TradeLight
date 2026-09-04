@@ -792,6 +792,9 @@ class PairLevelGridStrategy(BaseStrategy):
             'buy_position': buy_position,
             'sell_position': sell_position,
             'rsi': rsi,
+            'sell_level': None,
+            'sell_atr': None,
+            'sell_atr_source': None,
         }
 
         sell_threshold, should_return = self.handle_sell_trading(trading_context)
@@ -825,6 +828,9 @@ class PairLevelGridStrategy(BaseStrategy):
                 'current_date': trade_date,
                 'current_time': now,
                 'atr': self.atr,
+                'sell_atr': trading_context.get('sell_atr'),
+                'sell_atr_source': trading_context.get('sell_atr_source'),
+                'sell_level': trading_context.get('sell_level'),
                 'slope': self.slope,
                 'r_squared': self.r_squared,
                 'rsi': rsi,
@@ -852,12 +858,17 @@ class PairLevelGridStrategy(BaseStrategy):
                 level = self.sell_levels[self.sell_index]
                 low_position_atrs = self.params.get('lowPositionAtr', [])
                 atr = self.atr
+                atr_source = 'atr'
                 if (
                     self.params.get('fixedAtr', False)
                     and buy_position <= len(low_position_atrs)
                 ):
                     atr = low_position_atrs[buy_position - 1]
+                    atr_source = f'lowPositionAtr[{buy_position - 1}]'
                 _, sell_threshold = self.compute_thresholds(base_price, level, atr)
+                context['sell_level'] = level
+                context['sell_atr'] = atr
+                context['sell_atr_source'] = atr_source
 
                 if not existing_sell_order:
                     # if buy_position > 5 * order_qty:

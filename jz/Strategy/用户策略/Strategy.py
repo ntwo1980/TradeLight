@@ -51,7 +51,6 @@ class BaseStrategy():
         self.position_closed = False
         self._cached_enums = None
         self._last_no_trade_days_check_date = None
-        self.last_filled_time = None
 
     def initialize(self, context, **kwargs):   # BaseStrategy
         self.context = context
@@ -201,10 +200,6 @@ class BaseStrategy():
             if not self.order_deleted:
                 self.order_deleted = True
                 self.delete_orders()
-            return False
-
-        if not self.IsBacktest and self.last_filled_time is not None \
-            and self.api.TimeDiff(self.last_filled_time, now) < 1:
             return False
 
         return True
@@ -540,7 +535,6 @@ class BaseStrategy():
         self.apply_changes(changes)
         self.no_trade_days = 0
         self.save_strategy_state()
-        self.last_filled_time = self.api.CurrentTime()
 
         enums = self.get_enums()
         order_side = self.api.A_OrderBuyOrSell(order_id)

@@ -704,6 +704,17 @@ class PairLevelGridStrategy(BaseStrategy):
 
         self.api.SetActual()
 
+    def resolve_atr_for_holding(self, atr, order_qty):     # PairLevelGridStrategy
+        if not self.params.get('fixedAtr', False) or not isinstance(atr, (list, tuple, np.ndarray)):
+            return atr
+        if len(atr) == 0:
+            raise ValueError('atr must not be empty when configured as an array')
+        if order_qty <= 0:
+            raise ValueError('orderQty must be greater than zero')
+
+        tier_index = max(0, math.ceil(self.logical_holding / (order_qty * 10)) - 1)
+        return atr[min(tier_index, len(atr) - 1)]
+
     def GetPositionCode(self):     # PairLevelGridStrategy
         return self.codes[0]
 
@@ -733,13 +744,13 @@ class PairLevelGridStrategy(BaseStrategy):
         existing_buy_order, existing_sell_order = self.existing_order()
         existing_order = existing_buy_order or existing_sell_order
 
-        self.atr = self.ATRs[code]
+        orderQty = self.params.get('orderQty', 1)
+        self.atr = self.resolve_atr_for_holding(self.ATRs[code], orderQty)
         self.slope = self.slopes[code]
         self.r_squared = self.r_squareds[code]
         current_price = self.LastPrices[code]
 
         base_price = self.base_price
-        orderQty = self.params.get('orderQty', 1)
         sell_qty_multiplier = self.params.get('sellQtyMultiplier', 1)
         enableRsiCheck = self.params.get('enableRsiCheck', True)
         limit = self.params.get('limit')

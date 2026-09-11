@@ -12,7 +12,7 @@ def initialize(context):
 
     strategy.initialize(context,
         params = {
-            'name': '菜粕1',
+            'name': '淀粉',
             'codes': ['DCE|F|CS|2611'],
             'orderQty': 1,
             'disableMinBuyIndex': True,

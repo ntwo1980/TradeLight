@@ -685,10 +685,16 @@ class BaseStrategy():
         }
 
 class PairLevelGridStrategy(BaseStrategy):
+    CODE_NAME_PREFIXES = {
+        'ZCE|F|RM|': '菜粕',
+        'DCE|F|CS|': '淀粉',
+    }
+
     def initialize(self, context, **kwargs):     # PairLevelGridStrategy
         super().initialize(context, **kwargs)
         self.codes = self.params['codes']
         self.name = self.params['name']
+        self.validate_code_name_match()
         self.stop_new_position = self.params.get('stopNewPosition', False)
         self.min_buy_index = self.params.get('minBuyIndex', 0)
         self.disable_position_index_adjustment = self.params.get('disablePositionIndexAdjustment', False)
@@ -703,6 +709,19 @@ class PairLevelGridStrategy(BaseStrategy):
             self.api.SetBarInterval(code, 'D', 1, 100)
 
         self.api.SetActual()
+
+    def validate_code_name_match(self):
+        if not self.codes:
+            raise ValueError('codes must contain at least one code')
+
+        for code_prefix, name_prefix in self.CODE_NAME_PREFIXES.items():
+            if self.codes[0].startswith(code_prefix):
+                if not self.name.startswith(name_prefix):
+                    raise ValueError(
+                        f"name '{self.name}' must start with '{name_prefix}' "
+                        f"when codes[0] starts with '{code_prefix}'"
+                    )
+                return
 
     def resolve_atr_for_holding(self, atr, order_qty):     # PairLevelGridStrategy
         if not self.params.get('fixedAtr', False) or not isinstance(atr, (list, tuple, np.ndarray)):

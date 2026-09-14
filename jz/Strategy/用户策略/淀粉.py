@@ -22,7 +22,8 @@ def initialize(context):
             'maxSendOrderCount': 100,
             'fixedAtr': True,
             'atr': [5, 6, 7, 8],
-            'lowPositionAtr': [20, 15, 10]
+            'lowPositionAtr': [20, 15, 10],
+            'maxPositionMultiplier': 40,
         },
         api = api()
     )

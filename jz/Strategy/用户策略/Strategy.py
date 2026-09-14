@@ -532,6 +532,12 @@ class BaseStrategy():
         Extracted to improve readability while preserving existing side-effects
         and call ordering.
         """
+        price = self.api.A_OrderFilledPrice(order_id)
+        if price == 0:
+            price = trade_price
+        elif 'base_price' in changes:
+            changes['base_price'] = price
+
         self.apply_changes(changes)
         self.no_trade_days = 0
         self.save_strategy_state()
@@ -555,9 +561,6 @@ class BaseStrategy():
             if self.consecutive_sell_count == self.max_consecutive_count:
                 self.notify_consecutive_limit('sell')
         direction = '开' if self.api.A_OrderEntryOrExit(order_id) == enums['entry'] else '平'
-        price = self.api.A_OrderFilledPrice(order_id)
-        if price == 0:
-            price = trade_price
         quantity = self.api.A_OrderFilledLot(order_id)
         buy_position, sell_position = self.resolve_positions_for_order()
 
